@@ -40,35 +40,19 @@
 
                     <div class="fv-row mb-10">
                         <label class="form-label fs-6 fw-bold text-dark">Nouveau mot de passe</label>
-                        <div class="position-relative">
-                            <input class="form-control form-control-lg form-control-solid"
-                                type="password" name="password" autocomplete="new-password" required style="padding-right: 45px;">
-                            <button type="button" class="btn btn-sm btn-icon position-absolute end-0 top-50 translate-middle-y me-2"
-                                onclick="togglePassword(this)" aria-label="Afficher le mot de passe">
-                                <i class="ki-duotone ki-eye fs-4"><i class="path1"></i><i class="path2"></i><i class="path3"></i></i>
-                            </button>
-                        </div>
+                        <input class="form-control form-control-lg form-control-solid"
+                            type="password" name="password" autocomplete="new-password" required>
                     </div>
 
                     <div class="fv-row mb-10">
                         <label class="form-label fs-6 fw-bold text-dark">Confirmer le mot de passe</label>
-                        <div class="position-relative">
-                            <input class="form-control form-control-lg form-control-solid"
-                                type="password" name="password_confirmation" autocomplete="new-password" required style="padding-right: 45px;">
-                            <button type="button" class="btn btn-sm btn-icon position-absolute end-0 top-50 translate-middle-y me-2"
-                                onclick="togglePassword(this)" aria-label="Afficher le mot de passe">
-                                <i class="ki-duotone ki-eye fs-4"><i class="path1"></i><i class="path2"></i><i class="path3"></i></i>
-                            </button>
-                        </div>
+                        <input class="form-control form-control-lg form-control-solid"
+                            type="password" name="password_confirmation" autocomplete="new-password" required>
                     </div>
 
                     <div class="text-center">
-                        <button type="submit" id="btn-submit" class="btn btn-lg btn-primary w-100 mb-5">
-                            <span class="indicator-label">Reinitialiser le mot de passe</span>
-                            <span class="indicator-progress" style="display: none;">
-                                Reinitialisation...
-                                <span class="spinner-border spinner-border-sm ms-2"></span>
-                            </span>
+                        <button type="submit" class="btn btn-lg btn-primary w-100 mb-5">
+                            Reinitialiser le mot de passe
                         </button>
 
                         <a href="{{ route('login') }}" class="btn btn-lg btn-light-primary w-100">
@@ -80,27 +64,4 @@
         </div>
     </div>
 </div>
-
-<script>
-document.querySelector('form').addEventListener('submit', function() {
-    var btn = document.getElementById('btn-submit');
-    btn.disabled = true;
-    btn.querySelector('.indicator-label').style.display = 'none';
-    btn.querySelector('.indicator-progress').style.display = 'inline-block';
-});
-
-function togglePassword(btn) {
-    var input = btn.parentElement.querySelector('input');
-    var icon = btn.querySelector('i');
-    if (input.type === 'password') {
-        input.type = 'text';
-        icon.className = 'ki-duotone ki-eye-slash fs-4';
-        icon.innerHTML = '<i class="path1"></i><i class="path2"></i><i class="path3"></i><i class="path4"></i>';
-    } else {
-        input.type = 'password';
-        icon.className = 'ki-duotone ki-eye fs-4';
-        icon.innerHTML = '<i class="path1"></i><i class="path2"></i><i class="path3"></i>';
-    }
-}
-</script>
 @endsection

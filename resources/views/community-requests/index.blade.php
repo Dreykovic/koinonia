@@ -13,7 +13,6 @@
         <i class="ki-duotone ki-plus fs-4 me-1"><i class="path1"></i><i class="path2"></i><i class="path3"></i></i>
         Nouvelle demande
     </a>
-    @if($isAdmin)
     <a href="{{ route('community-requests.statistics') }}" class="btn btn-sm" style="background: var(--itcj-blue-light); color: var(--itcj-blue);">
         <i class="ki-duotone ki-chart-simple fs-4 me-1"><i class="path1"></i><i class="path2"></i><i class="path3"></i><i class="path4"></i></i>
         Statistiques
@@ -22,7 +21,6 @@
         <i class="ki-duotone ki-file-down fs-4 me-1"><i class="path1"></i><i class="path2"></i></i>
         Exporter CSV
     </a>
-    @endif
 </div>
 @endsection
 
@@ -126,10 +124,6 @@
     <div class="card-header border-0 pt-6">
         <div class="card-title">
             <form method="GET" class="d-flex align-items-center gap-3 flex-wrap">
-                <div class="position-relative">
-                    <i class="ki-duotone ki-magnifier fs-3 position-absolute" style="left: 12px; top: 50%; transform: translateY(-50%); color: var(--text-muted);"><i class="path1"></i><i class="path2"></i></i>
-                    <input type="text" name="search" class="form-control form-control-sm ps-10" placeholder="Rechercher description, email..." value="{{ request('search') }}" style="min-width: 200px;">
-                </div>
                 <select name="status" class="form-select form-select-sm w-150px" onchange="this.form.submit()">
                     <option value="">Tous les statuts</option>
                     @foreach($statuses as $key => $label)
@@ -141,15 +135,13 @@
                     <option value="reparation" {{ request('type') == 'reparation' ? 'selected' : '' }}>Reparation</option>
                     <option value="achat" {{ request('type') == 'achat' ? 'selected' : '' }}>Achat</option>
                 </select>
-                @if($isAdmin)
                 <select name="community_id" class="form-select form-select-sm w-150px" onchange="this.form.submit()">
                     <option value="">Toutes les communautes</option>
                     @foreach($communities as $community)
                         <option value="{{ $community->id }}" {{ request('community_id') == $community->id ? 'selected' : '' }}>{{ $community->name }}</option>
                     @endforeach
                 </select>
-                @endif
-                @if(request()->hasAny(['search', 'status', 'type', 'community_id']))
+                @if(request()->hasAny(['status', 'type', 'community_id']))
                     <a href="{{ route('community-requests.index') }}" class="btn btn-sm btn-light">
                         <i class="ki-duotone ki-cross fs-4"></i>
                         Effacer
@@ -173,15 +165,11 @@
                     <tr class="fw-bold text-muted">
                         <th class="min-w-50px">#</th>
                         <th class="min-w-100px">Date</th>
-                        @if($isAdmin)
                         <th class="min-w-150px">Email</th>
                         <th class="min-w-100px">Communaute</th>
-                        @endif
                         <th class="min-w-80px">Type</th>
                         <th class="min-w-80px">Statut</th>
-                        @if($isAdmin)
                         <th class="min-w-100px">Assigne a</th>
-                        @endif
                         <th class="min-w-80px text-end">Actions</th>
                     </tr>
                 </thead>
@@ -195,14 +183,12 @@
                             <span class="text-muted">{{ $request->created_at->format('d/m/Y') }}</span>
                             <span class="text-muted d-block fs-8">{{ $request->created_at->format('H:i') }}</span>
                         </td>
-                        @if($isAdmin)
                         <td>
                             <span class="text-dark">{{ $request->email }}</span>
                         </td>
                         <td>
                             <span class="badge badge-light-primary fs-7">{{ $request->community?->name ?? '-' }}</span>
                         </td>
-                        @endif
                         <td>
                             @if($request->isRepair())
                                 <span class="badge badge-light-warning fs-7">
@@ -229,7 +215,6 @@
                                 {{ $request->status_label }}
                             </span>
                         </td>
-                        @if($isAdmin)
                         <td>
                             @if($request->assignedUser)
                                 <span class="text-dark">{{ $request->assignedUser->name }}</span>
@@ -237,7 +222,6 @@
                                 <span class="text-muted">-</span>
                             @endif
                         </td>
-                        @endif
                         <td class="text-end">
                             <a href="{{ route('community-requests.show', $request) }}" class="btn btn-sm btn-light-primary">
                                 <i class="ki-duotone ki-eye fs-4"><i class="path1"></i><i class="path2"></i><i class="path3"></i></i>
@@ -247,7 +231,7 @@
                     </tr>
                     @empty
                     <tr>
-                        <td colspan="{{ $isAdmin ? 8 : 5 }}" class="text-center py-10">
+                        <td colspan="8" class="text-center py-10">
                             <div class="text-muted">
                                 <i class="ki-duotone ki-file-deleted fs-3x text-gray-400 mb-3"><i class="path1"></i><i class="path2"></i></i>
                                 <p class="mb-0">Aucune demande trouvee</p>
@@ -281,9 +265,7 @@
                         </span>
                     </div>
                     <div class="cr-mobile-body">
-                        @if($isAdmin)
                         <div class="cr-mobile-email">{{ $request->email }}</div>
-                        @endif
                         <div class="cr-mobile-badges">
                             @if($request->isRepair())
                                 <span class="badge badge-light-warning fs-8">
@@ -296,10 +278,10 @@
                                     Achat
                                 </span>
                             @endif
-                            @if($isAdmin && $request->community)
+                            @if($request->community)
                                 <span class="badge badge-light-primary fs-8">{{ $request->community->name }}</span>
                             @endif
-                            @if($isAdmin && $request->assignedUser)
+                            @if($request->assignedUser)
                                 <span class="badge bg-light text-muted fs-8">{{ $request->assignedUser->name }}</span>
                             @endif
                         </div>

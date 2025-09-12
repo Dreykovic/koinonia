@@ -2,25 +2,20 @@
 
 use App\Http\Controllers\AccountRequestController;
 use App\Http\Controllers\Admin\FailedEmailController;
-use App\Http\Controllers\Admin\VehicleSettingController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\BulletinController;
 use App\Http\Controllers\CommunityRequestController;
 use App\Http\Controllers\CommunityRequestFormController;
 use App\Http\Controllers\DashboardController;
-use App\Http\Controllers\GuideController;
 use App\Http\Controllers\MealController;
 use App\Http\Controllers\MealInscriptionController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\CommunityController;
 use App\Http\Controllers\RepairLocationController;
 use App\Http\Controllers\UserController;
-use App\Http\Controllers\UserProfileVehicleTypeController;
 use App\Http\Controllers\VehicleController;
-use App\Http\Controllers\WeekMenuController;
 use App\Http\Controllers\VehicleReservationController;
 use Illuminate\Support\Facades\Route;
-use App\Enums\PlatformRole;
 
 /*
 |--------------------------------------------------------------------------
@@ -54,9 +49,6 @@ Route::middleware('auth')->group(function () {
     // Dashboard
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
-    // Guide
-    Route::get('/guide', [GuideController::class, 'index'])->name('guide');
-
     // Vehicles Planning (accessible to all authenticated users)
     Route::get('vehicles/planning', [VehicleReservationController::class, 'planning'])->name('vehicles.planning');
 
@@ -74,7 +66,7 @@ Route::middleware('auth')->group(function () {
     });
 
     // Vehicles Management (admin only)
-    Route::middleware(roleMiddleware([PlatformRole::ADMIN]))->group(function () {
+    Route::middleware('role:admin')->group(function () {
         Route::resource('vehicles', VehicleController::class)->except(['show']);
         Route::get('vehicles/{vehicle}', [VehicleController::class, 'show'])->name('vehicles.show');
         Route::post('vehicles/{vehicle}/toggle-availability', [VehicleController::class, 'toggleAvailability'])->name('vehicles.toggle-availability');
@@ -91,7 +83,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/widget-data', [MealController::class, 'widgetData'])->name('widget-data');
 
         // Admin routes
-        Route::middleware(roleMiddleware([PlatformRole::ADMIN]))->group(function () {
+        Route::middleware('role:admin')->group(function () {
             Route::get('/admin', [MealController::class, 'adminIndex'])->name('admin.index');
             Route::get('/admin/create', [MealController::class, 'create'])->name('admin.create');
             Route::post('/admin', [MealController::class, 'store'])->name('admin.store');
@@ -109,7 +101,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/current', [BulletinController::class, 'current'])->name('current');
 
         // Admin only routes (defined BEFORE the show route to avoid conflict)
-        Route::middleware(roleMiddleware([PlatformRole::ADMIN,PlatformRole::COMMUNICATION]))->group(function () {
+        Route::middleware('role:admin')->group(function () {
             Route::get('/', [BulletinController::class, 'index'])->name('index');
             Route::get('/create', [BulletinController::class, 'create'])->name('create');
             Route::post('/', [BulletinController::class, 'store'])->name('store');
@@ -139,11 +131,10 @@ Route::middleware('auth')->group(function () {
     });
 
     // Users Management (admin only)
-    Route::middleware(roleMiddleware([PlatformRole::ADMIN]))->group(function () {
+    Route::middleware('role:admin')->group(function () {
         Route::resource('users', UserController::class);
         Route::post('users/{user}/toggle-active', [UserController::class, 'toggleActive'])->name('users.toggle-active');
     });
-
 
     // Profile
     Route::get('profile', [ProfileController::class, 'show'])->name('profile.show');
@@ -151,24 +142,18 @@ Route::middleware('auth')->group(function () {
     Route::put('profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::put('profile/password', [ProfileController::class, 'updatePassword'])->name('profile.password');
 
-    // Community Requests (Reparations et Achats)
+    // Community Requests (Reparations et Achats) - Administration
     Route::prefix('demandes')->name('community-requests.')->group(function () {
-        // Accessible to all authenticated users (controller filters by ownership)
         Route::get('/', [CommunityRequestController::class, 'index'])->name('index');
-
-        // Admin-only routes (defined BEFORE wildcard to avoid conflict)
-        Route::middleware(roleMiddleware([PlatformRole::ADMIN]))->group(function () {
-            Route::get('/statistics', [CommunityRequestController::class, 'statistics'])->name('statistics');
-            Route::get('/export', [CommunityRequestController::class, 'export'])->name('export');
-            Route::put('/{communityRequest}', [CommunityRequestController::class, 'update'])->name('update');
-            Route::delete('/{communityRequest}', [CommunityRequestController::class, 'destroy'])->name('destroy');
-        });
-
+        Route::get('/statistics', [CommunityRequestController::class, 'statistics'])->name('statistics');
+        Route::get('/export', [CommunityRequestController::class, 'export'])->name('export');
         Route::get('/{communityRequest}', [CommunityRequestController::class, 'show'])->name('show');
+        Route::put('/{communityRequest}', [CommunityRequestController::class, 'update'])->name('update');
+        Route::delete('/{communityRequest}', [CommunityRequestController::class, 'destroy'])->name('destroy');
     });
 
     // Repair Locations & Communities Management (admin only)
-    Route::middleware(roleMiddleware([PlatformRole::ADMIN]))->group(function () {
+    Route::middleware('role:admin')->group(function () {
         Route::resource('repair-locations', RepairLocationController::class)->except(['create', 'show', 'edit']);
         Route::resource('communities', CommunityController::class)->except(['create', 'show', 'edit']);
 
@@ -186,12 +171,6 @@ Route::middleware('auth')->group(function () {
             Route::post('/{failedEmail}/resolve', [FailedEmailController::class, 'resolve'])->name('resolve');
             Route::delete('/{failedEmail}', [FailedEmailController::class, 'destroy'])->name('destroy');
         });
-
-        // Vehicle Settings Management
-        Route::prefix('admin/vehicle-settings')->name('admin.vehicle-settings.')->group(function () {
-            Route::get('/', [VehicleSettingController::class, 'edit'])->name('edit');
-            Route::put('/', [VehicleSettingController::class, 'update'])->name('update');
-        });
     });
 
     // Community Requests Form (authenticated users)
@@ -203,42 +182,5 @@ Route::middleware('auth')->group(function () {
         Route::get('/achat', [CommunityRequestFormController::class, 'step2Purchase'])->name('step2.purchase');
         Route::post('/achat', [CommunityRequestFormController::class, 'postStep2Purchase'])->name('step2.purchase.post');
         Route::get('/confirmation', [CommunityRequestFormController::class, 'success'])->name('success');
-        Route::get('/qr-download', [CommunityRequestFormController::class, 'downloadQR'])->name('qr-download');
-    });
-
-
-
-    // Week menu - Member routes
-    Route::prefix('week-menu')->name('week-menus.')->group(function () {
-        Route::get('/', [WeekMenuController::class, 'index'])->name('index');
-
-        // Admin routes
-        Route::middleware(roleMiddleware([PlatformRole::ADMIN]))->group(function () {
-            Route::get('/admin/edit', [WeekMenuController::class, 'edit'])
-                ->name('admin.edit');
-
-            Route::put('/admin/{weekMenu}/update', [WeekMenuController::class, 'update'])
-                ->name('admin.update');
-
-            Route::patch('/admin/{weekMenu}/toggle', [WeekMenuController::class, 'toggle'])
-                ->name('admin.toggle');
-        });
-    });
-
-
-    // uSER pROFILE & vehicle type
-    Route::middleware([roleMiddleware([PlatformRole::ADMIN])])->group(function () {
-        Route::prefix('user-profile-vehicle-types')->name('user-profile-vehicle-types.')->group(function () {
-        Route::get('/', [UserProfileVehicleTypeController::class, 'index'])
-            ->name('index');
-        Route::post('/', [UserProfileVehicleTypeController::class, 'store'])
-            ->name('store');
-        Route::put('/{userProfile}/{vehicleType}', [UserProfileVehicleTypeController::class, 'update'])
-            ->name('update');
-        Route::delete('/{userProfile}/{vehicleType}', [UserProfileVehicleTypeController::class, 'destroy'])
-            ->name('destroy');
-        });
-
-
     });
 });

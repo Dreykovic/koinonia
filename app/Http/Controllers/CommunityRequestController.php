@@ -8,7 +8,6 @@ use App\Models\CommunityRequest;
 use App\Models\RepairLocation;
 use App\Models\User;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
 use App\Traits\SafeMailSender;
 
@@ -20,25 +19,7 @@ class CommunityRequestController extends Controller
      */
     public function index(Request $request)
     {
-        $user = auth()->user();
         $query = CommunityRequest::with(['community', 'repairLocation', 'assignedUser']);
-
-        // Les membres ne voient que leurs propres demandes
-        if (!$user->isAdmin()) {
-            $query->where('email', $user->email);
-        }
-
-        // Recherche
-        if ($request->filled('search')) {
-            $search = $request->search;
-            $query->where(function ($q) use ($search) {
-                $q->where('email', 'like', "%{$search}%")
-                  ->orWhere('problem_description', 'like', "%{$search}%")
-                  ->orWhere('purchase_description', 'like', "%{$search}%")
-                  ->orWhere('repair_location_text', 'like', "%{$search}%")
-                  ->orWhere('room_number', 'like', "%{$search}%");
-            });
-        }
 
         // Filtres
         if ($request->filled('status')) {
@@ -47,16 +28,15 @@ class CommunityRequestController extends Controller
         if ($request->filled('type')) {
             $query->type($request->type);
         }
-        if ($request->filled('community_id') && $user->isAdmin()) {
+        if ($request->filled('community_id')) {
             $query->byCommunity($request->community_id);
         }
 
-        $requests = $query->latest()->paginate(20)->withQueryString();
-        $communities = $user->isAdmin() ? Community::active()->ordered()->get() : collect();
+        $requests = $query->latest()->paginate(20);
+        $communities = Community::active()->ordered()->get();
         $statuses = CommunityRequest::STATUSES;
-        $isAdmin = $user->isAdmin();
 
-        return view('community-requests.index', compact('requests', 'communities', 'statuses', 'isAdmin'));
+        return view('community-requests.index', compact('requests', 'communities', 'statuses'));
     }
 
     /**
@@ -64,30 +44,18 @@ class CommunityRequestController extends Controller
      */
     public function show(CommunityRequest $communityRequest)
     {
-        $user = auth()->user();
-
-        // Les membres ne peuvent voir que leurs propres demandes
-        if (!$user->isAdmin() && $communityRequest->email !== $user->email) {
-            abort(403, 'Vous n\'avez pas acces a cette demande.');
-        }
-
         $communityRequest->load(['community', 'repairLocation', 'assignedUser']);
-        $users = $user->isAdmin() ? User::orderBy('name')->get() : collect();
+        $users = User::orderBy('name')->get();
         $statuses = CommunityRequest::STATUSES;
-        $isAdmin = $user->isAdmin();
 
-        return view('community-requests.show', compact('communityRequest', 'users', 'statuses', 'isAdmin'));
+        return view('community-requests.show', compact('communityRequest', 'users', 'statuses'));
     }
 
     /**
-     * Update the specified request (admin only).
+     * Update the specified request.
      */
     public function update(Request $request, CommunityRequest $communityRequest)
     {
-        if (!auth()->user()->isAdmin()) {
-            abort(403, 'Action reservee aux administrateurs.');
-        }
-
         $validated = $request->validate([
             'status' => ['required', 'in:pending,in_progress,completed,rejected'],
             'admin_notes' => ['nullable', 'string', 'max:2000'],
@@ -96,16 +64,12 @@ class CommunityRequestController extends Controller
 
         $oldStatus = $communityRequest->status;
 
-        // Explicit assignment for admin-only fields
-        $communityRequest->status = $validated['status'];
-        $communityRequest->admin_notes = $validated['admin_notes'] ?? $communityRequest->admin_notes;
-        $communityRequest->assigned_to = $validated['assigned_to'] ?? $communityRequest->assigned_to;
-
-        if ($validated['status'] === 'completed' && $oldStatus !== 'completed') {
-            $communityRequest->completed_at = now();
+        // Marquer comme complete si le statut change vers completed
+        if ($validated['status'] === 'completed' && $communityRequest->status !== 'completed') {
+            $validated['completed_at'] = now();
         }
 
-        $communityRequest->save();
+        $communityRequest->update($validated);
 
         // Notifier le demandeur si le statut a change (non-bloquant)
         if ($oldStatus !== $validated['status']) {
@@ -120,14 +84,10 @@ class CommunityRequestController extends Controller
     }
 
     /**
-     * Remove the specified request (admin only).
+     * Remove the specified request.
      */
     public function destroy(CommunityRequest $communityRequest)
     {
-        if (!auth()->user()->isAdmin()) {
-            abort(403, 'Action reservee aux administrateurs.');
-        }
-
         $communityRequest->delete();
 
         return redirect()->route('community-requests.index')
@@ -135,14 +95,10 @@ class CommunityRequestController extends Controller
     }
 
     /**
-     * Display statistics (admin only).
+     * Display statistics.
      */
     public function statistics()
     {
-        if (!auth()->user()->isAdmin()) {
-            abort(403, 'Action reservee aux administrateurs.');
-        }
-
         $stats = [
             'total' => CommunityRequest::count(),
             'pending' => CommunityRequest::pending()->count(),
@@ -158,42 +114,21 @@ class CommunityRequestController extends Controller
                 ->mapWithKeys(function ($item) {
                     return [$item->community?->name ?? 'Non defini' => $item->count];
                 }),
-            'by_month' => $this->getRequestsByMonth(),
+            'by_month' => CommunityRequest::selectRaw("strftime('%Y-%m', created_at) as month, count(*) as count")
+                ->groupBy('month')
+                ->orderByDesc('month')
+                ->limit(12)
+                ->pluck('count', 'month'),
         ];
 
         return view('community-requests.statistics', compact('stats'));
     }
 
     /**
-     * Get requests grouped by month (database-agnostic).
-     */
-    private function getRequestsByMonth()
-    {
-        $driver = DB::connection()->getDriverName();
-
-        $dateFormat = match ($driver) {
-            'mysql' => "DATE_FORMAT(created_at, '%Y-%m')",
-            'pgsql' => "TO_CHAR(created_at, 'YYYY-MM')",
-            'sqlite' => "strftime('%Y-%m', created_at)",
-            default => "DATE_FORMAT(created_at, '%Y-%m')",
-        };
-
-        return CommunityRequest::selectRaw("{$dateFormat} as month, count(*) as count")
-            ->groupBy('month')
-            ->orderByDesc('month')
-            ->limit(12)
-            ->pluck('count', 'month');
-    }
-
-    /**
-     * Export requests to CSV (admin only).
+     * Export requests to CSV.
      */
     public function export(Request $request)
     {
-        if (!auth()->user()->isAdmin()) {
-            abort(403, 'Action reservee aux administrateurs.');
-        }
-
         $query = CommunityRequest::with(['community', 'repairLocation', 'assignedUser']);
 
         if ($request->filled('status')) {

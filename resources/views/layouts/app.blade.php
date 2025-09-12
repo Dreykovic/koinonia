@@ -16,9 +16,6 @@
     <link href="{{ asset('assets/plugins/global/plugins.bundle.css') }}" rel="stylesheet" type="text/css">
     <link href="{{ asset('assets/css/style.bundle.css') }}" rel="stylesheet" type="text/css">
 
-    <!-- Vite for Echo/Broadcasting -->
-    @vite(['resources/js/app.js'])
-
     <style>
         /* ==================== ITCJ NEUMORPHISM DESIGN SYSTEM ==================== */
         /* Palette: Tons chauds - Bordeaux, Or, Crème */
@@ -839,7 +836,7 @@
             border-radius: 20px;
             padding: 6px 14px;
             font-weight: 600;
-            /* box-shadow: var(--neu-shadow-sm); */
+            box-shadow: var(--neu-shadow-sm);
         }
 
         .badge-itcj-gold, .badge-accent {
@@ -1158,10 +1155,8 @@
             }
 
             .btn-icon.btn-sm {
-                width: 44px;
-                height: 44px;
-                min-width: 44px;
-                min-height: 44px;
+                width: 36px;
+                height: 36px;
             }
 
             /* Full width buttons on mobile */
@@ -1181,39 +1176,6 @@
 
             .card-footer .gap-3 {
                 gap: 8px !important;
-            }
-        }
-
-        /* Mobile back button sticky */
-        @media (max-width: 768px) {
-            .mobile-back-btn {
-                position: fixed;
-                bottom: 20px;
-                left: 20px;
-                width: 44px;
-                height: 44px;
-                border-radius: 50%;
-                background: var(--bg-card);
-                box-shadow: 0 2px 10px rgba(0,0,0,0.15);
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                z-index: 100;
-                color: var(--text-primary);
-                text-decoration: none;
-                border: 1px solid rgba(0,0,0,0.08);
-                transition: all 0.2s ease;
-            }
-
-            .mobile-back-btn:hover,
-            .mobile-back-btn:active {
-                background: var(--primary);
-                color: #fff;
-                transform: scale(1.05);
-            }
-
-            .mobile-back-btn i {
-                font-size: 18px;
             }
         }
 

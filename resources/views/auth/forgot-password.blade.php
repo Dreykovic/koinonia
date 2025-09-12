@@ -43,12 +43,8 @@
                     </div>
 
                     <div class="text-center">
-                        <button type="submit" id="btn-submit" class="btn btn-lg btn-primary w-100 mb-5">
-                            <span class="indicator-label">Envoyer le lien</span>
-                            <span class="indicator-progress" style="display: none;">
-                                Envoi...
-                                <span class="spinner-border spinner-border-sm ms-2"></span>
-                            </span>
+                        <button type="submit" class="btn btn-lg btn-primary w-100 mb-5">
+                            Envoyer le lien
                         </button>
 
                         <a href="{{ route('login') }}" class="btn btn-lg btn-light-primary w-100">
@@ -60,13 +56,4 @@
         </div>
     </div>
 </div>
-
-<script>
-document.querySelector('form').addEventListener('submit', function() {
-    var btn = document.getElementById('btn-submit');
-    btn.disabled = true;
-    btn.querySelector('.indicator-label').style.display = 'none';
-    btn.querySelector('.indicator-progress').style.display = 'inline-block';
-});
-</script>
 @endsection

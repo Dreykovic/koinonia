@@ -166,7 +166,7 @@
                                 {{ $user->role_label }}
                             </span>
                         </td>
-                        <td class="text-muted">{{ $user->community ?? '-' }}</td>
+                        <td class="text-muted">{{ $user->community_label }}</td>
                         <td>
                             @if($user->is_active)
                                 <span class="badge fs-8" style="background: #e8f5e9; color: #2e7d32;">Actif</span>
@@ -240,7 +240,7 @@
                             {{ $user->role_label }}
                         </span>
                         @if($user->community)
-                            <span class="badge badge-light-primary fs-8">{{ $user->community }}</span>
+                            <span class="badge badge-light-primary fs-8">{{ $user->community->name }}</span>
                         @endif
                     </div>
                     <div class="member-mobile-actions">

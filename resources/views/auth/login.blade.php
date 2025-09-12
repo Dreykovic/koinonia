@@ -295,15 +295,19 @@
                     </div>
 
                     <div class="mb-5">
-                        <label class="d-flex align-items-center cursor-pointer py-2">
+                        <label class="d-flex align-items-center cursor-pointer" style="min-height: 44px; padding: 8px 0;">
                             <input type="checkbox" name="remember" class="form-check-input me-3"
-                                {{ old('remember') ? 'checked' : '' }} style="border-color: #ccc; cursor: pointer;">
+                                {{ old('remember') ? 'checked' : '' }} style="width: 24px; height: 24px; border-color: #ccc; cursor: pointer;">
                             <span class="text-muted fs-7">Se souvenir de moi</span>
                         </label>
                     </div>
 
-                    <button type="submit" class="btn btn-itcj-login w-100 mb-4">
-                        Se connecter
+                    <button type="submit" id="btn-submit" class="btn btn-itcj-login w-100 mb-4">
+                        <span class="indicator-label">Se connecter</span>
+                        <span class="indicator-progress" style="display: none;">
+                            Connexion...
+                            <span class="spinner-border spinner-border-sm ms-2"></span>
+                        </span>
                     </button>
 
                     <div class="text-center">
@@ -319,4 +323,13 @@
         </div>
     </div>
 </div>
+
+<script>
+document.querySelector('form').addEventListener('submit', function() {
+    var btn = document.getElementById('btn-submit');
+    btn.disabled = true;
+    btn.querySelector('.indicator-label').style.display = 'none';
+    btn.querySelector('.indicator-progress').style.display = 'inline-block';
+});
+</script>
 @endsection

@@ -38,7 +38,7 @@
         <div class="card mb-5">
             <div class="card-header py-4">
                 <h3 class="card-title fw-bold mb-0">
-                    <i class="ki-duotone ki-gift text-itcj-blue me-2"><i class="path1"></i><i class="path2"></i></i>
+                    <i class="ki-duotone ki-dish text-itcj-blue me-2"><i class="path1"></i><i class="path2"></i></i>
                     Informations
                 </h3>
             </div>
@@ -133,7 +133,7 @@
                                             <div class="d-flex align-items-center">
                                                 <div class="symbol symbol-40px me-3">
                                                     <span class="symbol-label bg-itcj-blue-light text-itcj-blue fw-bold">
-                                                        {{ strtoupper(substr($inscription->user->name, 0, 2)) }}
+                                                        {{ strtoupper(substr($inscription->user->name, 0, 1)) }}
                                                     </span>
                                                 </div>
                                                 <div>
@@ -187,7 +187,7 @@
                                             <div class="d-flex align-items-center">
                                                 <div class="symbol symbol-40px me-3">
                                                     <span class="symbol-label bg-light text-muted fw-bold">
-                                                        {{ strtoupper(substr($inscription->user->name, 0, 2)) }}
+                                                        {{ strtoupper(substr($inscription->user->name, 0, 1)) }}
                                                     </span>
                                                 </div>
                                                 <span class="text-muted">{{ $inscription->user->name }}</span>

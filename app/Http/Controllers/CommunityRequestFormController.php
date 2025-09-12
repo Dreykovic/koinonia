@@ -7,15 +7,13 @@ use App\Models\Community;
 use App\Models\CommunityRequest;
 use App\Models\RepairLocation;
 use App\Models\User;
-use App\Services\QRCodeService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Mail;
 use App\Traits\SafeMailSender;
-use App\Enums\PlatformRole;
 
 class CommunityRequestFormController extends Controller
 {
     use SafeMailSender;
-
     /**
      * Etape 1: Informations de base.
      */
@@ -54,8 +52,7 @@ class CommunityRequestFormController extends Controller
     public function step2Repair()
     {
         if (!session('community_request_form')) {
-            return redirect()->route('community-requests.form.step1')
-                ->with('error', 'Votre session a expire. Veuillez recommencer.');
+            return redirect()->route('community-requests.form.step1');
         }
 
         $locations = RepairLocation::active()->orderBy('name')->get();
@@ -68,8 +65,7 @@ class CommunityRequestFormController extends Controller
     public function postStep2Repair(Request $request)
     {
         if (!session('community_request_form')) {
-            return redirect()->route('community-requests.form.step1')
-                ->with('error', 'Votre session a expire. Veuillez recommencer.');
+            return redirect()->route('community-requests.form.step1');
         }
 
         $validated = $request->validate([
@@ -88,10 +84,13 @@ class CommunityRequestFormController extends Controller
 
         $communityRequest = CommunityRequest::create($formData);
 
-        $this->notifyAdmins($communityRequest);
+        // Notifier les admins (non-bloquant)
+        $admins = User::where('role', 'admin')->where('is_active', true)->get();
+        foreach ($admins as $admin) {
+            $this->sendMailSafely($admin, new NewCommunityRequestMail($communityRequest), $communityRequest);
+        }
 
         session()->forget('community_request_form');
-        session()->flash('request_id', $communityRequest->id);
 
         return redirect()->route('community-requests.form.success');
     }
@@ -102,8 +101,7 @@ class CommunityRequestFormController extends Controller
     public function step2Purchase()
     {
         if (!session('community_request_form')) {
-            return redirect()->route('community-requests.form.step1')
-                ->with('error', 'Votre session a expire. Veuillez recommencer.');
+            return redirect()->route('community-requests.form.step1');
         }
 
         return view('community-requests.form.step2-purchase');
@@ -115,8 +113,7 @@ class CommunityRequestFormController extends Controller
     public function postStep2Purchase(Request $request)
     {
         if (!session('community_request_form')) {
-            return redirect()->route('community-requests.form.step1')
-                ->with('error', 'Votre session a expire. Veuillez recommencer.');
+            return redirect()->route('community-requests.form.step1');
         }
 
         $validated = $request->validate([
@@ -127,10 +124,13 @@ class CommunityRequestFormController extends Controller
 
         $communityRequest = CommunityRequest::create($formData);
 
-        $this->notifyAdmins($communityRequest);
+        // Notifier les admins (non-bloquant)
+        $admins = User::where('role', 'admin')->where('is_active', true)->get();
+        foreach ($admins as $admin) {
+            $this->sendMailSafely($admin, new NewCommunityRequestMail($communityRequest), $communityRequest);
+        }
 
         session()->forget('community_request_form');
-        session()->flash('request_id', $communityRequest->id);
 
         return redirect()->route('community-requests.form.success');
     }
@@ -141,27 +141,5 @@ class CommunityRequestFormController extends Controller
     public function success()
     {
         return view('community-requests.form.success');
-    }
-
-    /**
-     * Download QR code as PNG for the form URL.
-     */
-    public function downloadQR(QRCodeService $qrCodeService)
-    {
-        $url = route('community-requests.form.step1');
-
-        return $qrCodeService->downloadPng($url);
-    }
-
-    /**
-     * Notify all admins about a new community request.
-     */
-    private function notifyAdmins(CommunityRequest $communityRequest): void
-    {
-        $admins = User::active()->byRole(PlatformRole::ADMIN)->get();
-
-        foreach ($admins as $admin) {
-            $this->sendMailSafely($admin, new NewCommunityRequestMail($communityRequest), $communityRequest);
-        }
     }
 }

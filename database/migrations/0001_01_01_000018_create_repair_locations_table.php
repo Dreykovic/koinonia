@@ -17,22 +17,6 @@ return new class extends Migration
             $table->boolean('is_active')->default(true);
             $table->timestamps();
         });
-
-
-        $locations = [
-            'Chambre',
-            'Cuisine/refectoire',
-            'Salle Tele',
-            'Toilettes',
-            'Chapelle',
-            'Salle informatique',
-            'Parloir',
-            'autre'
-        ];
-
-        foreach ($locations as $name) {
-              DB::table('repair_locations')->insert(['name' => $name]);
-        }
     }
 
     /**

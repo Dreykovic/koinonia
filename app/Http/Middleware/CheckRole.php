@@ -20,7 +20,7 @@ class CheckRole
             return redirect()->route('login');
         }
 
-        if (!$request->user()->hasAnyRole($roles)) {
+        if (!in_array($request->user()->role, $roles)) {
             abort(403, 'Vous n\'avez pas les permissions necessaires pour acceder a cette page.');
         }
 

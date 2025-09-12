@@ -4,8 +4,7 @@
         <!-- Mobile toggle -->
         <div class="d-flex align-items-center d-lg-none ms-n2 me-2">
             <button type="button"
-                    class="btn btn-icon btn-active-color-primary"
-                    style="width: 44px; height: 44px; min-width: 44px; min-height: 44px;"
+                    class="btn btn-icon btn-active-color-primary w-35px h-35px"
                     id="kt_app_sidebar_mobile_toggle"
                     aria-label="Ouvrir le menu de navigation"
                     aria-expanded="false"
@@ -85,7 +84,7 @@
                                  aria-label="Voir les détails du repas du {{ $meal->formatted_date }}">
                                 <div class="meal-icon-wrapper d-flex align-items-center justify-content-center rounded-circle"
                                      style="width: 38px; height: 38px; background: rgba(212, 168, 75, 0.15);">
-                                    <i class="ki-duotone ki-gift fs-3" style="color: var(--accent);" aria-hidden="true">
+                                    <i class="ki-duotone ki-dish fs-3" style="color: var(--accent);" aria-hidden="true">
                                         <i class="path1"></i><i class="path2"></i>
                                     </i>
                                 </div>
@@ -147,7 +146,7 @@
                                     <div class="d-flex align-items-center">
                                         <div class="symbol symbol-35px me-2">
                                             <span class="symbol-label" style="background: linear-gradient(135deg, var(--accent-light), var(--accent));">
-                                                <i class="ki-duotone ki-gift fs-5 text-white" aria-hidden="true"><i class="path1"></i><i class="path2"></i></i>
+                                                <i class="ki-duotone ki-dish fs-5 text-white" aria-hidden="true"><i class="path1"></i><i class="path2"></i></i>
                                             </span>
                                         </div>
                                         <div>
@@ -242,7 +241,7 @@
                             aria-label="Menu utilisateur - {{ auth()->user()->name }}">
                         <div class="symbol symbol-35px">
                             <span class="symbol-label bg-itcj-blue text-white fw-bold fs-6" aria-hidden="true">
-                                {{ strtoupper(substr(auth()->user()->name, 0, 2)) }}
+                                {{ strtoupper(substr(auth()->user()->name, 0, 1)) }}
                             </span>
                         </div>
                         <div class="d-none d-md-flex flex-column ms-3 me-2">
@@ -262,7 +261,7 @@
                             <div class="menu-content d-flex align-items-center px-3">
                                 <div class="symbol symbol-50px me-4" aria-hidden="true">
                                     <span class="symbol-label bg-itcj-blue text-white fw-bold fs-3">
-                                        {{ strtoupper(substr(auth()->user()->name, 0, 2)) }}
+                                        {{ strtoupper(substr(auth()->user()->name, 0, 1)) }}
                                     </span>
                                 </div>
                                 <div>
@@ -290,7 +289,7 @@
 
                         <div class="menu-item px-5" role="none">
                             <a href="{{ route('meals.index') }}" class="menu-link px-5" role="menuitem">
-                                <i class="ki-duotone ki-gift fs-5 me-2" aria-hidden="true"><i class="path1"></i><i class="path2"></i></i>
+                                <i class="ki-duotone ki-dish fs-5 me-2" aria-hidden="true"><i class="path1"></i><i class="path2"></i></i>
                                 Repas Dimanche
                             </a>
                         </div>

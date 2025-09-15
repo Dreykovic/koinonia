@@ -1447,12 +1447,23 @@
             pollingInterval: null,
             searchFilter: '',
             statusFilter: 'all',
+            // Vehicle settings
+            settings: {
+                openingHour: {{ $settings->opening_hour_int }},
+                closingHour: {{ $settings->closing_hour_int }},
+                openingHourFormatted: '{{ $settings->opening_hour_formatted }}',
+                closingHourFormatted: '{{ $settings->closing_hour_formatted }}',
+                maxFutureDays: {{ $settings->max_future_days }},
+                maxReservationDate: '{{ $settings->max_reservation_date }}',
+            },
 
             init() {
                 this.bindEvents();
                 this.loadData();
                 this.startPolling();
                 this.setDefaultTimes();
+                // Set max date on date picker
+                $('#planning-date').attr('max', this.settings.maxReservationDate);
             },
 
             bindEvents() {
@@ -1536,8 +1547,19 @@
 
                 // Body with accessible cells
                 let bodyHtml = '';
-                for (let hour = 0; hour < 24; hour++) {
+                const today = new Date().toISOString().split('T')[0];
+                const currentHour = new Date().getHours();
+                const isToday = this.selectedDate === today;
+                const isPastDate = this.selectedDate < today;
+                const isFutureDate = this.selectedDate > this.settings.maxReservationDate;
+
+                // Use settings for hour range
+                const startHour = this.settings.openingHour;
+                const endHour = this.settings.closingHour;
+
+                for (let hour = startHour; hour <= endHour; hour++) {
                     const timeStr = String(hour).padStart(2, '0') + ':00';
+                    const isPastHour = isPastDate || isFutureDate || (isToday && hour <= currentHour);
                     bodyHtml += '<tr role="row">';
                     bodyHtml += `<th scope="row">${timeStr}</th>`;
 
@@ -1567,6 +1589,9 @@
                                 onkeydown="Planning.handleCellKeydown(event, this)">
                                 <div class="cell-content">${content}</div>
                             </td>`;
+                        } else if (isPastHour) {
+                            // Créneau passé - désactivé
+                            bodyHtml += `<td class="cell-disabled" role="gridcell" aria-label="${v.name} à ${timeStr} - Créneau passé"></td>`;
                         } else {
                             const ariaLabel = `${v.name} à ${timeStr} - Disponible. Appuyez sur Entrée ou Espace pour réserver.`;
                             bodyHtml += `<td class="cell-disponible"
@@ -1780,12 +1805,23 @@
             selectedDate: '{{ now()->toDateString() }}',
             currentVehicleId: null,
             pollingInterval: null,
+            // Vehicle settings
+            settings: {
+                openingHour: {{ $settings->opening_hour_int }},
+                closingHour: {{ $settings->closing_hour_int }},
+                openingHourFormatted: '{{ $settings->opening_hour_formatted }}',
+                closingHourFormatted: '{{ $settings->closing_hour_formatted }}',
+                maxFutureDays: {{ $settings->max_future_days }},
+                maxReservationDate: '{{ $settings->max_reservation_date }}',
+            },
 
             init() {
                 this.bindEvents();
                 this.loadData();
                 this.updateDateDisplay();
                 this.startPolling();
+                // Set max date on date picker
+                $('#mobile-date-input').attr('max', this.settings.maxReservationDate);
             },
 
             bindEvents() {
@@ -1932,10 +1968,20 @@
 
             renderTimeSlots(vehicleId) {
                 let html = '';
+                const today = new Date().toISOString().split('T')[0];
+                const currentHour = new Date().getHours();
+                const isToday = this.selectedDate === today;
+                const isPastDate = this.selectedDate < today;
+                const isFutureDate = this.selectedDate > this.settings.maxReservationDate;
 
-                for (let hour = 0; hour < 24; hour++) {
+                // Use settings for hour range
+                const startHour = this.settings.openingHour;
+                const endHour = this.settings.closingHour;
+
+                for (let hour = startHour; hour <= endHour; hour++) {
                     const timeStr = String(hour).padStart(2, '0') + ':00';
                     const hourStr = String(hour).padStart(2, '0') + ':00:00';
+                    const isPastHour = isPastDate || isFutureDate || (isToday && hour <= currentHour);
                     const reservation = this.reservations.find(
                         r => r.vehicle_id === vehicleId && r.start_time <= hourStr && r.end_time > hourStr
                     );
@@ -1955,11 +2001,26 @@
                                 </div>
                                 ${isMine && reservation.can_edit ? `
                                     <div class="time-slot-mobile-actions">
-                                        <button class="btn btn-sm btn-light" onclick="event.stopPropagation(); MobilePlanning.editReservation(${reservation.id})">
+                                        <button class="btn btn-sm btn-light" onclick="event.stopPropagation(); MobilePlanning.editReservation(${reservation.id})" title="Modifier">
                                             <i class="ki-duotone ki-pencil"><i class="path1"></i><i class="path2"></i></i>
                                         </button>
+                                        ${reservation.can_cancel ? `
+                                            <button class="btn btn-sm btn-danger" onclick="event.stopPropagation(); MobilePlanning.cancelReservation(${reservation.id})" title="Annuler">
+                                                <i class="ki-duotone ki-cross"><i class="path1"></i><i class="path2"></i></i>
+                                            </button>
+                                        ` : ''}
                                     </div>
                                 ` : ''}
+                            </div>
+                        `;
+                    } else if (isPastHour) {
+                        // Créneau passé - désactivé
+                        html += `
+                            <div class="time-slot-mobile" style="opacity: 0.5; cursor: not-allowed; border-left: 4px solid #ccc;">
+                                <div class="time-slot-mobile-time">${timeStr}</div>
+                                <div class="time-slot-mobile-info">
+                                    <div class="time-slot-mobile-status" style="color: #999;">Passé</div>
+                                </div>
                             </div>
                         `;
                     } else {
@@ -2048,6 +2109,27 @@
                 $('#reservation-notes').val(r.notes || '');
                 r.can_cancel ? $('#btn-cancel-reservation').removeClass('d-none') : $('#btn-cancel-reservation').addClass('d-none');
                 $('#reservationModal').modal('show');
+            },
+
+            cancelReservation(reservationId) {
+                Swal.fire({
+                    title: 'Confirmer l\'annulation ?',
+                    text: 'Voulez-vous vraiment annuler cette réservation ?',
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#e74c3c',
+                    confirmButtonText: 'Oui, annuler',
+                    cancelButtonText: 'Non'
+                }).then(result => {
+                    if (result.isConfirmed) {
+                        $.ajax({ url: `/api/v1/reservations/${reservationId}`, method: 'DELETE' })
+                            .done(() => {
+                                Swal.fire({ icon: 'success', title: 'Réservation annulée', timer: 1500, showConfirmButton: false });
+                                this.loadData();
+                            })
+                            .fail(xhr => Swal.fire('Erreur', xhr.responseJSON?.message || 'Erreur lors de l\'annulation', 'error'));
+                    }
+                });
             },
 
             startPolling() {

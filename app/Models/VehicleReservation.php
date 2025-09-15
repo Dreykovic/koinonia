@@ -65,7 +65,7 @@ class VehicleReservation extends Model
     }
 
     /**
-     * Check if the reservation can be cancelled (at least 2h before).
+     * Check if the reservation can be cancelled.
      */
     public function canBeCancelled(): bool
     {
@@ -73,10 +73,11 @@ class VehicleReservation extends Model
             return false;
         }
 
-        $reservationDateTime = $this->reservation_date->format('Y-m-d') . ' ' . $this->start_time;
-        $reservationTime = \Carbon\Carbon::parse($reservationDateTime);
+        // Peut annuler tant que la réservation n'est pas terminée
+        $reservationEndDateTime = $this->reservation_date->format('Y-m-d') . ' ' . $this->end_time;
+        $reservationEndTime = \Carbon\Carbon::parse($reservationEndDateTime);
 
-        return now()->addHours(2)->lessThan($reservationTime);
+        return now()->lessThan($reservationEndTime);
     }
 
     /**

@@ -16,7 +16,7 @@
         <div class="card">
             <div class="card-header py-4 d-flex justify-content-between align-items-center">
                 <h3 class="card-title fw-bold mb-0">
-                    <i class="ki-duotone ki-dish text-itcj-blue me-2"><i class="path1"></i><i class="path2"></i></i>
+                    <i class="ki-duotone ki-gift text-itcj-blue me-2"><i class="path1"></i><i class="path2"></i></i>
                     Modifier le Repas
                 </h3>
                 <div>
@@ -44,7 +44,7 @@
                     <div class="col-md-4">
                         <div class="p-4 rounded" style="background: var(--itcj-gold-light);">
                             <div class="d-flex align-items-center">
-                                <i class="ki-duotone ki-dish fs-2x me-3" style="color: #9a7a30;"><i class="path1"></i><i class="path2"></i></i>
+                                <i class="ki-duotone ki-gift fs-2x me-3" style="color: #9a7a30;"><i class="path1"></i><i class="path2"></i></i>
                                 <div>
                                     <div class="fs-4 fw-bold" style="color: #9a7a30;">{{ $meal->remaining_places }}</div>
                                     <div class="text-muted fs-7">Places restantes</div>

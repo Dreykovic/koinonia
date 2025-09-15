@@ -125,6 +125,19 @@
                             <span class="menu-title">Réparations & Achats</span>
                         </a>
                     </li>
+
+                    <li class="menu-item mb-1" role="none">
+                        <a class="menu-link py-3 {{ request()->routeIs('community-requests.index', 'community-requests.show') && !auth()->user()->isAdmin() ? 'active' : '' }}"
+                           href="{{ route('community-requests.index') }}"
+                           role="menuitem"
+                           aria-current="{{ request()->routeIs('community-requests.index', 'community-requests.show') ? 'page' : 'false' }}"
+                           data-tooltip="Voir mes demandes de réparation et achat">
+                            <span class="menu-icon" aria-hidden="true">
+                                <i class="ki-duotone ki-clipboard fs-2"><i class="path1"></i><i class="path2"></i><i class="path3"></i></i>
+                            </span>
+                            <span class="menu-title">Mes Demandes</span>
+                        </a>
+                    </li>
                 </ul>
 
                 @if(auth()->user()->isAdmin())
@@ -255,6 +268,19 @@
                                 <i class="ki-duotone ki-geolocation fs-2"><i class="path1"></i><i class="path2"></i></i>
                             </span>
                             <span class="menu-title">Lieux Réparation</span>
+                        </a>
+                    </li>
+
+                    <li class="menu-item mb-1" role="none">
+                        <a class="menu-link py-3 {{ request()->routeIs('admin.vehicle-settings.*') ? 'active' : '' }}"
+                           href="{{ route('admin.vehicle-settings.edit') }}"
+                           role="menuitem"
+                           aria-current="{{ request()->routeIs('admin.vehicle-settings.*') ? 'page' : 'false' }}"
+                           data-tooltip="Configurer les horaires de reservation">
+                            <span class="menu-icon" aria-hidden="true">
+                                <i class="ki-duotone ki-time fs-2"><i class="path1"></i><i class="path2"></i></i>
+                            </span>
+                            <span class="menu-title">Parametres Vehicules</span>
                         </a>
                     </li>
 

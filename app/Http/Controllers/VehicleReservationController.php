@@ -7,6 +7,7 @@ use App\Events\ReservationCreated;
 use App\Events\ReservationUpdated;
 use App\Models\Vehicle;
 use App\Models\VehicleReservation;
+use App\Models\VehicleSetting;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -24,7 +25,10 @@ class VehicleReservationController extends Controller
         // Get all vehicles (not just available ones, so we can show them as disabled for non-accessible)
         $vehicles = Vehicle::all();
 
-        return view('vehicles.planning', compact('vehicles'));
+        // Get vehicle settings for time restrictions
+        $settings = VehicleSetting::getSettings();
+
+        return view('vehicles.planning', compact('vehicles', 'settings'));
     }
 
     /**
@@ -106,13 +110,33 @@ class VehicleReservationController extends Controller
      */
     public function store(Request $request)
     {
+        $settings = VehicleSetting::getSettings();
+
         $validated = $request->validate([
             'vehicle_id' => ['required', 'exists:vehicles,id'],
-            'reservation_date' => ['required', 'date', 'after_or_equal:today'],
-            'start_time' => ['required', 'date_format:H:i'],
-            'end_time' => ['required', 'date_format:H:i', 'after:start_time'],
+            'reservation_date' => [
+                'required',
+                'date',
+                'after_or_equal:today',
+                'before_or_equal:'.$settings->max_reservation_date,
+            ],
+            'start_time' => [
+                'required',
+                'date_format:H:i',
+                'after_or_equal:'.$settings->opening_hour_formatted,
+            ],
+            'end_time' => [
+                'required',
+                'date_format:H:i',
+                'after:start_time',
+                'before_or_equal:'.$settings->closing_hour_formatted,
+            ],
             'destination' => ['nullable', 'string', 'max:255'],
             'notes' => ['nullable', 'string'],
+        ], [
+            'reservation_date.before_or_equal' => 'Les reservations ne peuvent pas depasser '.$settings->max_future_days.' jours a l\'avance.',
+            'start_time.after_or_equal' => 'L\'heure de debut doit etre apres '.$settings->opening_hour_formatted.'.',
+            'end_time.before_or_equal' => 'L\'heure de fin doit etre avant '.$settings->closing_hour_formatted.'.',
         ]);
 
         $user = auth()->user();
@@ -245,23 +269,29 @@ class VehicleReservationController extends Controller
     /**
      * Cancel a reservation.
      */
-    public function destroy($id)
+    public function destroy(Request $request, $id)
     {
         $reservation = VehicleReservation::findOrFail($id);
         $user = auth()->user();
 
         // Check ownership or admin
         if ($reservation->user_id !== $user->id && !$user->isAdmin()) {
-            return response()->json([
-                'message' => 'Vous n\'etes pas autorise a annuler cette reservation.',
-            ], 403);
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'message' => 'Vous n\'etes pas autorise a annuler cette reservation.',
+                ], 403);
+            }
+            return back()->with('error', 'Vous n\'etes pas autorise a annuler cette reservation.');
         }
 
         // Check if can be cancelled
         if (!$reservation->canBeCancelled()) {
-            return response()->json([
-                'message' => 'Cette reservation ne peut plus etre annulee (moins de 2h avant le debut).',
-            ], 422);
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'message' => 'Cette reservation ne peut plus etre annulee.',
+                ], 422);
+            }
+            return back()->with('error', 'Cette reservation ne peut plus etre annulee.');
         }
 
         // Broadcast before updating status (we need the original data)
@@ -269,32 +299,72 @@ class VehicleReservationController extends Controller
 
         $reservation->update(['status' => 'cancelled']);
 
-        return response()->json([
-            'message' => 'Reservation annulee avec succes.',
-        ]);
+        if ($request->expectsJson()) {
+            return response()->json([
+                'message' => 'Reservation annulee avec succes.',
+            ]);
+        }
+
+        return redirect()->route('reservations.index')->with('success', 'Reservation annulee avec succes.');
     }
 
     /**
      * Display a listing of reservations.
      */
-    public function index()
+    public function index(Request $request)
     {
         $user = auth()->user();
+        $filter = $request->get('filter', 'all');
+        $dateFilter = $request->get('date', 'upcoming');
 
+        $query = VehicleReservation::with(['vehicle', 'user:id,name']);
+
+        // Filter by user (admin only)
         if ($user->isAdmin()) {
-            $reservations = VehicleReservation::with(['vehicle', 'user:id,name'])
-                ->orderBy('reservation_date', 'desc')
-                ->orderBy('start_time', 'desc')
-                ->paginate(20);
+            if ($filter === 'mine') {
+                $query->where('user_id', $user->id);
+            } elseif ($filter === 'others') {
+                $query->where('user_id', '!=', $user->id);
+            }
         } else {
-            $reservations = VehicleReservation::with('vehicle')
-                ->where('user_id', $user->id)
-                ->orderBy('reservation_date', 'desc')
-                ->orderBy('start_time', 'desc')
-                ->paginate(20);
+            $query->where('user_id', $user->id);
         }
 
-        return view('reservations.index', compact('reservations'));
+        // Date filters
+        $today = now()->toDateString();
+        $tomorrow = now()->addDay()->toDateString();
+        $endOfWeek = now()->endOfWeek()->toDateString();
+
+        switch ($dateFilter) {
+            case 'today':
+                $query->whereDate('reservation_date', $today);
+                break;
+            case 'tomorrow':
+                $query->whereDate('reservation_date', $tomorrow);
+                break;
+            case 'week':
+                $query->whereDate('reservation_date', '>=', $today)
+                      ->whereDate('reservation_date', '<=', $endOfWeek);
+                break;
+            case 'upcoming':
+                $query->whereDate('reservation_date', '>=', $today);
+                break;
+            case 'past':
+                $query->whereDate('reservation_date', '<', $today);
+                break;
+            // 'all' = no date filter
+        }
+
+        // Order: upcoming dates first for non-past, past dates most recent first
+        if ($dateFilter === 'past') {
+            $query->orderBy('reservation_date', 'desc')->orderBy('start_time', 'desc');
+        } else {
+            $query->orderBy('reservation_date', 'asc')->orderBy('start_time', 'asc');
+        }
+
+        $reservations = $query->paginate(20)->appends(['filter' => $filter, 'date' => $dateFilter]);
+
+        return view('reservations.index', compact('reservations', 'filter', 'dateFilter'));
     }
 
     /**
@@ -398,8 +468,8 @@ class VehicleReservationController extends Controller
     /**
      * API: Cancel a reservation.
      */
-    public function apiDestroy($id)
+    public function apiDestroy(Request $request, $id)
     {
-        return $this->destroy($id);
+        return $this->destroy($request, $id);
     }
 }

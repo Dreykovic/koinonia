@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AccountRequestController;
 use App\Http\Controllers\Admin\FailedEmailController;
+use App\Http\Controllers\Admin\VehicleSettingController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\BulletinController;
 use App\Http\Controllers\CommunityRequestController;
@@ -170,6 +171,12 @@ Route::middleware('auth')->group(function () {
             Route::get('/', [FailedEmailController::class, 'index'])->name('index');
             Route::post('/{failedEmail}/resolve', [FailedEmailController::class, 'resolve'])->name('resolve');
             Route::delete('/{failedEmail}', [FailedEmailController::class, 'destroy'])->name('destroy');
+        });
+
+        // Vehicle Settings Management
+        Route::prefix('admin/vehicle-settings')->name('admin.vehicle-settings.')->group(function () {
+            Route::get('/', [VehicleSettingController::class, 'edit'])->name('edit');
+            Route::put('/', [VehicleSettingController::class, 'update'])->name('update');
         });
     });
 

@@ -20,7 +20,13 @@ class CommunityRequestController extends Controller
      */
     public function index(Request $request)
     {
+        $user = auth()->user();
         $query = CommunityRequest::with(['community', 'repairLocation', 'assignedUser']);
+
+        // Les membres ne voient que leurs propres demandes
+        if (!$user->isAdmin()) {
+            $query->where('email', $user->email);
+        }
 
         // Filtres
         if ($request->filled('status')) {
@@ -29,15 +35,16 @@ class CommunityRequestController extends Controller
         if ($request->filled('type')) {
             $query->type($request->type);
         }
-        if ($request->filled('community_id')) {
+        if ($request->filled('community_id') && $user->isAdmin()) {
             $query->byCommunity($request->community_id);
         }
 
         $requests = $query->latest()->paginate(20);
-        $communities = Community::active()->ordered()->get();
+        $communities = $user->isAdmin() ? Community::active()->ordered()->get() : collect();
         $statuses = CommunityRequest::STATUSES;
+        $isAdmin = $user->isAdmin();
 
-        return view('community-requests.index', compact('requests', 'communities', 'statuses'));
+        return view('community-requests.index', compact('requests', 'communities', 'statuses', 'isAdmin'));
     }
 
     /**
@@ -45,18 +52,30 @@ class CommunityRequestController extends Controller
      */
     public function show(CommunityRequest $communityRequest)
     {
-        $communityRequest->load(['community', 'repairLocation', 'assignedUser']);
-        $users = User::orderBy('name')->get();
-        $statuses = CommunityRequest::STATUSES;
+        $user = auth()->user();
 
-        return view('community-requests.show', compact('communityRequest', 'users', 'statuses'));
+        // Les membres ne peuvent voir que leurs propres demandes
+        if (!$user->isAdmin() && $communityRequest->email !== $user->email) {
+            abort(403, 'Vous n\'avez pas acces a cette demande.');
+        }
+
+        $communityRequest->load(['community', 'repairLocation', 'assignedUser']);
+        $users = $user->isAdmin() ? User::orderBy('name')->get() : collect();
+        $statuses = CommunityRequest::STATUSES;
+        $isAdmin = $user->isAdmin();
+
+        return view('community-requests.show', compact('communityRequest', 'users', 'statuses', 'isAdmin'));
     }
 
     /**
-     * Update the specified request.
+     * Update the specified request (admin only).
      */
     public function update(Request $request, CommunityRequest $communityRequest)
     {
+        if (!auth()->user()->isAdmin()) {
+            abort(403, 'Action reservee aux administrateurs.');
+        }
+
         $validated = $request->validate([
             'status' => ['required', 'in:pending,in_progress,completed,rejected'],
             'admin_notes' => ['nullable', 'string', 'max:2000'],
@@ -85,10 +104,14 @@ class CommunityRequestController extends Controller
     }
 
     /**
-     * Remove the specified request.
+     * Remove the specified request (admin only).
      */
     public function destroy(CommunityRequest $communityRequest)
     {
+        if (!auth()->user()->isAdmin()) {
+            abort(403, 'Action reservee aux administrateurs.');
+        }
+
         $communityRequest->delete();
 
         return redirect()->route('community-requests.index')
@@ -96,10 +119,14 @@ class CommunityRequestController extends Controller
     }
 
     /**
-     * Display statistics.
+     * Display statistics (admin only).
      */
     public function statistics()
     {
+        if (!auth()->user()->isAdmin()) {
+            abort(403, 'Action reservee aux administrateurs.');
+        }
+
         $stats = [
             'total' => CommunityRequest::count(),
             'pending' => CommunityRequest::pending()->count(),
@@ -143,10 +170,14 @@ class CommunityRequestController extends Controller
     }
 
     /**
-     * Export requests to CSV.
+     * Export requests to CSV (admin only).
      */
     public function export(Request $request)
     {
+        if (!auth()->user()->isAdmin()) {
+            abort(403, 'Action reservee aux administrateurs.');
+        }
+
         $query = CommunityRequest::with(['community', 'repairLocation', 'assignedUser']);
 
         if ($request->filled('status')) {

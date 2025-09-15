@@ -2,10 +2,15 @@
 
 namespace App\Http\Controllers;
 
+use App\Events\ReservationCancelled;
+use App\Events\ReservationCreated;
+use App\Events\ReservationUpdated;
 use App\Models\Vehicle;
 use App\Models\VehicleReservation;
+use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 
 class VehicleReservationController extends Controller
 {
@@ -97,6 +102,7 @@ class VehicleReservationController extends Controller
 
     /**
      * Store a new reservation.
+     * Uses transaction + pessimistic lock to prevent race conditions.
      */
     public function store(Request $request)
     {
@@ -110,41 +116,59 @@ class VehicleReservationController extends Controller
         ]);
 
         $user = auth()->user();
-        $vehicle = Vehicle::findOrFail($validated['vehicle_id']);
 
-        // Check access
-        if (!$user->canAccessVehicle($vehicle)) {
-            return response()->json([
-                'message' => 'Vous n\'avez pas acces a ce vehicule.',
-            ], 403);
+        try {
+            return DB::transaction(function () use ($validated, $user) {
+                // Lock the vehicle row to prevent concurrent reservations
+                $vehicle = Vehicle::lockForUpdate()->findOrFail($validated['vehicle_id']);
+
+                // Check access
+                if (!$user->canAccessVehicle($vehicle)) {
+                    return response()->json([
+                        'message' => 'Vous n\'avez pas acces a ce vehicule.',
+                    ], 403);
+                }
+
+                // Check availability (now protected by lock)
+                if (!$vehicle->isAvailableAt($validated['reservation_date'], $validated['start_time'], $validated['end_time'])) {
+                    return response()->json([
+                        'message' => 'Ce creneau n\'est pas disponible.',
+                    ], 422);
+                }
+
+                $reservation = VehicleReservation::create([
+                    'vehicle_id' => $validated['vehicle_id'],
+                    'user_id' => $user->id,
+                    'reservation_date' => $validated['reservation_date'],
+                    'start_time' => $validated['start_time'],
+                    'end_time' => $validated['end_time'],
+                    'destination' => $validated['destination'],
+                    'notes' => $validated['notes'] ?? null,
+                    'status' => 'approved', // Auto-approved for simplicity
+                ]);
+
+                // Broadcast to other users
+                broadcast(new ReservationCreated($reservation->load('vehicle', 'user')))->toOthers();
+
+                return response()->json([
+                    'message' => 'Reservation creee avec succes.',
+                    'reservation' => $reservation->load('vehicle', 'user:id,name'),
+                ], 201);
+            });
+        } catch (QueryException $e) {
+            // Handle unique constraint violation (PostgreSQL: 23505, MySQL: 23000)
+            if (in_array($e->getCode(), ['23505', '23000'])) {
+                return response()->json([
+                    'message' => 'Ce creneau vient d\'etre reserve par un autre utilisateur.',
+                ], 409);
+            }
+            throw $e;
         }
-
-        // Check availability
-        if (!$vehicle->isAvailableAt($validated['reservation_date'], $validated['start_time'], $validated['end_time'])) {
-            return response()->json([
-                'message' => 'Ce creneau n\'est pas disponible.',
-            ], 422);
-        }
-
-        $reservation = VehicleReservation::create([
-            'vehicle_id' => $validated['vehicle_id'],
-            'user_id' => $user->id,
-            'reservation_date' => $validated['reservation_date'],
-            'start_time' => $validated['start_time'],
-            'end_time' => $validated['end_time'],
-            'destination' => $validated['destination'],
-            'notes' => $validated['notes'] ?? null,
-            'status' => 'approved', // Auto-approved for simplicity
-        ]);
-
-        return response()->json([
-            'message' => 'Reservation creee avec succes.',
-            'reservation' => $reservation->load('vehicle', 'user:id,name'),
-        ]);
     }
 
     /**
      * Update a reservation.
+     * Uses transaction + pessimistic lock when times are being changed.
      */
     public function update(Request $request, $id)
     {
@@ -165,28 +189,56 @@ class VehicleReservationController extends Controller
             'notes' => ['nullable', 'string'],
         ]);
 
-        // Check availability (excluding current reservation) only if times are being changed
+        // If times are being changed, use transaction with lock
         if (isset($validated['start_time']) || isset($validated['end_time'])) {
-            $startTime = $validated['start_time'] ?? $reservation->start_time;
-            $endTime = $validated['end_time'] ?? $reservation->end_time;
+            try {
+                return DB::transaction(function () use ($validated, $reservation) {
+                    // Lock the vehicle to prevent concurrent modifications
+                    $vehicle = Vehicle::lockForUpdate()->findOrFail($reservation->vehicle_id);
 
-            if (!$reservation->vehicle->isAvailableAt(
-                $reservation->reservation_date->format('Y-m-d'),
-                $startTime,
-                $endTime,
-                $reservation->id
-            )) {
-                return response()->json([
-                    'message' => 'Ce creneau n\'est pas disponible.',
-                ], 422);
+                    $startTime = $validated['start_time'] ?? $reservation->start_time;
+                    $endTime = $validated['end_time'] ?? $reservation->end_time;
+
+                    if (!$vehicle->isAvailableAt(
+                        $reservation->reservation_date->format('Y-m-d'),
+                        $startTime,
+                        $endTime,
+                        $reservation->id
+                    )) {
+                        return response()->json([
+                            'message' => 'Ce creneau n\'est pas disponible.',
+                        ], 422);
+                    }
+
+                    $reservation->update($validated);
+
+                    $freshReservation = $reservation->fresh()->load('vehicle', 'user');
+                    broadcast(new ReservationUpdated($freshReservation))->toOthers();
+
+                    return response()->json([
+                        'message' => 'Reservation mise a jour avec succes.',
+                        'reservation' => $freshReservation,
+                    ]);
+                });
+            } catch (QueryException $e) {
+                if (in_array($e->getCode(), ['23505', '23000'])) {
+                    return response()->json([
+                        'message' => 'Ce creneau vient d\'etre reserve par un autre utilisateur.',
+                    ], 409);
+                }
+                throw $e;
             }
         }
 
+        // No time change, simple update without lock
         $reservation->update($validated);
+
+        $freshReservation = $reservation->fresh()->load('vehicle', 'user');
+        broadcast(new ReservationUpdated($freshReservation))->toOthers();
 
         return response()->json([
             'message' => 'Reservation mise a jour avec succes.',
-            'reservation' => $reservation->fresh()->load('vehicle', 'user:id,name'),
+            'reservation' => $freshReservation,
         ]);
     }
 
@@ -211,6 +263,9 @@ class VehicleReservationController extends Controller
                 'message' => 'Cette reservation ne peut plus etre annulee (moins de 2h avant le debut).',
             ], 422);
         }
+
+        // Broadcast before updating status (we need the original data)
+        broadcast(new ReservationCancelled($reservation))->toOthers();
 
         $reservation->update(['status' => 'cancelled']);
 

@@ -38,7 +38,7 @@
         <div class="card mb-5">
             <div class="card-header py-4">
                 <h3 class="card-title fw-bold mb-0">
-                    <i class="ki-duotone ki-dish text-itcj-blue me-2"><i class="path1"></i><i class="path2"></i></i>
+                    <i class="ki-duotone ki-gift text-itcj-blue me-2"><i class="path1"></i><i class="path2"></i></i>
                     Informations
                 </h3>
             </div>

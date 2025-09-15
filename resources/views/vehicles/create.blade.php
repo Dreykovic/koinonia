@@ -74,16 +74,16 @@
         <div class="card-body">
             <div class="row mb-5">
                 <div class="col-md-6">
-                    <label class="form-label required">Nom du vehicule</label>
-                    <input type="text" name="name" class="form-control form-control-solid @error('name') is-invalid @enderror"
+                    <label class="form-label required" for="name">Nom du vehicule</label>
+                    <input type="text" id="name" name="name" class="form-control form-control-solid @error('name') is-invalid @enderror"
                         value="{{ old('name') }}" placeholder="Ex: Toyota Corolla" required>
                     @error('name')
                         <div class="invalid-feedback">{{ $message }}</div>
                     @enderror
                 </div>
                 <div class="col-md-6">
-                    <label class="form-label required">Type</label>
-                    <select name="type" class="form-select form-select-solid @error('type') is-invalid @enderror" required>
+                    <label class="form-label required" for="type">Type</label>
+                    <select id="type" name="type" class="form-select form-select-solid @error('type') is-invalid @enderror" required aria-describedby="type_help">
                         <option value="communautaire" {{ old('type', 'communautaire') == 'communautaire' ? 'selected' : '' }}>Communautaire</option>
                         <option value="sante" {{ old('type') == 'sante' ? 'selected' : '' }}>Sante</option>
                         <option value="formation" {{ old('type') == 'formation' ? 'selected' : '' }}>Formation</option>
@@ -91,7 +91,7 @@
                     @error('type')
                         <div class="invalid-feedback">{{ $message }}</div>
                     @enderror
-                    <div class="form-text">
+                    <div class="form-text" id="type_help">
                         <strong>Communautaire:</strong> Accessible a tous sauf formateurs<br>
                         <strong>Sante:</strong> Reserve au personnel de sante<br>
                         <strong>Formation:</strong> Reserve aux formateurs
@@ -101,16 +101,16 @@
 
             <div class="row mb-5">
                 <div class="col-md-6">
-                    <label class="form-label">Immatriculation <span class="text-muted fw-normal">(optionnel)</span></label>
-                    <input type="text" name="license_plate" class="form-control form-control-solid @error('license_plate') is-invalid @enderror"
+                    <label class="form-label" for="license_plate">Immatriculation <span class="text-muted fw-normal">(optionnel)</span></label>
+                    <input type="text" id="license_plate" name="license_plate" class="form-control form-control-solid @error('license_plate') is-invalid @enderror"
                         value="{{ old('license_plate') }}" placeholder="Ex: AB-123-CD">
                     @error('license_plate')
                         <div class="invalid-feedback">{{ $message }}</div>
                     @enderror
                 </div>
                 <div class="col-md-6">
-                    <label class="form-label">Capacite <span class="text-muted fw-normal">(optionnel, defaut: 5)</span></label>
-                    <input type="number" name="capacity" class="form-control form-control-solid @error('capacity') is-invalid @enderror"
+                    <label class="form-label" for="capacity">Capacite <span class="text-muted fw-normal">(optionnel, defaut: 5)</span></label>
+                    <input type="number" inputmode="numeric" id="capacity" name="capacity" class="form-control form-control-solid @error('capacity') is-invalid @enderror"
                         value="{{ old('capacity', 5) }}" min="1" max="50" placeholder="5">
                     @error('capacity')
                         <div class="invalid-feedback">{{ $message }}</div>
@@ -119,8 +119,8 @@
             </div>
 
             <div class="mb-5">
-                <label class="form-label">Description</label>
-                <textarea name="description" class="form-control form-control-solid @error('description') is-invalid @enderror"
+                <label class="form-label" for="description">Description</label>
+                <textarea id="description" name="description" class="form-control form-control-solid @error('description') is-invalid @enderror"
                     rows="3" placeholder="Details supplementaires sur le vehicule...">{{ old('description') }}</textarea>
                 @error('description')
                     <div class="invalid-feedback">{{ $message }}</div>
@@ -129,16 +129,36 @@
 
             <div class="mb-5">
                 <div class="form-check form-switch form-check-custom form-check-solid">
-                    <input class="form-check-input" type="checkbox" name="is_available" value="1"
+                    <input class="form-check-input" type="checkbox" id="is_available" name="is_available" value="1"
                         {{ old('is_available', true) ? 'checked' : '' }}>
-                    <label class="form-check-label">Vehicule disponible</label>
+                    <label class="form-check-label" for="is_available">Vehicule disponible</label>
                 </div>
             </div>
         </div>
         <div class="card-footer d-flex justify-content-end">
             <a href="{{ route('vehicles.index') }}" class="btn btn-light me-3">Annuler</a>
-            <button type="submit" class="btn btn-primary">Ajouter</button>
+            <button type="submit" id="btn-submit" class="btn btn-primary">
+                <span class="indicator-label">Ajouter</span>
+                <span class="indicator-progress" style="display: none;">
+                    Ajout...
+                    <span class="spinner-border spinner-border-sm ms-2"></span>
+                </span>
+            </button>
         </div>
     </form>
 </div>
+
+<!-- Mobile back button -->
+<a href="{{ route('vehicles.index') }}" class="mobile-back-btn d-md-none" aria-label="Retour aux vehicules">
+    <i class="ki-duotone ki-arrow-left"><i class="path1"></i><i class="path2"></i></i>
+</a>
+
+<script>
+document.querySelector('form').addEventListener('submit', function() {
+    var btn = document.getElementById('btn-submit');
+    btn.disabled = true;
+    btn.querySelector('.indicator-label').style.display = 'none';
+    btn.querySelector('.indicator-progress').style.display = 'inline-block';
+});
+</script>
 @endsection

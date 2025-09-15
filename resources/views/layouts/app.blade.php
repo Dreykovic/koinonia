@@ -1155,8 +1155,10 @@
             }
 
             .btn-icon.btn-sm {
-                width: 36px;
-                height: 36px;
+                width: 44px;
+                height: 44px;
+                min-width: 44px;
+                min-height: 44px;
             }
 
             /* Full width buttons on mobile */
@@ -1176,6 +1178,39 @@
 
             .card-footer .gap-3 {
                 gap: 8px !important;
+            }
+        }
+
+        /* Mobile back button sticky */
+        @media (max-width: 768px) {
+            .mobile-back-btn {
+                position: fixed;
+                bottom: 20px;
+                left: 20px;
+                width: 44px;
+                height: 44px;
+                border-radius: 50%;
+                background: var(--bg-card);
+                box-shadow: 0 2px 10px rgba(0,0,0,0.15);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                z-index: 100;
+                color: var(--text-primary);
+                text-decoration: none;
+                border: 1px solid rgba(0,0,0,0.08);
+                transition: all 0.2s ease;
+            }
+
+            .mobile-back-btn:hover,
+            .mobile-back-btn:active {
+                background: var(--primary);
+                color: #fff;
+                transform: scale(1.05);
+            }
+
+            .mobile-back-btn i {
+                font-size: 18px;
             }
         }
 

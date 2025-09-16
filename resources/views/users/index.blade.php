@@ -154,9 +154,11 @@
                         <td>
                             @php
                                 $roleColors = [
+                                    
                                     'admin' => ['bg' => 'var(--itcj-red-light)', 'text' => 'var(--itcj-red)'],
                                     'communication' => ['bg' => 'var(--itcj-gold-light)', 'text' => '#9a7a30'],
                                     'sante' => ['bg' => '#e8f5e9', 'text' => '#2e7d32'],
+                                    'chauffeur' => ['bg' => '#e8f5e9', 'text' => '#2e7d82'],
                                     'formateur' => ['bg' => 'var(--itcj-blue-light)', 'text' => 'var(--itcj-blue)'],
                                     'membre' => ['bg' => '#f5f5f5', 'text' => '#616161'],
                                 ];
@@ -210,6 +212,7 @@
                         'admin' => ['bg' => 'var(--itcj-red-light)', 'text' => 'var(--itcj-red)'],
                         'communication' => ['bg' => 'var(--itcj-gold-light)', 'text' => '#9a7a30'],
                         'sante' => ['bg' => '#e8f5e9', 'text' => '#2e7d32'],
+                        'chauffeur' => ['bg' => '#e8f5e9', 'text' => '#2e7d82'],
                         'formateur' => ['bg' => 'var(--itcj-blue-light)', 'text' => 'var(--itcj-blue)'],
                         'membre' => ['bg' => '#f5f5f5', 'text' => '#616161'],
                     ];

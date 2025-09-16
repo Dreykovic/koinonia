@@ -283,6 +283,7 @@ class BulletinController extends Controller
         $validated = $request->validate([
             'title' => 'required|string|max:255',
             'description' => 'nullable|string',
+            'guests' => 'nullable|string',
             'activity_date' => 'nullable|date',
             'activity_time' => 'nullable|date_format:H:i',
             'location' => 'nullable|string|max:255',
@@ -306,6 +307,7 @@ class BulletinController extends Controller
         $validated = $request->validate([
             'title' => 'required|string|max:255',
             'description' => 'nullable|string',
+            'guests' => 'nullable|string',
             'activity_date' => 'nullable|date',
             'activity_time' => 'nullable|date_format:H:i',
             'location' => 'nullable|string|max:255',

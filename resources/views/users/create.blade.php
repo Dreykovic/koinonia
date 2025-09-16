@@ -71,6 +71,7 @@
                         <option value="membre" {{ old('role') == 'membre' ? 'selected' : '' }}>Membre</option>
                         <option value="formateur" {{ old('role') == 'formateur' ? 'selected' : '' }}>Formateur</option>
                         <option value="sante" {{ old('role') == 'sante' ? 'selected' : '' }}>Sante</option>
+                        <option value="chauffeur" {{ old('role') == 'chauffeur' ? 'selected' : '' }}>Chauffeur</option>
                         <option value="communication" {{ old('role') == 'communication' ? 'selected' : '' }}>Communication</option>
                         <option value="admin" {{ old('role') == 'admin' ? 'selected' : '' }}>Administrateur</option>
                     </select>

@@ -13,7 +13,7 @@ return new class extends Migration {
             $table->tinyInteger('position')->comment('ordre affichage');
         });
 
-        // Insert default settings
+
         DB::table('week_menu_days')->insert([
             ['id'=>1,'code'=>'lundi','position'=>1],
             ['id'=>2,'code'=>'mardi','position'=>2],

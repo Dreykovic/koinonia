@@ -80,7 +80,7 @@ class User extends Authenticatable
         }
 
         return match ($vehicle->type) {
-            'sante' => $this->role === 'sante',
+            'sante' => $this->role === 'sante'|| $this->role === 'chauffeur',
             'formation' => $this->role === 'formateur',
             'communautaire' => $this->role !== 'formateur',
             default => false,
@@ -114,6 +114,8 @@ class User extends Authenticatable
             'sante' => 'Sante',
             'formateur' => 'Formateur',
             'membre' => 'Membre',
+            'chauffeur' => 'Chauffeur',
+            'autre' => 'Autre',
             default => $this->role,
         };
     }

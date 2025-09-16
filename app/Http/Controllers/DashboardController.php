@@ -8,6 +8,7 @@ use App\Models\SundayMeal;
 use App\Models\User;
 use App\Models\Vehicle;
 use App\Models\VehicleReservation;
+use App\Models\WeekMenu;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 
@@ -91,6 +92,13 @@ class DashboardController extends Controller
         // Get birthdays for this week
         $birthdays = $this->getWeekBirthdays($bulletin);
 
+
+        $todaysMenus = WeekMenu::available()
+            ->today()
+            ->ordered()
+            ->get();
+        // dd($myRequests);
+        // dd($todaysMenus);
         return view('dashboard.index', compact(
             'upcomingMeal',
             'userInscription',
@@ -98,7 +106,8 @@ class DashboardController extends Controller
             'myRequests',
             'stats',
             'bulletin',
-            'birthdays'
+            'birthdays',
+            'todaysMenus',
         ));
     }
 

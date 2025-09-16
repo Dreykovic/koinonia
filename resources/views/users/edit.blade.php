@@ -73,6 +73,7 @@
                         <option value="membre" {{ old('role', $user->role) == 'membre' ? 'selected' : '' }}>Membre</option>
                         <option value="formateur" {{ old('role', $user->role) == 'formateur' ? 'selected' : '' }}>Formateur</option>
                         <option value="sante" {{ old('role', $user->role) == 'sante' ? 'selected' : '' }}>Sante</option>
+                        <option value="chauffeur" {{ old('role', $user->role) == 'chauffeur' ? 'selected' : '' }}>Chauffeur</option>
                         <option value="communication" {{ old('role', $user->role) == 'communication' ? 'selected' : '' }}>Communication</option>
                         <option value="admin" {{ old('role', $user->role) == 'admin' ? 'selected' : '' }}>Administrateur</option>
                     </select>

@@ -15,6 +15,7 @@ use App\Http\Controllers\CommunityController;
 use App\Http\Controllers\RepairLocationController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\VehicleController;
+use App\Http\Controllers\WeekMenuController;
 use App\Http\Controllers\VehicleReservationController;
 use Illuminate\Support\Facades\Route;
 
@@ -189,5 +190,24 @@ Route::middleware('auth')->group(function () {
         Route::get('/achat', [CommunityRequestFormController::class, 'step2Purchase'])->name('step2.purchase');
         Route::post('/achat', [CommunityRequestFormController::class, 'postStep2Purchase'])->name('step2.purchase.post');
         Route::get('/confirmation', [CommunityRequestFormController::class, 'success'])->name('success');
+    });
+
+
+
+    // Week menu - Member routes
+    Route::prefix('week-menu')->name('week-menus.')->group(function () {
+        Route::get('/', [WeekMenuController::class, 'index'])->name('index');
+
+        // Admin routes
+        Route::middleware('role:admin')->group(function () {
+            Route::get('/admin/edit', [WeekMenuController::class, 'edit'])
+                ->name('admin.edit');
+
+            Route::post('/admin/{weekMenu}/update', [WeekMenuController::class, 'update'])
+                ->name('admin.update');
+
+            Route::patch('/admin/{weekMenu}/toggle', [WeekMenuController::class, 'toggle'])
+                ->name('admin.toggle');
+        });
     });
 });

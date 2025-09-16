@@ -15,7 +15,7 @@ return new class extends Migration
             $table->id();
             $table->string('name');
             $table->string('license_plate')->unique();
-            $table->enum('type', ['sante', 'formation', 'communautaire']);
+            $table->enum('type', ['sante', 'formation', 'communautaire','autres']);
             $table->integer('capacity')->default(5);
             $table->boolean('is_available')->default(true);
             $table->text('description')->nullable();

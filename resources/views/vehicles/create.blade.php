@@ -93,7 +93,7 @@
                     @enderror
                     <div class="form-text" id="type_help">
                         <strong>Communautaire:</strong> Accessible a tous sauf formateurs<br>
-                        <strong>Sante:</strong> Reserve au personnel de sante<br>
+                        <strong>Sante:</strong> Reserve au personnel de sante et chauffeur<br>
                         <strong>Formation:</strong> Reserve aux formateurs
                     </div>
                 </div>

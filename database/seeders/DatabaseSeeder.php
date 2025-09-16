@@ -18,6 +18,7 @@ class DatabaseSeeder extends Seeder
             VehicleReservationSeeder::class,
             SundayMealSeeder::class,
             RepairLocationSeeder::class,
+            WeekMenuSeeder::class,
         ]);
     }
 }

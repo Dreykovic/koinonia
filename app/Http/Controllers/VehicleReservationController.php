@@ -319,6 +319,16 @@ class VehicleReservationController extends Controller
 
         $query = VehicleReservation::with(['vehicle', 'user:id,name']);
 
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->where('destination', 'like', "%{$search}%")
+                  ->orWhereHas('vehicle', function ($vq) use ($search) {
+                      $vq->where('name', 'like', "%{$search}%");
+                  });
+            });
+        }
+
         // Filter by user (admin only)
         if ($user->isAdmin()) {
             if ($filter === 'mine') {
@@ -370,7 +380,7 @@ class VehicleReservationController extends Controller
             $query->orderBy('reservation_date', 'asc')->orderBy('start_time', 'asc');
         }
 
-        $reservations = $query->paginate(20)->appends(['filter' => $filter, 'date' => $dateFilter]);
+        $reservations = $query->paginate(20)->withQueryString();
 
         return view('reservations.index', compact('reservations', 'filter', 'dateFilter'));
     }

@@ -48,14 +48,17 @@
                     <!-- Description de l'achat -->
                     <div class="fv-row mb-10">
                         <label class="form-label fw-bold text-dark fs-6 required">Decrire la nature de l'achat</label>
-                        <textarea name="purchase_description" rows="8"
+                        <textarea name="purchase_description" rows="8" maxlength="2000" id="purchase_description"
                             class="form-control @error('purchase_description') is-invalid @enderror"
                             placeholder="Decrivez en detail ce que vous souhaitez acheter, la quantite, et toute autre information utile..." required>{{ old('purchase_description') }}</textarea>
                         @error('purchase_description')
                             <div class="invalid-feedback">{{ $message }}</div>
                         @enderror
-                        <div class="form-text text-muted mt-2">
-                            Soyez le plus precis possible : type de produit, quantite, specifications techniques si necessaire, etc.
+                        <div class="d-flex justify-content-between mt-2">
+                            <div class="form-text text-muted">
+                                Soyez le plus precis possible : type de produit, quantite, specifications techniques si necessaire, etc.
+                            </div>
+                            <div class="form-text text-end"><span id="purchase_description_count">{{ strlen(old('purchase_description', '')) }}</span> / 2000</div>
                         </div>
                     </div>
 
@@ -65,7 +68,7 @@
                             <i class="ki-duotone ki-arrow-left fs-3 me-2"><i class="path1"></i><i class="path2"></i></i>
                             Retour
                         </a>
-                        <button type="submit" class="btn btn-itcj">
+                        <button type="submit" class="btn btn-itcj" id="submitBtn">
                             <i class="ki-duotone ki-check fs-3 me-2"><i class="path1"></i><i class="path2"></i></i>
                             Envoyer la demande
                         </button>
@@ -76,3 +79,21 @@
     </div>
 </div>
 @endsection
+
+@push('scripts')
+<script>
+$(document).ready(function() {
+    // Character counter
+    $('#purchase_description').on('input', function() {
+        $('#purchase_description_count').text(this.value.length);
+    });
+
+    // Loading state on submit
+    $('form').on('submit', function() {
+        var btn = $('#submitBtn');
+        btn.prop('disabled', true);
+        btn.html('<span class="spinner-border spinner-border-sm me-2"></span> Envoi en cours...');
+    });
+});
+</script>
+@endpush

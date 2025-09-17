@@ -18,6 +18,17 @@ return new class extends Migration
             $table->boolean('is_active')->default(true);
             $table->timestamps();
         });
+
+        $communities = ['Matungulu', 'Mveng', 'Xavier', 'Loyola', 'Akwaba', 'Tansi', 'Favre'];
+
+        foreach ($communities as $name) {
+            DB::table('communities')->insert([
+                'name' => $name,
+                'is_active' => true,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+        }
     }
 
     /**

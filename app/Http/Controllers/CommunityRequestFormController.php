@@ -10,6 +10,7 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Mail;
 use App\Traits\SafeMailSender;
+use App\Enums\PlatformRole;
 
 class CommunityRequestFormController extends Controller
 {
@@ -85,7 +86,7 @@ class CommunityRequestFormController extends Controller
         $communityRequest = CommunityRequest::create($formData);
 
         // Notifier les admins (non-bloquant)
-        $admins = User::where('role', 'admin')->where('is_active', true)->get();
+        $admins = User::active()->byRole(PlatformRole::ADMIN)->get();
         foreach ($admins as $admin) {
             $this->sendMailSafely($admin, new NewCommunityRequestMail($communityRequest), $communityRequest);
         }
@@ -125,7 +126,8 @@ class CommunityRequestFormController extends Controller
         $communityRequest = CommunityRequest::create($formData);
 
         // Notifier les admins (non-bloquant)
-        $admins = User::where('role', 'admin')->where('is_active', true)->get();
+        $admins = User::active()->byRole(PlatformRole::ADMIN)->get();
+
         foreach ($admins as $admin) {
             $this->sendMailSafely($admin, new NewCommunityRequestMail($communityRequest), $communityRequest);
         }

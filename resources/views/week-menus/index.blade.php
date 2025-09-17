@@ -8,9 +8,12 @@
 @endsection
 
 @section('page-actions')
+@if(auth()->user()->isAdmin())
 <a href="{{ route('week-menus.admin.edit') }}" class="btn btn-sm btn-itcj desktop-add-btn">
     <i class="ki-duotone ki-plus fs-2"></i> Modifier Menu
 </a>
+@endif
+
 @endsection
 
 @push('styles')

@@ -14,9 +14,9 @@ class DatabaseSeeder extends Seeder
         $this->call([
             CommunitiesSeeder::class,
             UserSeeder::class,
-            VehicleSeeder::class,
-            VehicleReservationSeeder::class,
-            SundayMealSeeder::class,
+            // VehicleSeeder::class,
+            // VehicleReservationSeeder::class,
+            // SundayMealSeeder::class,
             RepairLocationSeeder::class,
             WeekMenuSeeder::class,
         ]);

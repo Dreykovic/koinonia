@@ -21,7 +21,11 @@
                 <h1 class="text-dark fw-bolder mb-5">Demande envoyee avec succes!</h1>
 
                 <div class="text-gray-500 fw-semibold fs-6 mb-10">
-                    Votre demande a ete enregistree et sera traitee dans les plus brefs delais.<br>
+                    @if(session('request_id'))
+                        Votre demande N° <strong>{{ session('request_id') }}</strong> a ete enregistree et sera traitee dans les plus brefs delais.<br>
+                    @else
+                        Votre demande a ete enregistree et sera traitee dans les plus brefs delais.<br>
+                    @endif
                     Vous pouvez suivre l'etat de vos demandes depuis la liste des demandes.
                 </div>
 

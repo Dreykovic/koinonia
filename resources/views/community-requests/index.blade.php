@@ -126,6 +126,10 @@
     <div class="card-header border-0 pt-6">
         <div class="card-title">
             <form method="GET" class="d-flex align-items-center gap-3 flex-wrap">
+                <div class="position-relative">
+                    <i class="ki-duotone ki-magnifier fs-3 position-absolute" style="left: 12px; top: 50%; transform: translateY(-50%); color: var(--text-muted);"><i class="path1"></i><i class="path2"></i></i>
+                    <input type="text" name="search" class="form-control form-control-sm ps-10" placeholder="Rechercher description, email..." value="{{ request('search') }}" style="min-width: 200px;">
+                </div>
                 <select name="status" class="form-select form-select-sm w-150px" onchange="this.form.submit()">
                     <option value="">Tous les statuts</option>
                     @foreach($statuses as $key => $label)
@@ -145,7 +149,7 @@
                     @endforeach
                 </select>
                 @endif
-                @if(request()->hasAny(['status', 'type', 'community_id']))
+                @if(request()->hasAny(['search', 'status', 'type', 'community_id']))
                     <a href="{{ route('community-requests.index') }}" class="btn btn-sm btn-light">
                         <i class="ki-duotone ki-cross fs-4"></i>
                         Effacer

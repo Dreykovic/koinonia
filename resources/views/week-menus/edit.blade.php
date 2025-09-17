@@ -14,103 +14,7 @@
 @endsection
 
 @push('styles')
-<style>
-    /* Mobile members optimizations */
-    @media (max-width: 768px) {
-        .table-responsive {
-            display: none;
-        }
-
-        .members-mobile-list {
-            display: block;
-        }
-    }
-
-    @media (min-width: 769px) {
-        .members-mobile-list {
-            display: none;
-        }
-    }
-
-    /* Mobile member cards */
-    .member-mobile-card {
-        background: var(--bg-card);
-        border-radius: 12px;
-        padding: 14px;
-        margin-bottom: 12px;
-        box-shadow: var(--neu-shadow-sm);
-    }
-
-    .member-mobile-header {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        margin-bottom: 10px;
-    }
-
-    .member-mobile-header .symbol {
-        flex-shrink: 0;
-    }
-
-    .member-mobile-header .symbol-label {
-        width: 40px;
-        height: 40px;
-        font-size: 14px;
-    }
-
-    .member-mobile-info {
-        flex: 1;
-        min-width: 0;
-    }
-
-    .member-mobile-name {
-        font-size: 15px;
-        font-weight: 600;
-        color: var(--text-primary);
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-    }
-
-    .member-mobile-email {
-        font-size: 12px;
-        color: var(--text-muted);
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-    }
-
-    .member-mobile-room {
-        font-size: 11px;
-        color: var(--text-muted);
-    }
-
-    .member-mobile-meta {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 6px;
-        margin-bottom: 10px;
-    }
-
-    .member-mobile-actions {
-        display: flex;
-        gap: 8px;
-        padding-top: 10px;
-        border-top: 1px solid rgba(60, 48, 40, 0.08);
-    }
-
-    .member-mobile-actions .btn {
-        flex: 1;
-    }
-
-    .member-mobile-actions form {
-        flex: 1;
-    }
-
-    .member-mobile-actions form .btn {
-        width: 100%;
-    }
-</style>
+@include('week-menus._shared-styles')
 @endpush
 
 @section('content')
@@ -126,22 +30,22 @@
                         <th  class="bg-light text-uppercase">
                              Jours
                         </th>
-                       
+
                         <th  class="bg-light text-uppercase">
-                                    MIDI                         
+                                    MIDI
                         </th>
                         <th  class="bg-light text-uppercase">
                                     SOIR
                         </th>
-                       
+
                     </tr>
                 </thead>
                 <tbody>
-                
+
                     @foreach($menusPerDays as $day => $menuCollection)
                          @php
                                 $roleColors = [
-                                    
+
                                     'lundi' => ['bg' => 'var(--itcj-red-light)', 'text' => 'var(--itcj-red)'],
                                     'mardi' => ['bg' => 'var(--itcj-gold-light)', 'text' => '#9a7a30'],
                                     'mercredi' => ['bg' => '#e8f5e9', 'text' => '#2e7d32'],
@@ -152,64 +56,63 @@
                                 ];
                                 $role = $roleColors[$day] ?? $roleColors['lundi'];
                           @endphp
-                         
+
                     <tr>
-                          
-                        
+
+
                         <td class="bg-light text-uppercase align-middle d-flex justify-content-center">
                             <div class="symbol symbol-40px">
                                 <span class="symbol-label  fw-bold"  style="background: {{ $role['bg'] }}; color: {{ $role['text'] }};">
                                     {{ strtoupper(substr($day, 0, 3)) }}
                                 </span>
                             </div>
-                       
+
                         </td>
 
                         @foreach ($menuCollection as  $menu)
-                           
-                            <td class="align-middle">   
+
+                            <td class="align-middle">
 
                                 <div class=" d-flex flex-col justify-content-between align-items-center gap-2">
 
-                                    <form class="flex-grow-1" action="{{ route('week-menus.admin.update',$menu) }}" method="POST">
+                                    <form class="flex-grow-1 menu-form" action="{{ route('week-menus.admin.update',$menu) }}" method="POST">
                                         @csrf
+                                        @method('PUT')
                                             <div class="d-flex flex-col justify-content-between    align-items-center gap-2 " >
                                                 <div class="flex-grow-1 ">
-                                                    <input type="text" id="dish_name{{ $menu->id }}" name="dish_name" 
-                                                        value="{{ $menu->dish_name }}" class="form-control form-control-lg w-100 form-control-solid @error('dish_name') is-invalid @enderror" required {{ $menu->available ? "" :'disabled' }}>
+                                                    <input type="text" id="dish_name{{ $menu->id }}" name="dish_name"
+                                                        value="{{ $menu->dish_name }}" class="form-control form-control-lg w-100 form-control-solid @error('dish_name') is-invalid @enderror" {{ !$menu->available ? 'disabled' : '' }} style="{{ !$menu->available ? 'opacity: 0.5;' : '' }}" required>
                                                     @error('dish_name')
                                                         <div class="invalid-feedback">{{ $message }}</div>
                                                     @enderror
                                                 </div>
-                                              
-                                                    <button type="submit" class="btn btn-icon btn-sm  btn-itcj-gold" title="enregistrer"
-                                                       >
+
+                                                    <button type="submit" class="btn btn-icon btn-sm btn-itcj-gold" aria-label="Enregistrer"
+                                                        {{ !$menu->available ? 'disabled' : '' }}>
                                                         <i class="ki-duotone ki-check fs-4"><i class="path1"></i><i class="path2"></i></i>
                                                     </button>
-                                                
+
                                         </div>
                                     </form>
-                                    <form class="d-flex  justify-content-center align-items-center" action="{{ route('week-menus.admin.toggle', $menu) }}" method="POST">
+                                    <form class="d-flex  justify-content-center align-items-center" action="{{ route('week-menus.admin.toggle', $menu) }}" method="POST" onsubmit="return confirm('Modifier la visibilite de ce menu ?')">
                                         @csrf
-                                        
+
                                         @method('PATCH')
 
-                                        @if($menu->available )
-                                            <button type="submit" class="btn btn-icon btn-sm btn-itcj-red" title="cacher">
-                                                <i class="ki-duotone ki-eye-slash fs-4"><i class="path1"></i><i class="path2"></i></i>
+                                        @if($menu->available)
+                                            <button type="submit" class="btn btn-icon btn-sm btn-light-success" title="Masquer ce menu" aria-label="Masquer le menu">
+                                                <i class="ki-duotone ki-eye fs-4"><i class="path1"></i><i class="path2"></i><i class="path3"></i></i>
                                             </button>
                                         @else
-                                            <button type="submit" class="btn btn-icon btn-sm btn-light-primary" title="Activer"
-                                   >
-                                         <i class="ki-duotone ki-eye fs-4"><i class="path1"></i><i class="path2"></i><i class="path3"></i></i>
+                                            <button type="submit" class="btn btn-icon btn-sm btn-light-danger" title="Rendre visible ce menu" aria-label="Rendre visible le menu">
+                                                <i class="ki-duotone ki-eye-slash fs-4"><i class="path1"></i><i class="path2"></i></i>
                                             </button>
-                                    
                                         @endif
                                     </form>
                                 </div>
                             </td>
                         @endforeach
-                      
+
                     </tr>
                     @endforeach
                 </tbody>
@@ -220,7 +123,7 @@
             @foreach($menusPerDays as $day => $menuCollection)
                  @php
                                 $roleColors = [
-                                    
+
                                     'lundi' => ['bg' => 'var(--itcj-red-light)', 'text' => 'var(--itcj-red)'],
                                     'mardi' => ['bg' => 'var(--itcj-gold-light)', 'text' => '#9a7a30'],
                                     'mercredi' => ['bg' => '#e8f5e9', 'text' => '#2e7d32'],
@@ -241,65 +144,62 @@
                         <div class="member-mobile-info">
                             <div class="member-mobile-name"  style="background: {{ $role['bg'] }}; color: {{ $role['text'] }};">{{ $day }}</div>
                         </div>
-                 
-                     
+
+
                     </div>
-                
+
                         @foreach ($menuCollection as $menu)
-                            
+
                                 <div class=" gap-2">
                                     <div class="d-flex   justify-content-between    align-items-center "   style="background: {{ $role['bg'] }}; color: {{ $role['text'] }};">{{ $menu->period->code }}</div>
                                     <div class=" d-flex flex-col justify-content-between align-items-center gap-2">
 
-                                        <form class="flex-grow-1" action="{{ route('week-menus.admin.update',$menu) }}" method="POST">
+                                        <form class="flex-grow-1 menu-form" action="{{ route('week-menus.admin.update',$menu) }}" method="POST">
                                             @csrf
+                                            @method('PUT')
                                                 <div class="d-flex flex-col justify-content-between    align-items-center gap-2 " >
                                                     <div class="flex-grow-1 ">
-                                                    
-                                                        <textarea type="text" id="dish_name{{ $menu->id }}" name="dish_name" 
-                                                            class="form-control     form-control-solid @error('dish_name') is-invalid @enderror" required {{ $menu->available ? "" :'disabled' }}>{{ $menu->dish_name }}
-                                                        </textarea>
+
+                                                        <textarea id="dish_name{{ $menu->id }}" name="dish_name"
+                                                            class="form-control form-control-solid @error('dish_name') is-invalid @enderror" {{ !$menu->available ? 'disabled' : '' }} style="{{ !$menu->available ? 'opacity: 0.5;' : '' }}" required>{{ $menu->dish_name }}</textarea>
                                                         @error('dish_name')
                                                             <div class="invalid-feedback">{{ $message }}</div>
                                                         @enderror
                                                     </div>
-                                                
-                                                    <button type="submit" class="btn btn-icon btn-sm  btn-itcj-gold" title="enregistrer"
-                                                        >
+
+                                                    <button type="submit" class="btn btn-icon btn-sm btn-itcj-gold" aria-label="Enregistrer" {{ !$menu->available ? 'disabled' : '' }}>
                                                             <i class="ki-duotone ki-check fs-5"><i class="path1"></i><i class="path2"></i></i>
                                                      </button>
-                                                    
+
                                             </div>
                                         </form>
-                                        <form class="d-flex  justify-content-center align-items-center" action="{{ route('week-menus.admin.toggle', $menu) }}" method="POST">
+                                        <form class="d-flex  justify-content-center align-items-center" action="{{ route('week-menus.admin.toggle', $menu) }}" method="POST" onsubmit="return confirm('Modifier la visibilite de ce menu ?')">
                                             @csrf
-                                            
+
                                             @method('PATCH')
 
-                                            @if($menu->available )
-                                                <button type="submit" class="btn btn-icon btn-sm btn-itcj-red" title="cacher">
-                                                    <i class="ki-duotone ki-eye-slash fs-4"><i class="path1"></i><i class="path2"></i></i>
+                                            @if($menu->available)
+                                                <button type="submit" class="btn btn-icon btn-sm btn-light-success" title="Masquer ce menu" aria-label="Masquer le menu">
+                                                    <i class="ki-duotone ki-eye fs-4"><i class="path1"></i><i class="path2"></i><i class="path3"></i></i>
                                                 </button>
                                             @else
-                                                <button type="submit" class="btn btn-icon btn-sm btn-light-primary" title="Activer"
-                                    >
-                                            <i class="ki-duotone ki-eye fs-4"><i class="path1"></i><i class="path2"></i><i class="path3"></i></i>
+                                                <button type="submit" class="btn btn-icon btn-sm btn-light-danger" title="Rendre visible ce menu" aria-label="Rendre visible le menu">
+                                                    <i class="ki-duotone ki-eye-slash fs-4"><i class="path1"></i><i class="path2"></i></i>
                                                 </button>
-                                        
                                             @endif
                                         </form>
                                     </div>
                                 </div>
                         @endforeach
-                    
-                
-             
+
+
+
                 </div>
             @endforeach
         </div>
 
-      
-   
+
+
     </div>
 </div>
 
@@ -308,3 +208,17 @@
     <i class="ki-duotone ki-coffee"><i class="path1"></i><i class="path2"></i><i class="path3"></i></i>
 </a>
 @endsection
+
+@push('scripts')
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('.menu-form').forEach(function(form) {
+        form.addEventListener('submit', function() {
+            var btn = form.querySelector('button[type="submit"]');
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
+        });
+    });
+});
+</script>
+@endpush

@@ -98,12 +98,14 @@
                     <!-- Description du probleme -->
                     <div class="fv-row mb-10">
                         <label class="form-label fw-bold text-dark fs-6 required">Decrire le probleme</label>
-                        <textarea name="problem_description" rows="5"
+                        <textarea name="problem_description" rows="5" maxlength="2000"
                             class="form-control @error('problem_description') is-invalid @enderror"
-                            placeholder="Decrivez le probleme en detail..." required>{{ old('problem_description') }}</textarea>
+                            placeholder="Decrivez le probleme en detail..." required
+                            id="problem_description">{{ old('problem_description') }}</textarea>
                         @error('problem_description')
                             <div class="invalid-feedback">{{ $message }}</div>
                         @enderror
+                        <div class="form-text text-end"><span id="problem_description_count">{{ strlen(old('problem_description', '')) }}</span> / 2000 caracteres</div>
                     </div>
 
                     <!-- Submit -->
@@ -112,7 +114,7 @@
                             <i class="ki-duotone ki-arrow-left fs-3 me-2"><i class="path1"></i><i class="path2"></i></i>
                             Retour
                         </a>
-                        <button type="submit" class="btn btn-itcj-gold">
+                        <button type="submit" class="btn btn-itcj-gold" id="submitBtn">
                             <i class="ki-duotone ki-check fs-3 me-2"><i class="path1"></i><i class="path2"></i></i>
                             Envoyer la demande
                         </button>
@@ -134,6 +136,18 @@ $(document).ready(function() {
             $('#other_location_container').hide();
             $('input[name="other_location"]').val('');
         }
+    });
+
+    // Character counter
+    $('#problem_description').on('input', function() {
+        $('#problem_description_count').text(this.value.length);
+    });
+
+    // Loading state on submit
+    $('form').on('submit', function() {
+        var btn = $('#submitBtn');
+        btn.prop('disabled', true);
+        btn.html('<span class="spinner-border spinner-border-sm me-2"></span> Envoi en cours...');
     });
 });
 </script>

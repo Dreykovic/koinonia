@@ -12,8 +12,9 @@ return new class extends Migration {
             $table->string('code', 10)->unique()->comment('midi, soir');
             $table->tinyInteger('position')->comment('ordre affichage');
         });
-
-            DB::table('week_menu_periods')->insert([
+        
+        // Insert default settings
+        DB::table('week_menu_periods')->insert([
             ['id'=>1,'code'=>'midi','position'=>1],
             ['id'=>2,'code'=>'soir','position'=>2],
         ]);

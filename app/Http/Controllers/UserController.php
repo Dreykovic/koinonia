@@ -4,10 +4,12 @@ namespace App\Http\Controllers;
 
 use App\Models\Community;
 use App\Models\User;
+use App\Models\UserProfile;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rules\Password;
-
+use Illuminate\Validation\Rule;
+use App\Enums\PlatformRole;
 class UserController extends Controller
 {
     /**
@@ -15,7 +17,9 @@ class UserController extends Controller
      */
     public function index()
     {
-        $users = User::with('community')
+
+        $users = User::with(['profile', 'community'])
+            ->latest()
             ->orderBy('name')
             ->paginate(20);
 
@@ -28,7 +32,9 @@ class UserController extends Controller
     public function create()
     {
         $communities = Community::active()->ordered()->get();
-        return view('users.create', compact('communities'));
+        $profiles = UserProfile::active()->orderBy('name')->get();
+        
+        return view('users.create', compact('profiles','communities'));
     }
 
     /**
@@ -40,11 +46,14 @@ class UserController extends Controller
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'email', 'unique:users'],
             'password' => ['required', Password::defaults(), 'confirmed'],
-            'role' => ['required', 'in:admin,communication,sante,formateur,membre,chauffeur,autre'],
+            'roles' => ['required', 'array', 'min:1'],
+            'roles.*' => ['required', Rule::in(PlatformRole::all())],
             'community_id' => ['nullable', 'exists:communities,id'],
             'room_number' => ['nullable', 'string', 'max:20'],
             'phone' => ['nullable', 'string', 'max:20'],
             'is_active' => ['boolean'],
+            'user_profile_id' => 'nullable|exists:user_profiles,id',
+
         ]);
 
         $validated['password'] = Hash::make($validated['password']);
@@ -61,7 +70,7 @@ class UserController extends Controller
      */
     public function show(User $user)
     {
-        $user->load('community');
+        $user->load(['community','profile']);
         return view('users.show', compact('user'));
     }
 
@@ -70,8 +79,9 @@ class UserController extends Controller
      */
     public function edit(User $user)
     {
-        $communities = Community::active()->ordered()->get();
-        return view('users.edit', compact('user', 'communities'));
+        $communities = Community::active()->ordered()->get();      
+        $profiles = UserProfile::active()->orderBy('name')->get();
+        return view('users.edit', compact('profiles','user', 'communities'));
     }
 
     /**
@@ -83,11 +93,14 @@ class UserController extends Controller
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'email', 'unique:users,email,' . $user->id],
             'password' => ['nullable', Password::defaults(), 'confirmed'],
-            'role' => ['required', 'in:admin,communication,sante,formateur,membre,chauffeur,autre'],
+            'roles' => ['required', 'array', 'min:1'],
+            'roles.*' => ['required', Rule::in(PlatformRole::all())],
             'community_id' => ['nullable', 'exists:communities,id'],
             'room_number' => ['nullable', 'string', 'max:20'],
             'phone' => ['nullable', 'string', 'max:20'],
             'is_active' => ['boolean'],
+            'user_profile_id' => 'nullable|exists:user_profiles,id',
+
         ]);
 
         if (!empty($validated['password'])) {

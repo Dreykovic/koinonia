@@ -26,7 +26,7 @@
                         <option value="">Selectionnez un vehicule</option>
                         @foreach($vehicles as $vehicle)
                             <option value="{{ $vehicle->id }}" {{ old('vehicle_id') == $vehicle->id ? 'selected' : '' }}>
-                                {{ $vehicle->name }} ({{ $vehicle->license_plate }}) - {{ ucfirst($vehicle->type) }}
+                                {{ $vehicle->name }} ({{ $vehicle->license_plate }}) - {{ ucfirst($vehicle->type->name) }}
                             </option>
                         @endforeach
                     </select>

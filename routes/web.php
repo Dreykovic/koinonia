@@ -14,6 +14,7 @@ use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\CommunityController;
 use App\Http\Controllers\RepairLocationController;
 use App\Http\Controllers\UserController;
+use App\Http\Controllers\UserProfileVehicleTypeController;
 use App\Http\Controllers\VehicleController;
 use App\Http\Controllers\WeekMenuController;
 use App\Http\Controllers\VehicleReservationController;
@@ -138,6 +139,7 @@ Route::middleware('auth')->group(function () {
         Route::post('users/{user}/toggle-active', [UserController::class, 'toggleActive'])->name('users.toggle-active');
     });
 
+
     // Profile
     Route::get('profile', [ProfileController::class, 'show'])->name('profile.show');
     Route::get('profile/edit', [ProfileController::class, 'edit'])->name('profile.edit');
@@ -209,5 +211,22 @@ Route::middleware('auth')->group(function () {
             Route::patch('/admin/{weekMenu}/toggle', [WeekMenuController::class, 'toggle'])
                 ->name('admin.toggle');
         });
+    });
+
+
+    // uSER pROFILE & vehicle type
+    Route::middleware(['role:admin'])->group(function () {
+        Route::prefix('user-profile-vehicle-types')->name('user-profile-vehicle-types.')->group(function () {
+        Route::get('/', [UserProfileVehicleTypeController::class, 'index'])
+            ->name('index');
+        Route::post('/', [UserProfileVehicleTypeController::class, 'store'])
+            ->name('store');
+        Route::put('/{userProfile}/{vehicleType}', [UserProfileVehicleTypeController::class, 'update'])
+            ->name('update');
+        Route::delete('/{userProfile}/{vehicleType}', [UserProfileVehicleTypeController::class, 'destroy'])
+            ->name('destroy');
+        });
+
+
     });
 });

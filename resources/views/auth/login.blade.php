@@ -347,45 +347,7 @@
                                         <span style="color: #E65100; font-weight: 500;">recteur@itcj.org</span>
                                         <span class="badge ms-2" style="background: #E65100; color: #FFF; font-size: 10px; padding: 2px 6px;">Cliquez ici</span>
                                     </div>
-                                    <div class="credential-item mb-2 p-2"
-                                         style="background: #FFF; border-radius: 6px; cursor: pointer; transition: all 0.2s; border: 1px solid transparent;"
-                                         onclick="fillCredentials('jean-baptiste.fongang@itcj.org', 'password')"
-                                         onmouseover="this.style.borderColor='#FFB74D'; this.style.transform='translateX(4px)'"
-                                         onmouseout="this.style.borderColor='transparent'; this.style.transform='translateX(0)'">
-                                        <i class="ki-duotone ki-user fs-5 me-1" style="color: #F57C00;">
-                                            <i class="path1"></i>
-                                            <i class="path2"></i>
-                                        </i>
-                                        <strong>Membre:</strong>
-                                        <span style="color: #E65100; font-weight: 500;">jean-baptiste.fongang@itcj.org</span>
-                                        <span class="badge ms-2" style="background: #E65100; color: #FFF; font-size: 10px; padding: 2px 6px;">Cliquez ici</span>
-                                    </div>
-                                    <div class="credential-item mb-2 p-2"
-                                         style="background: #FFF; border-radius: 6px; cursor: pointer; transition: all 0.2s; border: 1px solid transparent;"
-                                         onclick="fillCredentials('formateur1@itcj.org', 'password')"
-                                         onmouseover="this.style.borderColor='#FFB74D'; this.style.transform='translateX(4px)'"
-                                         onmouseout="this.style.borderColor='transparent'; this.style.transform='translateX(0)'">
-                                        <i class="ki-duotone ki-teacher fs-5 me-1" style="color: #F57C00;">
-                                            <i class="path1"></i>
-                                            <i class="path2"></i>
-                                        </i>
-                                        <strong>Formateur:</strong>
-                                        <span style="color: #E65100; font-weight: 500;">formateur1@itcj.org</span>
-                                        <span class="badge ms-2" style="background: #E65100; color: #FFF; font-size: 10px; padding: 2px 6px;">Cliquez ici</span>
-                                    </div>
-                                    <div class="credential-item p-2"
-                                         style="background: #FFF; border-radius: 6px; cursor: pointer; transition: all 0.2s; border: 1px solid transparent;"
-                                         onclick="fillCredentials('sante@itcj.org', 'password')"
-                                         onmouseover="this.style.borderColor='#FFB74D'; this.style.transform='translateX(4px)'"
-                                         onmouseout="this.style.borderColor='transparent'; this.style.transform='translateX(0)'">
-                                        <i class="ki-duotone ki-medicine fs-5 me-1" style="color: #F57C00;">
-                                            <i class="path1"></i>
-                                            <i class="path2"></i>
-                                        </i>
-                                        <strong>Sante:</strong>
-                                        <span style="color: #E65100; font-weight: 500;">sante@itcj.org</span>
-                                        <span class="badge ms-2" style="background: #E65100; color: #FFF; font-size: 10px; padding: 2px 6px;">Cliquez ici</span>
-                                    </div>
+                                 
                                 </div>
                             </div>
                         </div>

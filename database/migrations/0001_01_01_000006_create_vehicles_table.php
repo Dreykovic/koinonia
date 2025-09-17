@@ -14,7 +14,7 @@ return new class extends Migration
         Schema::create('vehicles', function (Blueprint $table) {
             $table->id();
             $table->string('name');
-            $table->string('license_plate')->unique();
+            $table->string('license_plate')->unique()->nullable();
             $table->enum('type', ['sante', 'formation', 'communautaire','autres']);
             $table->integer('capacity')->default(5);
             $table->boolean('is_available')->default(true);

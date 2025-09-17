@@ -118,7 +118,7 @@
                             @endif
                         </div>
                         <div class="d-flex gap-2">
-                            <button type="button" class="btn btn-icon btn-sm btn-light-warning" aria-label="Modifier le service" data-bs-toggle="modal" data-bs-target="#editServiceModal{{ $service->id }}">
+                            <button type="button" class="btn btn-icon btn-sm btn-light-warning" data-bs-toggle="modal" data-bs-target="#editServiceModal{{ $service->id }}">
                                 <i class="ki-duotone ki-pencil fs-6"><i class="path1"></i><i class="path2"></i></i>
                             </button>
                             <form action="{{ route('bulletin.services.destroy', $service) }}" method="POST"
@@ -127,7 +127,7 @@
                                   data-confirm-ok="Supprimer">
                                 @csrf
                                 @method('DELETE')
-                                <button type="submit" class="btn btn-icon btn-sm btn-light-danger" aria-label="Supprimer le service">
+                                <button type="submit" class="btn btn-icon btn-sm btn-light-danger">
                                     <i class="ki-duotone ki-trash fs-6"><i class="path1"></i><i class="path2"></i><i class="path3"></i><i class="path4"></i><i class="path5"></i></i>
                                 </button>
                             </form>
@@ -206,10 +206,7 @@
                 @forelse($bulletin->weeklyActivities->sortBy('activity_date') as $activity)
                     <div class="item-card d-flex justify-content-between align-items-center">
                         <div>
-                            <span class="badge me-2" style="background:{{ $activity->type_color['bg'] }};color:{{ $activity->type_color['text'] }}">
-                                <i class="ki-duotone {{ $activity->type_icon }} fs-6" aria-hidden="true"></i>
-                                {{ $activity->type_label }}
-                            </span>
+                            <span class="badge badge-light-warning me-2">{{ $activity->type_label }}</span>
                             <strong>{{ $activity->title }}</strong>
                             @if($activity->activity_date)
                                 <span class="text-muted ms-2">{{ $activity->formatted_date }} {{ $activity->formatted_time }}</span>
@@ -219,49 +216,88 @@
                             @endif
                              @if($activity->guests)
                                     <div class="service-pill" role="listitem">
-                                        <span aria-hidden="true">
+                                        <span class=""  aria-hidden="true">
                                             <i class="ki-duotone ki-people"><i class="path1"></i><i class="path2"></i></i>
                                         </span>
                                         <span>Invites: {{ Str::limit($activity->guests, 20) }}</span>
                                     </div>
                             @endif
-
+                         
                         </div>
                         <div class="d-flex gap-2">
-                            <button type="button" class="btn btn-icon btn-sm btn-light-warning edit-activity-btn" aria-label="Modifier l'activite"
-                                data-activity-id="{{ $activity->id }}"
-                                data-activity-title="{{ $activity->title }}"
-                                data-activity-type="{{ $activity->type }}"
-                                data-activity-date="{{ $activity->activity_date?->format('Y-m-d') }}"
-                                data-activity-time="{{ $activity->activity_time ? \Carbon\Carbon::parse($activity->activity_time)->format('H:i') : '' }}"
-                                data-activity-location="{{ $activity->location }}"
-                                data-activity-description="{{ $activity->description }}"
-                                data-activity-guests="{{ $activity->guests }}"
-                                data-activity-highlighted="{{ $activity->is_highlighted ? '1' : '0' }}"
-                                data-bs-toggle="modal" data-bs-target="#editActivityModal">
+                            <button type="button" class="btn btn-icon btn-sm btn-light-warning" data-bs-toggle="modal" data-bs-target="#editActivityModal{{ $activity->id }}">
                                 <i class="ki-duotone ki-pencil fs-6"><i class="path1"></i><i class="path2"></i></i>
                             </button>
                             <form action="{{ route('bulletin.activities.destroy', $activity) }}" method="POST"
-                                  data-confirm="Supprimer cette activite ?"
-                                  data-confirm-title="Supprimer l'activite"
+                                  data-confirm="Supprimer cette activité ?"
+                                  data-confirm-title="Supprimer l'activité"
                                   data-confirm-ok="Supprimer">
                                 @csrf
                                 @method('DELETE')
-                                <button type="submit" class="btn btn-icon btn-sm btn-light-danger" aria-label="Supprimer l'activite">
+                                <button type="submit" class="btn btn-icon btn-sm btn-light-danger">
                                     <i class="ki-duotone ki-trash fs-6"><i class="path1"></i><i class="path2"></i><i class="path3"></i><i class="path4"></i><i class="path5"></i></i>
                                 </button>
                             </form>
                         </div>
                     </div>
-                @empty
-                    <div class="text-center py-8">
-                        <i class="ki-duotone ki-calendar fs-3x text-muted mb-3"><i class="path1"></i><i class="path2"></i></i>
-                        <p class="text-muted mb-4">Aucune activite ajoutee</p>
-                        <button type="button" class="btn btn-sm btn-itcj-gold" data-bs-toggle="modal" data-bs-target="#addActivityModal">
-                            <i class="ki-duotone ki-plus fs-4"><i class="path1"></i><i class="path2"></i><i class="path3"></i></i>
-                            Ajouter une activite
-                        </button>
+
+                    <!-- Modal edit activity -->
+                    <div class="modal fade" id="editActivityModal{{ $activity->id }}" tabindex="-1">
+                        <div class="modal-dialog">
+                            <div class="modal-content">
+                                <form action="{{ route('bulletin.activities.update', $activity) }}" method="POST">
+                                    @csrf
+                                    @method('PUT')
+                                    <div class="modal-header">
+                                        <h5 class="modal-title">Modifier l'activite</h5>
+                                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                    </div>
+                                    <div class="modal-body">
+                                        <div class="mb-3">
+                                            <label class="form-label required">Titre</label>
+                                            <input type="text" name="title" class="form-control" value="{{ $activity->title }}" required>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label class="form-label required">Type</label>
+                                            <select name="type" class="form-select" required>
+                                                @foreach($activityTypes as $key => $label)
+                                                    <option value="{{ $key }}" {{ $activity->type === $key ? 'selected' : '' }}>{{ $label }}</option>
+                                                @endforeach
+                                            </select>
+                                        </div>
+                                        <div class="row mb-3">
+                                            <div class="col-6">
+                                                <label class="form-label">Date</label>
+                                                <input type="date" name="activity_date" class="form-control" value="{{ $activity->activity_date?->format('Y-m-d') }}">
+                                            </div>
+                                            <div class="col-6">
+                                                <label class="form-label">Heure</label>
+                                                <input type="time" name="activity_time" class="form-control" value="{{ $activity->activity_time ? \Carbon\Carbon::parse($activity->activity_time)->format('H:i') : '' }}">
+                                            </div>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label class="form-label">Lieu</label>
+                                            <input type="text" name="location" class="form-control" value="{{ $activity->location }}">
+                                        </div>
+                                        <div class="mb-3">
+                                            <label class="form-label">Description</label>
+                                            <textarea name="description" class="form-control" rows="2">{{ $activity->description }}</textarea>
+                                        </div>
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" name="is_highlighted" value="1" {{ $activity->is_highlighted ? 'checked' : '' }}>
+                                            <label class="form-check-label">Mettre en evidence</label>
+                                        </div>
+                                    </div>
+                                    <div class="modal-footer">
+                                        <button type="button" class="btn btn-light" data-bs-dismiss="modal">Annuler</button>
+                                        <button type="submit" class="btn btn-itcj">Enregistrer</button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
                     </div>
+                @empty
+                    <p class="text-muted text-center py-4">Aucune activite ajoutee</p>
                 @endforelse
             </div>
         </div>
@@ -287,16 +323,16 @@
                                 <strong>{{ $reflection->title }}</strong>
                             </div>
                             <div class="d-flex gap-2">
-                                <button type="button" class="btn btn-icon btn-sm btn-light-warning" aria-label="Modifier la reflexion" data-bs-toggle="modal" data-bs-target="#editReflectionModal{{ $reflection->id }}">
+                                <button type="button" class="btn btn-icon btn-sm btn-light-warning" data-bs-toggle="modal" data-bs-target="#editReflectionModal{{ $reflection->id }}">
                                     <i class="ki-duotone ki-pencil fs-6"><i class="path1"></i><i class="path2"></i></i>
                                 </button>
                                 <form action="{{ route('bulletin.reflections.destroy', $reflection) }}" method="POST"
-                                      data-confirm="Supprimer cette reflexion ?"
-                                      data-confirm-title="Supprimer la reflexion"
+                                      data-confirm="Supprimer cette réflexion ?"
+                                      data-confirm-title="Supprimer la réflexion"
                                       data-confirm-ok="Supprimer">
                                     @csrf
                                     @method('DELETE')
-                                    <button type="submit" class="btn btn-icon btn-sm btn-light-danger" aria-label="Supprimer la reflexion">
+                                    <button type="submit" class="btn btn-icon btn-sm btn-light-danger">
                                         <i class="ki-duotone ki-trash fs-6"><i class="path1"></i><i class="path2"></i><i class="path3"></i><i class="path4"></i><i class="path5"></i></i>
                                     </button>
                                 </form>
@@ -468,66 +504,6 @@
     </div>
 </div>
 
-<!-- Modal: Modifier une activite (dynamic single modal) -->
-<div class="modal fade" id="editActivityModal" tabindex="-1" role="dialog" aria-labelledby="editActivityModalTitle" aria-modal="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <form id="editActivityForm" method="POST">
-                @csrf
-                @method('PUT')
-                <div class="modal-header">
-                    <h5 class="modal-title" id="editActivityModalTitle">Modifier l'activite</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fermer"></button>
-                </div>
-                <div class="modal-body">
-                    <div class="mb-3">
-                        <label class="form-label required">Titre</label>
-                        <input type="text" name="title" id="editActivityTitle" class="form-control" required>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label required">Type</label>
-                        <select name="type" id="editActivityType" class="form-select" required>
-                            @foreach($activityTypes as $key => $label)
-                                <option value="{{ $key }}">{{ $label }}</option>
-                            @endforeach
-                        </select>
-                    </div>
-                    <div class="row mb-3">
-                        <div class="col-6">
-                            <label class="form-label">Date</label>
-                            <input type="date" name="activity_date" id="editActivityDate" class="form-control">
-                        </div>
-                        <div class="col-6">
-                            <label class="form-label">Heure</label>
-                            <input type="time" name="activity_time" id="editActivityTime" class="form-control">
-                        </div>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Lieu</label>
-                        <input type="text" name="location" id="editActivityLocation" class="form-control">
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Description</label>
-                        <textarea name="description" id="editActivityDescription" class="form-control" rows="2"></textarea>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Invites</label>
-                        <textarea name="guests" id="editActivityGuests" class="form-control" rows="2"></textarea>
-                    </div>
-                    <div class="form-check">
-                        <input class="form-check-input" type="checkbox" name="is_highlighted" id="editActivityHighlighted" value="1">
-                        <label class="form-check-label">Mettre en evidence</label>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Annuler</button>
-                    <button type="submit" class="btn btn-itcj">Enregistrer</button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
-
 <!-- Modal: Ajouter une reflexion -->
 <div class="modal fade" id="addReflectionModal" tabindex="-1">
     <div class="modal-dialog modal-lg">
@@ -574,24 +550,6 @@
 @push('scripts')
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Dynamic activity edit modal
-    var activityBaseUrl = "{{ url('bulletin/activities') }}";
-    document.querySelectorAll('.edit-activity-btn').forEach(function(btn) {
-        btn.addEventListener('click', function() {
-            var id = this.dataset.activityId;
-            document.getElementById('editActivityForm').action = activityBaseUrl + '/' + id;
-            document.getElementById('editActivityTitle').value = this.dataset.activityTitle || '';
-            document.getElementById('editActivityType').value = this.dataset.activityType || '';
-            document.getElementById('editActivityDate').value = this.dataset.activityDate || '';
-            document.getElementById('editActivityTime').value = this.dataset.activityTime || '';
-            document.getElementById('editActivityLocation').value = this.dataset.activityLocation || '';
-            document.getElementById('editActivityDescription').value = this.dataset.activityDescription || '';
-            document.getElementById('editActivityGuests').value = this.dataset.activityGuests || '';
-            document.getElementById('editActivityHighlighted').checked = this.dataset.activityHighlighted === '1';
-        });
-    });
-
-    // Week date auto-calculation
     const weekStart = document.getElementById('week_start');
     const weekEnd = document.getElementById('week_end');
     let isManualOverride = false;

@@ -286,3 +286,4 @@ $user->primary_role_label; // "Administrateur"
 User::byAnyRole(['admin', 'communication'])->get();
  */
 
+

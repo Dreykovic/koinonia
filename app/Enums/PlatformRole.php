@@ -60,3 +60,4 @@ class PlatformRole
         return self::labels();
     }
 }
+

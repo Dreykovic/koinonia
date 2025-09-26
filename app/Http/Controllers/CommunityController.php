@@ -70,3 +70,4 @@ class CommunityController extends Controller
         return back()->with('success', 'Communaute supprimee avec succes.');
     }
 }
+

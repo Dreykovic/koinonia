@@ -52,3 +52,4 @@ class Community extends Model
         return $query->orderBy('name');
     }
 }
+

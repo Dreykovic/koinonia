@@ -142,3 +142,4 @@ class VehicleController extends Controller
         return back()->with('success', "Vehicule {$vehicle->name} est maintenant {$status}.");
     }
 }
+

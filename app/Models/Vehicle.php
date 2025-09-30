@@ -96,3 +96,6 @@ class Vehicle extends Model
         return $query->where('type', $type);
     }
 }
+
+
+

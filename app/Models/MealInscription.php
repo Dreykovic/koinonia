@@ -93,3 +93,4 @@ class MealInscription extends Model
     }
 }
 
+

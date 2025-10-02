@@ -106,3 +106,8 @@ class VehicleReservation extends Model
                      ->orderBy('start_time');
     }
 }
+
+
+
+
+

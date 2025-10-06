@@ -262,3 +262,6 @@ class SundayMeal extends Model
         return $this->max_guests_per_user ?? 5;
     }
 }
+
+
+

@@ -138,3 +138,7 @@ class SundayMealController extends Controller
         return back()->with('success', "Les inscriptions sont maintenant {$status}.");
     }
 }
+
+
+
+

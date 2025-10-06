@@ -92,3 +92,7 @@ class MealInscription extends Model
         return $query->whereNotNull('cancelled_at');
     }
 }
+
+
+
+

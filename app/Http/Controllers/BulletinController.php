@@ -433,3 +433,4 @@ class BulletinController extends Controller
         }
     }
 }
+

@@ -86,3 +86,5 @@ class BulletinEdition extends Model
         return "Numero: {$this->edition_number} | {$this->week_label} | Annee {$this->year}";
     }
 }
+
+

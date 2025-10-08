@@ -112,3 +112,4 @@ class WeeklyActivity extends Model
         return $query->where('is_highlighted', true);
     }
 }
+

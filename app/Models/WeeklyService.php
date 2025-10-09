@@ -102,3 +102,4 @@ class WeeklyService extends Model
         return $query->where('service_type', $type);
     }
 }
+

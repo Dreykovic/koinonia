@@ -167,3 +167,4 @@ class AccountRequestController extends Controller
             ->with('success', 'La demande a été rejetée. Un email a été envoyé au demandeur.');
     }
 }
+

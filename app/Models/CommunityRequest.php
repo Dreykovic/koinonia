@@ -151,3 +151,8 @@ class CommunityRequest extends Model
         return $query->where('request_type', 'achat');
     }
 }
+
+
+
+
+

@@ -50,3 +50,4 @@ class AccountApprovedMail extends Mailable implements ShouldQueue
         return [];
     }
 }
+

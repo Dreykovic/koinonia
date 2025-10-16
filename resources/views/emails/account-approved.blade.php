@@ -21,3 +21,4 @@ Si vous n'avez pas demande ce compte, veuillez ignorer cet email.
 Cordialement,<br>
 {{ config('app.name') }}
 @endcomponent
+

@@ -49,3 +49,4 @@ class NewAccountRequestMail extends Mailable implements ShouldQueue
         return [];
     }
 }
+

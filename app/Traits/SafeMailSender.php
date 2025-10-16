@@ -89,3 +89,4 @@ trait SafeMailSender
         return ['sent' => $sent, 'failed' => $failed];
     }
 }
+

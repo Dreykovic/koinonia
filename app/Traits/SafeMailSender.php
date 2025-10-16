@@ -90,3 +90,4 @@ trait SafeMailSender
     }
 }
 
+

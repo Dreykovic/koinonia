@@ -62,3 +62,4 @@ class UserProfile extends Model
     }
 }
 
+

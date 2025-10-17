@@ -63,3 +63,4 @@ class ProfileController extends Controller
         return back()->with('success', 'Mot de passe mis a jour avec succes.');
     }
 }
+

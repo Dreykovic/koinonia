@@ -174,3 +174,5 @@ class UserController extends Controller
         return back()->with('success', "Le membre {$user->name} est maintenant {$status}.");
     }
 }
+
+

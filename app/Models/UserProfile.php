@@ -61,3 +61,5 @@ class UserProfile extends Model
             ->exists();
     }
 }
+
+

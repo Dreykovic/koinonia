@@ -89,3 +89,7 @@ class WeekMenuController extends Controller
         return compact('menusPerDays', 'menusPerPeriods');
     }
 }
+
+
+
+

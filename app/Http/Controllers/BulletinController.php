@@ -437,3 +437,4 @@ class BulletinController extends Controller
 
 
 
+

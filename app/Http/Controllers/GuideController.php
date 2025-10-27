@@ -20,3 +20,4 @@ class GuideController extends Controller
         return view('guide.index', compact('sections'));
     }
 }
+

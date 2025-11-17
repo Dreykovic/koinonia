@@ -39,3 +39,4 @@ class ReservationCancelled implements ShouldBroadcast
         ];
     }
 }
+

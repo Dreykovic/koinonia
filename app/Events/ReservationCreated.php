@@ -42,3 +42,4 @@ class ReservationCreated implements ShouldBroadcast
         ];
     }
 }
+

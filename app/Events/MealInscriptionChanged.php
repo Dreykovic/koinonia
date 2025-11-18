@@ -40,3 +40,6 @@ class MealInscriptionChanged implements ShouldBroadcast
         ];
     }
 }
+
+
+

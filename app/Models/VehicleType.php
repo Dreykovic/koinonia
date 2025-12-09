@@ -46,3 +46,4 @@ class VehicleType extends Model
 }
 
 
+

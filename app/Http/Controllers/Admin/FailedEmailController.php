@@ -55,3 +55,4 @@ class FailedEmailController extends Controller
     }
 }
 
+

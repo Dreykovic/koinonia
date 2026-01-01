@@ -20,3 +20,4 @@ Vous pouvez approuver ou rejeter cette demande depuis l'interface d'administrati
 Cordialement,<br>
 {{ config('app.name') }}
 @endcomponent
+

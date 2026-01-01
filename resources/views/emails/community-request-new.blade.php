@@ -33,3 +33,4 @@ Vous pouvez traiter cette demande depuis l'interface d'administration.
 Cordialement,<br>
 {{ config('app.name') }}
 @endcomponent
+

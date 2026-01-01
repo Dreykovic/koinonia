@@ -54,3 +54,5 @@ class FailedEmailController extends Controller
         return back()->with('success', 'Entrée supprimée.');
     }
 }
+
+

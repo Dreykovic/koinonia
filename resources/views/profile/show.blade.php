@@ -97,17 +97,17 @@
                 </h3>
                 <div class="mb-6">
                     @php
-                        $profileColors = [
-                            'administrateur' => ['bg' => 'var(--itcj-red-light)', 'text' => 'var(--itcj-red)'],
-                            'chauffeur' => ['bg' => 'var(--itcj-gold-light)', 'text' => '#9a7a30'],
+                        $roleColors = [
+                            'admin' => ['bg' => 'var(--itcj-red-light)', 'text' => 'var(--itcj-red)'],
+                            'communication' => ['bg' => 'var(--itcj-gold-light)', 'text' => '#9a7a30'],
                             'sante' => ['bg' => '#e8f5e9', 'text' => '#2e7d32'],
                             'formateur' => ['bg' => 'var(--itcj-blue-light)', 'text' => 'var(--itcj-blue)'],
-                            'etudiant' => ['bg' => '#f5f5f5', 'text' => '#616161'],
+                            'membre' => ['bg' => '#f5f5f5', 'text' => '#616161'],
                         ];
-                        $profile = $profileColors[$user->profile ? $user->profile->name :'Profile Non Defini' ] ?? $profileColors['etudiant'];
+                        $role = $roleColors[$user->role] ?? $roleColors['membre'];
                     @endphp
-                    <span class="badge fs-7 px-4 py-2" style="background: {{ $profile['bg'] }}; color: {{ $profile['text'] }};">
-                        {{ $user->profile ? $user->profile->name :'Profile Non Defini' }}
+                    <span class="badge fs-7 px-4 py-2" style="background: {{ $role['bg'] }}; color: {{ $role['text'] }};">
+                        {{ $user->role_label }}
                     </span>
                 </div>
                 <a href="{{ route('profile.edit') }}" class="btn btn-itcj">
@@ -157,7 +157,7 @@
                         Communaute
                     </label>
                     <div class="col-lg-8">
-                        <span class="fw-bold" style="color: var(--itcj-dark);">{{ $user->community->name ?? '-' }}</span>
+                        <span class="fw-bold" style="color: var(--itcj-dark);">{{ $user->community ?? '-' }}</span>
                     </div>
                 </div>
 

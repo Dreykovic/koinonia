@@ -2,47 +2,11 @@
 
 @section('title', 'Nouvelle demande')
 @section('page-title', 'Reparations et Achats en Communaute')
-@push('styles')
-    <style>
-.share-modal {
-    display: none;
-    position: fixed;
-    z-index: 9999;
-    left: 0;
-    top: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(0,0,0,0.5);
-}
 
-.share-modal-content {
-    background: #fff;
-    width: 350px;
-    margin: 10% auto;
-    padding: 20px;
-    border-radius: 8px;
-    text-align: center;
-}
-
-.close {
-    float: right;
-    cursor: pointer;
-    font-size: 20px;
-}
-</style>
-
-@endpush
 @section('breadcrumb')
 <li class="breadcrumb-item text-muted">Nouvelle demande</li>
 @endsection
-@section('page-actions')
 
-<button type="button" onclick="openShareModal()" class="btn btn-itcj desktop-add-btn">
-     <i class="ki-duotone ki-fasten fs-3 me-1"><i class="path1"></i><i class="path2"></i><i class="path3"></i></i>
-     Partager ce formulaire
-</button>
-
-@endsection
 @section('content')
 <div class="row justify-content-center">
     <div class="col-xl-8">
@@ -91,7 +55,7 @@
                         <div class="d-flex align-items-center p-5 rounded" style="background: var(--itcj-blue-light, #f0f4f8);">
                             <div class="symbol symbol-40px me-4">
                                 <span class="symbol-label bg-primary text-white fw-bold fs-6">
-                                    {{ strtoupper(substr($user->name, 0, 2)) }}
+                                    {{ strtoupper(substr($user->name, 0, 1)) }}
                                 </span>
                             </div>
                             <div>
@@ -163,7 +127,7 @@
 
                     <!-- Submit -->
                     <div class="d-flex justify-content-end">
-                        <button type="submit" class="btn btn-itcj" id="submitBtn">
+                        <button type="submit" class="btn btn-itcj">
                             Suivant
                             <i class="ki-duotone ki-arrow-right fs-3 ms-2"><i class="path1"></i><i class="path2"></i></i>
                         </button>
@@ -173,89 +137,11 @@
         </div>
     </div>
 </div>
-<!-- Share Modal -->
-<div id="shareModal" class="share-modal" role="dialog" aria-labelledby="shareModalTitle" aria-modal="true">
-    <div class="share-modal-content">
-        <span class="close" onclick="closeShareModal()" aria-label="Fermer">&times;</span>
-
-        <h4 id="shareModalTitle">Partager le formulaire</h4>
-<div class="d-flex flex-column align-items-center ">
-    <!-- QR Code -->
-        <div id="qrcode"></div>
-
-        <a id="downloadQR" class="btn btn-sm btn-itcj mt-2" download="formulaire-qrcode.png">
-             <i class="ki-duotone ki-arrow-down fs-3 me-1"><i class="path1"></i><i class="path2"></i><i class="path3"></i></i>
-            Telecharger (apercu)
-        </a>
-        <a href="{{ route('community-requests.form.qr-download') }}" class="btn btn-sm btn-itcj-outline mt-2">
-             <i class="ki-duotone ki-arrow-down fs-3 me-1"><i class="path1"></i><i class="path2"></i><i class="path3"></i></i>
-            Telecharger en haute qualite (SVG)
-        </a>
-</div>
-    
-
-        <!-- Link -->
-        <div class="mt-3 d-flex align-items-center ">
-            <input type="text" id="shareLink" readonly class="form-control" disabled>
-            <button class="btn btn-icon btn-light ms-2" onclick="copyLink()" aria-label="Copier le lien">
-                     <i class="ki-duotone ki-copy fs-3 me-1"><i class="path1"></i><i class="path2"></i><i class="path3"></i></i>
-            </button>
-        </div>
-    </div>
-</div>
-
 @endsection
 
 @push('scripts')
-<script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js" integrity="sha384-3zSEDfvllQohrq0PHL1fOXJuC/jSOO34H46t6UQfobFOmxE5BpjjaIJY5F2/bMnU" crossorigin="anonymous"></script>
-<script>
-let qr;
-const formUrl = "{{ route('community-requests.form.step1') }}";
-
-function openShareModal() {
-    document.getElementById('shareModal').style.display = 'block';
-    document.getElementById('shareLink').value = formUrl;
-
-    // Nettoyer ancien QR
-    document.getElementById('qrcode').innerHTML = "";
-
-    qr = new QRCode(document.getElementById("qrcode"), {
-        text: formUrl,
-        width: 200,
-        height: 200,
-    });
-
-    // Attendre que le canvas soit genere
-    setTimeout(() => {
-        const canvas = document.querySelector("#qrcode canvas");
-        if (canvas) {
-            document.getElementById('downloadQR').href = canvas.toDataURL("image/png");
-        }
-    }, 300);
-}
-
-function closeShareModal() {
-    document.getElementById('shareModal').style.display = 'none';
-}
-
-function copyLink() {
-    const input = document.getElementById('shareLink');
-    input.select();
-    input.setSelectionRange(0, 99999);
-    navigator.clipboard.writeText(input.value);
-    alert("Lien copie !");
-}
-</script>
-
 <script>
 $(document).ready(function() {
-    // Loading state on submit
-    $('form').on('submit', function() {
-        var btn = $('#submitBtn');
-        btn.prop('disabled', true);
-        btn.html('<span class="spinner-border spinner-border-sm me-2"></span> Chargement...');
-    });
-
     // Highlight selected radio on change
     $('input[name="community_id"]').on('change', function() {
         $('input[name="community_id"]').closest('label').removeClass('border-primary bg-light-primary');

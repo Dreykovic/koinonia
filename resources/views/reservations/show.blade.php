@@ -94,20 +94,7 @@
         </div>
         @endif
     </div>
-    <div class="card-footer d-flex justify-content-between">
-        <div>
-            @if($reservation->canBeCancelled() && ($reservation->user_id === auth()->id() || auth()->user()->isAdmin()))
-            <form action="{{ route('reservations.destroy', $reservation) }}" method="POST" class="d-inline"
-                  onsubmit="return confirm('Voulez-vous annuler cette réservation ?')">
-                @csrf
-                @method('DELETE')
-                <button type="submit" class="btn btn-danger">
-                    <i class="ki-duotone ki-cross fs-4"><i class="path1"></i><i class="path2"></i></i>
-                    Annuler la réservation
-                </button>
-            </form>
-            @endif
-        </div>
+    <div class="card-footer d-flex justify-content-end">
         <a href="{{ route('reservations.index') }}" class="btn btn-light">Retour</a>
     </div>
 </div>

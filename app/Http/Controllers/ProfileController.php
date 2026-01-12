@@ -13,7 +13,8 @@ class ProfileController extends Controller
      */
     public function show()
     {
-        $user = auth()->user()->with("profile")->first();
+        $user = auth()->user();
+
         return view('profile.show', compact('user'));
     }
 

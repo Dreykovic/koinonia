@@ -116,43 +116,8 @@
 @section('content')
 <div class="card">
     <div class="card-header py-4">
-        <div class="d-flex flex-column w-100">
-            <div class="d-flex justify-content-between align-items-center mb-3">
-                <div>
-                    <h3 class="card-title fw-bold mb-0">Liste des membres</h3>
-                    <span class="text-muted fs-7">Gestion des membres de la communaute</span>
-                </div>
-            </div>
-            <form method="GET" class="d-flex align-items-center gap-3 flex-wrap">
-                <div class="position-relative">
-                    <i class="ki-duotone ki-magnifier fs-3 position-absolute" style="left: 12px; top: 50%; transform: translateY(-50%); color: var(--text-muted);"><i class="path1"></i><i class="path2"></i></i>
-                    <input type="text" name="search" class="form-control form-control-sm ps-10" placeholder="Rechercher nom, email..." value="{{ request('search') }}" style="min-width: 200px;">
-                </div>
-                <select name="role" class="form-select form-select-sm" style="min-width: 150px;" onchange="this.form.submit()">
-                    <option value="">Tous les roles</option>
-                    @foreach($roles as $value => $label)
-                        <option value="{{ $value }}" {{ request('role') == $value ? 'selected' : '' }}>{{ $label }}</option>
-                    @endforeach
-                </select>
-                <select name="status" class="form-select form-select-sm" style="min-width: 130px;" onchange="this.form.submit()">
-                    <option value="">Tous les statuts</option>
-                    <option value="active" {{ request('status') == 'active' ? 'selected' : '' }}>Actif</option>
-                    <option value="inactive" {{ request('status') == 'inactive' ? 'selected' : '' }}>Inactif</option>
-                </select>
-                <select name="community_id" class="form-select form-select-sm" style="min-width: 160px;" onchange="this.form.submit()">
-                    <option value="">Toutes les communautes</option>
-                    @foreach($communities as $community)
-                        <option value="{{ $community->id }}" {{ request('community_id') == $community->id ? 'selected' : '' }}>{{ $community->name }}</option>
-                    @endforeach
-                </select>
-                @if(request()->hasAny(['search', 'role', 'status', 'community_id']))
-                    <a href="{{ route('users.index') }}" class="btn btn-sm btn-light">
-                        <i class="ki-duotone ki-cross fs-4"></i>
-                        Reinitialiser
-                    </a>
-                @endif
-            </form>
-        </div>
+        <h3 class="card-title fw-bold mb-0">Liste des membres</h3>
+        <span class="text-muted fs-7">Gestion des membres de la communaute</span>
     </div>
     <div class="card-body pt-0">
         <div class="table-responsive">
@@ -161,9 +126,8 @@
                     <tr>
                         <th>Nom</th>
                         <th>Email</th>
-                        <th>Rôles</th>
-                        <th>Profil</th>
-                        <th>Communauté</th>
+                        <th>Role</th>
+                        <th>Communaute</th>
                         <th>Statut</th>
                         <th class="text-end">Actions</th>
                     </tr>
@@ -175,7 +139,7 @@
                             <div class="d-flex align-items-center">
                                 <div class="symbol symbol-45px me-4">
                                     <span class="symbol-label bg-itcj-blue-light text-itcj-blue fw-bold fs-5">
-                                        {{ strtoupper(substr($user->name, 0, 2)) }}
+                                        {{ strtoupper(substr($user->name, 0, 1)) }}
                                     </span>
                                 </div>
                                 <div>
@@ -192,41 +156,17 @@
                                 $roleColors = [
                                     'admin' => ['bg' => 'var(--itcj-red-light)', 'text' => 'var(--itcj-red)'],
                                     'communication' => ['bg' => 'var(--itcj-gold-light)', 'text' => '#9a7a30'],
-                                    'gestion_plateforme' => ['bg' => '#e3f2fd', 'text' => '#1976d2'],
                                     'sante' => ['bg' => '#e8f5e9', 'text' => '#2e7d32'],
-                                    'chauffeur' => ['bg' => '#e0f2f1', 'text' => '#00796b'],
                                     'formateur' => ['bg' => 'var(--itcj-blue-light)', 'text' => 'var(--itcj-blue)'],
                                     'membre' => ['bg' => '#f5f5f5', 'text' => '#616161'],
-                                    'autre' => ['bg' => '#fce4ec', 'text' => '#c2185b'],
                                 ];
+                                $role = $roleColors[$user->role] ?? $roleColors['membre'];
                             @endphp
-                            
-                            @if(!empty($user->roles))
-                                <div class="d-flex flex-wrap gap-1">
-                                    @foreach($user->role_labels as $index => $label)
-                                        @php
-                                            $roleKey = $user->roles[$index] ?? 'autre';
-                                            $colors = $roleColors[$roleKey] ?? $roleColors['autre'];
-                                        @endphp
-                                        <span class="badge fs-8" style="background: {{ $colors['bg'] }}; color: {{ $colors['text'] }};">
-                                            {{ $label }}
-                                        </span>
-                                    @endforeach
-                                </div>
-                            @else
-                                <span class="text-muted fs-8">Aucun rôle</span>
-                            @endif
+                            <span class="badge fs-8" style="background: {{ $role['bg'] }}; color: {{ $role['text'] }};">
+                                {{ $user->role_label }}
+                            </span>
                         </td>
-                        <td>
-                            @if($user->profile)
-                                <span class="badge fs-8" style="background: var(--itcj-blue-light); color: var(--itcj-blue);">
-                                    {{ $user->profile ? $user->profile->name :'Profile Non Defini'  }}
-                                </span>
-                            @else
-                                <span class="text-muted fs-8">Aucun profil</span>
-                            @endif
-                        </td>
-                        <td class="text-muted">{{ $user->community_label }}</td>
+                        <td class="text-muted">{{ $user->community ?? '-' }}</td>
                         <td>
                             @if($user->is_active)
                                 <span class="badge fs-8" style="background: #e8f5e9; color: #2e7d32;">Actif</span>
@@ -243,7 +183,7 @@
                                 <form action="{{ route('users.toggle-active', $user) }}" method="POST">
                                     @csrf
                                     @if($user->is_active)
-                                    <button type="submit" class="btn btn-icon btn-sm btn-itcj-red" title="Désactiver">
+                                    <button type="submit" class="btn btn-icon btn-sm btn-itcj-red" title="Desactiver">
                                         <i class="ki-duotone ki-cross fs-4"><i class="path1"></i><i class="path2"></i></i>
                                     </button>
                                     @else
@@ -260,15 +200,7 @@
                     @endforeach
                 </tbody>
             </table>
-
-
         </div>
-
-        @if($users->hasPages())
-        <div class="d-flex justify-content-center mt-4">
-            {{ $users->links() }}
-        </div>
-        @endif
 
         <!-- Mobile Cards -->
         <div class="members-mobile-list">
@@ -277,19 +209,17 @@
                     $roleColors = [
                         'admin' => ['bg' => 'var(--itcj-red-light)', 'text' => 'var(--itcj-red)'],
                         'communication' => ['bg' => 'var(--itcj-gold-light)', 'text' => '#9a7a30'],
-                        'gestion_plateforme' => ['bg' => '#e3f2fd', 'text' => '#1976d2'],
                         'sante' => ['bg' => '#e8f5e9', 'text' => '#2e7d32'],
-                        'chauffeur' => ['bg' => '#e0f2f1', 'text' => '#00796b'],
                         'formateur' => ['bg' => 'var(--itcj-blue-light)', 'text' => 'var(--itcj-blue)'],
                         'membre' => ['bg' => '#f5f5f5', 'text' => '#616161'],
-                        'autre' => ['bg' => '#fce4ec', 'text' => '#c2185b'],
                     ];
+                    $role = $roleColors[$user->role] ?? $roleColors['membre'];
                 @endphp
                 <div class="member-mobile-card">
                     <div class="member-mobile-header">
                         <div class="symbol symbol-40px">
                             <span class="symbol-label bg-itcj-blue-light text-itcj-blue fw-bold">
-                                {{ strtoupper(substr($user->name, 0, 2)) }}
+                                {{ strtoupper(substr($user->name, 0, 1)) }}
                             </span>
                         </div>
                         <div class="member-mobile-info">
@@ -306,37 +236,11 @@
                         @endif
                     </div>
                     <div class="member-mobile-meta">
-                        {{-- Affichage des rôles --}}
-                        @if(!empty($user->roles))
-                            @foreach($user->role_labels as $index => $label)
-                                @php
-                                    $roleKey = $user->roles[$index] ?? 'autre';
-                                    $colors = $roleColors[$roleKey] ?? $roleColors['autre'];
-                                @endphp
-                                <span class="badge fs-8" style="background: {{ $colors['bg'] }}; color: {{ $colors['text'] }};">
-                                    {{ $label }}
-                                </span>
-                            @endforeach
-                        @else
-                            <span class="badge badge-light fs-8">Aucun rôle</span>
-                        @endif
-
-                        {{-- Affichage du profil --}}
-                        @if($user->profile)
-                            <span class="badge fs-8" style="background: var(--itcj-blue-light); color: var(--itcj-blue);">
-                                <i class="ki-duotone ki-profile-user fs-7">
-                                    <i class="path1"></i>
-                                    <i class="path2"></i>
-                                    <i class="path3"></i>
-                                    <i class="path4"></i>
-                                </i>
-                                {{ $user->profile ? $user->profile->name :'Profile Non Defini'  }}
-                            </span>
-                        @endif
-
-                        {{-- Affichage de la communauté --}}
+                        <span class="badge fs-8" style="background: {{ $role['bg'] }}; color: {{ $role['text'] }};">
+                            {{ $user->role_label }}
+                        </span>
                         @if($user->community)
-                            <span class="badge badge-light-primary fs-8">{{ $user->community->name }}</span>
+                            <span class="badge badge-light-primary fs-8">{{ $user->community }}</span>
                         @endif
                     </div>
                     <div class="member-mobile-actions">
@@ -363,13 +267,15 @@
                     </div>
                 </div>
             @endforeach
-
-            @if($users->hasPages())
-            <div class="d-flex justify-content-center mt-4">
-                {{ $users->links() }}
-            </div>
-            @endif
         </div>
+
+        @if($users->hasPages())
+        <div class="d-flex justify-content-center mt-4">
+            {{ $users->links() }}
+        </div>
+        @endif
+    </div>
+</div>
 
 <!-- FAB for mobile -->
 <a href="{{ route('users.create') }}" class="fab" aria-label="Nouveau membre">

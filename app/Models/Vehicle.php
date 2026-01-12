@@ -4,7 +4,6 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Vehicle extends Model
@@ -14,24 +13,16 @@ class Vehicle extends Model
     protected $fillable = [
         'name',
         'license_plate',
+        'type',
         'capacity',
         'is_available',
         'description',
-        'vehicle_type_id'
     ];
 
     protected $casts = [
         'is_available' => 'boolean',
         'capacity' => 'integer',
     ];
-
-    /**
-     * Get the reservations for this vehicle.
-     */
-    public function type(): BelongsTo
-    {
-        return $this->belongsTo(VehicleType::class,'vehicle_type_id');
-    }
 
     /**
      * Get the reservations for this vehicle.
@@ -72,11 +63,11 @@ class Vehicle extends Model
      */
     public function getTypeLabelAttribute(): string
     {
-        return match ($this->type->name) {
+        return match ($this->type) {
             'sante' => 'Sante',
             'formation' => 'Formation',
             'communautaire' => 'Communautaire',
-            default => $this->type->name,
+            default => $this->type,
         };
     }
 

@@ -290,30 +290,20 @@
                                 Mot de passe oublie ?
                             </a>
                         </div>
-                        <div class="position-relative">
-                            <input class="form-control form-control-itcj" type="password" name="password"
-                                autocomplete="current-password" required placeholder="Votre mot de passe" style="padding-right: 45px;">
-                            <button type="button" class="btn btn-sm btn-icon position-absolute end-0 top-50 translate-middle-y me-2"
-                                onclick="togglePassword(this)" aria-label="Afficher le mot de passe">
-                                <i class="ki-duotone ki-eye fs-4"><i class="path1"></i><i class="path2"></i><i class="path3"></i></i>
-                            </button>
-                        </div>
+                        <input class="form-control form-control-itcj" type="password" name="password"
+                            autocomplete="current-password" required placeholder="Votre mot de passe">
                     </div>
 
                     <div class="mb-5">
-                        <label class="d-flex align-items-center cursor-pointer" style="min-height: 44px; padding: 8px 0;">
+                        <label class="d-flex align-items-center cursor-pointer py-2">
                             <input type="checkbox" name="remember" class="form-check-input me-3"
-                                {{ old('remember') ? 'checked' : '' }} style="width: 24px; height: 24px; border-color: #ccc; cursor: pointer;">
+                                {{ old('remember') ? 'checked' : '' }} style="border-color: #ccc; cursor: pointer;">
                             <span class="text-muted fs-7">Se souvenir de moi</span>
                         </label>
                     </div>
 
-                    <button type="submit" id="btn-submit" class="btn btn-itcj-login w-100 mb-4">
-                        <span class="indicator-label">Se connecter</span>
-                        <span class="indicator-progress" style="display: none;">
-                            Connexion...
-                            <span class="spinner-border spinner-border-sm ms-2"></span>
-                        </span>
+                    <button type="submit" class="btn btn-itcj-login w-100 mb-4">
+                        Se connecter
                     </button>
 
                     <div class="text-center">
@@ -321,38 +311,6 @@
                         <a href="{{ route('account-request.create') }}" class="link-itcj fs-7 ms-1">Demander l'adhesion</a>
                     </div>
                 </form>
-
-                @if(config('app.env') === 'local' || config('app.env') === 'dev')
-                    <div class="alert mt-4 mb-0" style="background: #FFF4E6; border: 1px solid #FFB74D; border-radius: 8px; padding: 12px 16px;">
-                        <div class="d-flex align-items-start">
-                            <i class="ki-duotone ki-information fs-2 me-2" style="color: #F57C00;">
-                                <i class="path1"></i>
-                                <i class="path2"></i>
-                                <i class="path3"></i>
-                            </i>
-                            <div style="flex: 1;">
-                                <strong style="color: #E65100; font-size: 14px; margin-bottom: 8px; display: block;">Mode Test - Cliquez pour remplir</strong>
-                                <div style="font-size: 13px; color: #5D4037;">
-                                    <div class="credential-item mb-2 p-2"
-                                         style="background: #FFF; border-radius: 6px; cursor: pointer; transition: all 0.2s; border: 1px solid transparent;"
-                                         onclick="fillCredentials('recteur@itcj.org', 'password')"
-                                         onmouseover="this.style.borderColor='#FFB74D'; this.style.transform='translateX(4px)'"
-                                         onmouseout="this.style.borderColor='transparent'; this.style.transform='translateX(0)'">
-                                        <i class="ki-duotone ki-user-tick fs-5 me-1" style="color: #F57C00;">
-                                            <i class="path1"></i>
-                                            <i class="path2"></i>
-                                            <i class="path3"></i>
-                                        </i>
-                                        <strong>Admin:</strong>
-                                        <span style="color: #E65100; font-weight: 500;">recteur@itcj.org</span>
-                                        <span class="badge ms-2" style="background: #E65100; color: #FFF; font-size: 10px; padding: 2px 6px;">Cliquez ici</span>
-                                    </div>
-                                 
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                @endif
             </div>
         </div>
 
@@ -361,64 +319,4 @@
         </div>
     </div>
 </div>
-
-<script>
-document.querySelector('form').addEventListener('submit', function() {
-    var btn = document.getElementById('btn-submit');
-    btn.disabled = true;
-    btn.querySelector('.indicator-label').style.display = 'none';
-    btn.querySelector('.indicator-progress').style.display = 'inline-block';
-});
-
-function togglePassword(btn) {
-    var input = btn.parentElement.querySelector('input');
-    var icon = btn.querySelector('i');
-    if (input.type === 'password') {
-        input.type = 'text';
-        icon.className = 'ki-duotone ki-eye-slash fs-4';
-        icon.innerHTML = '<i class="path1"></i><i class="path2"></i><i class="path3"></i><i class="path4"></i>';
-    } else {
-        input.type = 'password';
-        icon.className = 'ki-duotone ki-eye fs-4';
-        icon.innerHTML = '<i class="path1"></i><i class="path2"></i><i class="path3"></i>';
-    }
-}
-
-function fillCredentials(email, password) {
-    // Fill the form fields
-    var emailInput = document.querySelector('input[name="email"]');
-    var passwordInput = document.querySelector('input[name="password"]');
-
-    emailInput.value = email;
-    passwordInput.value = password;
-
-    // Add visual feedback with animation
-    emailInput.style.transition = 'all 0.3s ease';
-    passwordInput.style.transition = 'all 0.3s ease';
-
-    emailInput.style.background = '#E8F5E9';
-    passwordInput.style.background = '#E8F5E9';
-
-    // Focus on email field briefly to show it's filled
-    emailInput.focus();
-
-    // Reset background color after animation
-    setTimeout(function() {
-        emailInput.style.background = '';
-        passwordInput.style.background = '';
-    }, 1000);
-
-    // Show success message
-    var credentialItems = document.querySelectorAll('.credential-item');
-    credentialItems.forEach(function(item) {
-        if (item.onclick.toString().includes(email)) {
-            var originalBg = item.style.background;
-            item.style.background = '#E8F5E9';
-            setTimeout(function() {
-                item.style.background = originalBg;
-            }, 800);
-        }
-    });
-}
-</script>
 @endsection

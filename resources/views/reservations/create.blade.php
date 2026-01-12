@@ -26,7 +26,7 @@
                         <option value="">Selectionnez un vehicule</option>
                         @foreach($vehicles as $vehicle)
                             <option value="{{ $vehicle->id }}" {{ old('vehicle_id') == $vehicle->id ? 'selected' : '' }}>
-                                {{ $vehicle->name }} ({{ $vehicle->license_plate }}) - {{ ucfirst($vehicle->type->name) }}
+                                {{ $vehicle->name }} ({{ $vehicle->license_plate }}) - {{ ucfirst($vehicle->type) }}
                             </option>
                         @endforeach
                     </select>
@@ -83,28 +83,8 @@
         </div>
         <div class="card-footer d-flex justify-content-end">
             <a href="{{ route('reservations.index') }}" class="btn btn-light me-3">Annuler</a>
-            <button type="submit" id="btn-submit" class="btn btn-primary">
-                <span class="indicator-label">Reserver</span>
-                <span class="indicator-progress" style="display: none;">
-                    Reservation...
-                    <span class="spinner-border spinner-border-sm ms-2"></span>
-                </span>
-            </button>
+            <button type="submit" class="btn btn-primary">Reserver</button>
         </div>
     </form>
 </div>
-
-<!-- Mobile back button -->
-<a href="{{ route('reservations.index') }}" class="mobile-back-btn d-md-none" aria-label="Retour aux reservations">
-    <i class="ki-duotone ki-arrow-left"><i class="path1"></i><i class="path2"></i></i>
-</a>
-
-<script>
-document.querySelector('form').addEventListener('submit', function() {
-    var btn = document.getElementById('btn-submit');
-    btn.disabled = true;
-    btn.querySelector('.indicator-label').style.display = 'none';
-    btn.querySelector('.indicator-progress').style.display = 'inline-block';
-});
-</script>
 @endsection

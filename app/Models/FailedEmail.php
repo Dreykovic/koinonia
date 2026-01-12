@@ -70,3 +70,4 @@ class FailedEmail extends Model
         return null;
     }
 }
+

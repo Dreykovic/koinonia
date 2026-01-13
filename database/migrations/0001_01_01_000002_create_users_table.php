@@ -14,14 +14,11 @@ return new class extends Migration
         Schema::create('users', function (Blueprint $table) {
             $table->id();
             $table->string('name');
-            $table->string('matricule')->nullable();
             $table->string('title_prefix')->nullable();
             $table->string('email')->unique();
             $table->timestamp('email_verified_at')->nullable();
             $table->string('password');
-            $table->json('roles')->nullable();
-
-            $table->foreignId('user_profile_id')->nullable()->constrained('user_profiles')->onDelete('cascade');
+            $table->enum('role', ['admin', 'communication', 'sante', 'formateur', 'membre'])->default('membre');
             $table->foreignId('community_id')->nullable()->constrained('communities')->nullOnDelete();
             $table->string('room_number')->nullable();
             $table->string('phone')->nullable();

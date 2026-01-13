@@ -8,6 +8,7 @@ use App\Models\CommunityRequest;
 use App\Models\RepairLocation;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
 use App\Traits\SafeMailSender;
 
@@ -114,14 +115,31 @@ class CommunityRequestController extends Controller
                 ->mapWithKeys(function ($item) {
                     return [$item->community?->name ?? 'Non defini' => $item->count];
                 }),
-            'by_month' => CommunityRequest::selectRaw("strftime('%Y-%m', created_at) as month, count(*) as count")
-                ->groupBy('month')
-                ->orderByDesc('month')
-                ->limit(12)
-                ->pluck('count', 'month'),
+            'by_month' => $this->getRequestsByMonth(),
         ];
 
         return view('community-requests.statistics', compact('stats'));
+    }
+
+    /**
+     * Get requests grouped by month (database-agnostic).
+     */
+    private function getRequestsByMonth()
+    {
+        $driver = DB::connection()->getDriverName();
+
+        $dateFormat = match ($driver) {
+            'mysql' => "DATE_FORMAT(created_at, '%Y-%m')",
+            'pgsql' => "TO_CHAR(created_at, 'YYYY-MM')",
+            'sqlite' => "strftime('%Y-%m', created_at)",
+            default => "DATE_FORMAT(created_at, '%Y-%m')",
+        };
+
+        return CommunityRequest::selectRaw("{$dateFormat} as month, count(*) as count")
+            ->groupBy('month')
+            ->orderByDesc('month')
+            ->limit(12)
+            ->pluck('count', 'month');
     }
 
     /**

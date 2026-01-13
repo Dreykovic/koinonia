@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Models\Community;
 use App\Models\User;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
@@ -10,6 +11,9 @@ class UserSeeder extends Seeder
 {
     public function run(): void
     {
+        // Recuperer les IDs des communautes
+        $communities = Community::pluck('id', 'name');
+
         // Admin (Recteur)
         User::updateOrCreate(
             ['email' => 'recteur@itcj.org'],
@@ -17,7 +21,7 @@ class UserSeeder extends Seeder
                 'name' => 'Jean-Marie NDONGO',
                 'password' => Hash::make('password'),
                 'role' => 'admin',
-                'community' => 'Matungulu',
+                'community_id' => $communities['Matungulu'] ?? null,
                 'room_number' => 'R01',
                 'phone' => '+237 6 99 00 00 01',
                 'is_active' => true,
@@ -42,7 +46,7 @@ class UserSeeder extends Seeder
                     'name' => $m['name'],
                     'password' => Hash::make('password'),
                     'role' => 'membre',
-                    'community' => 'Xavier',
+                    'community_id' => $communities['Xavier'] ?? null,
                     'room_number' => $m['room'],
                     'phone' => '+237 6 ' . rand(70, 99) . ' ' . rand(10, 99) . ' ' . rand(10, 99) . ' ' . str_pad($i + 10, 2, '0', STR_PAD_LEFT),
                     'is_active' => true,
@@ -68,7 +72,7 @@ class UserSeeder extends Seeder
                     'name' => $m['name'],
                     'password' => Hash::make('password'),
                     'role' => 'membre',
-                    'community' => 'Loyola',
+                    'community_id' => $communities['Loyola'] ?? null,
                     'room_number' => $m['room'],
                     'phone' => '+237 6 ' . rand(70, 99) . ' ' . rand(10, 99) . ' ' . rand(10, 99) . ' ' . str_pad($i + 20, 2, '0', STR_PAD_LEFT),
                     'is_active' => true,
@@ -94,7 +98,7 @@ class UserSeeder extends Seeder
                     'name' => $m['name'],
                     'password' => Hash::make('password'),
                     'role' => 'membre',
-                    'community' => 'Akwaba',
+                    'community_id' => $communities['Akwaba'] ?? null,
                     'room_number' => $m['room'],
                     'phone' => '+237 6 ' . rand(70, 99) . ' ' . rand(10, 99) . ' ' . rand(10, 99) . ' ' . str_pad($i + 30, 2, '0', STR_PAD_LEFT),
                     'is_active' => true,
@@ -111,7 +115,7 @@ class UserSeeder extends Seeder
                 'name' => 'Service Communication',
                 'password' => Hash::make('password'),
                 'role' => 'communication',
-                'community' => 'Mveng',
+                'community_id' => $communities['Mveng'] ?? null,
                 'room_number' => 'B01',
                 'phone' => '+237 6 99 00 00 02',
                 'is_active' => true,
@@ -127,7 +131,7 @@ class UserSeeder extends Seeder
                 'name' => 'Dr. Marie ATANGANA',
                 'password' => Hash::make('password'),
                 'role' => 'sante',
-                'community' => 'Tansi',
+                'community_id' => $communities['Tansi'] ?? null,
                 'room_number' => 'B02',
                 'phone' => '+237 6 99 00 00 03',
                 'is_active' => true,
@@ -138,8 +142,8 @@ class UserSeeder extends Seeder
 
         // Formateurs
         $formateurs = [
-            ['name' => 'Jacques ESSONO', 'prefix' => 'P.', 'birthday' => '1970-02-14', 'community' => 'Farre'],
-            ['name' => 'Andre MVONDO', 'prefix' => 'P.', 'birthday' => '1972-10-08', 'community' => 'Farre'],
+            ['name' => 'Jacques ESSONO', 'prefix' => 'P.', 'birthday' => '1970-02-14', 'community' => 'Favre'],
+            ['name' => 'Andre MVONDO', 'prefix' => 'P.', 'birthday' => '1972-10-08', 'community' => 'Favre'],
         ];
 
         foreach ($formateurs as $i => $f) {
@@ -149,7 +153,7 @@ class UserSeeder extends Seeder
                     'name' => $f['name'],
                     'password' => Hash::make('password'),
                     'role' => 'formateur',
-                    'community' => $f['community'],
+                    'community_id' => $communities[$f['community']] ?? null,
                     'room_number' => 'F0' . ($i + 1),
                     'phone' => '+237 6 99 00 00 0' . ($i + 4),
                     'is_active' => true,

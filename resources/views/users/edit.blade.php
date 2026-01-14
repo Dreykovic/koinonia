@@ -42,75 +42,35 @@
             <div class="row mb-5">
                 <div class="col-md-6">
                     <label class="form-label">Nouveau mot de passe</label>
-                    <div class="position-relative">
-                        <input type="password" name="password" class="form-control form-control-solid @error('password') is-invalid @enderror" style="padding-right: 45px;">
-                        <button type="button" class="btn btn-sm btn-icon position-absolute end-0 top-50 translate-middle-y me-2"
-                            onclick="togglePassword(this)" aria-label="Afficher le mot de passe">
-                            <i class="ki-duotone ki-eye fs-4"><i class="path1"></i><i class="path2"></i><i class="path3"></i></i>
-                        </button>
-                    </div>
+                    <input type="password" name="password" class="form-control form-control-solid @error('password') is-invalid @enderror">
                     @error('password')
-                        <div class="invalid-feedback d-block">{{ $message }}</div>
+                        <div class="invalid-feedback">{{ $message }}</div>
                     @enderror
                     <div class="form-text">Laisser vide pour ne pas changer.</div>
                 </div>
                 <div class="col-md-6">
                     <label class="form-label">Confirmer le mot de passe</label>
-                    <div class="position-relative">
-                        <input type="password" name="password_confirmation" class="form-control form-control-solid" style="padding-right: 45px;">
-                        <button type="button" class="btn btn-sm btn-icon position-absolute end-0 top-50 translate-middle-y me-2"
-                            onclick="togglePassword(this)" aria-label="Afficher le mot de passe">
-                            <i class="ki-duotone ki-eye fs-4"><i class="path1"></i><i class="path2"></i><i class="path3"></i></i>
-                        </button>
-                    </div>
+                    <input type="password" name="password_confirmation" class="form-control form-control-solid">
                 </div>
             </div>
 
             <div class="row mb-5">
                 <div class="col-md-6">
-                    <label class="form-label required" for="roles">Rôles</label>
-                    <select id="roles" name="roles[]" class="form-select form-select-solid @error('roles') is-invalid @enderror @error('roles.*') is-invalid @enderror" multiple required>
-                        @foreach(\App\Enums\PlatformRole::options() as $value => $label)
-                            <option value="{{ $value }}" {{ in_array($value, old('roles', $user->roles ?? [])) ? 'selected' : '' }}>
-                                {{ $label }}
-                            </option>
-                        @endforeach
+                    <label class="form-label required">Role</label>
+                    <select name="role" class="form-select form-select-solid @error('role') is-invalid @enderror" required>
+                        <option value="membre" {{ old('role', $user->role) == 'membre' ? 'selected' : '' }}>Membre</option>
+                        <option value="formateur" {{ old('role', $user->role) == 'formateur' ? 'selected' : '' }}>Formateur</option>
+                        <option value="sante" {{ old('role', $user->role) == 'sante' ? 'selected' : '' }}>Sante</option>
+                        <option value="communication" {{ old('role', $user->role) == 'communication' ? 'selected' : '' }}>Communication</option>
+                        <option value="admin" {{ old('role', $user->role) == 'admin' ? 'selected' : '' }}>Administrateur</option>
                     </select>
-                    <small class="form-text text-muted">Maintenez Ctrl (Cmd sur Mac) pour sélectionner plusieurs rôles</small>
-                    @error('roles')
-                        <div class="invalid-feedback">{{ $message }}</div>
-                    @enderror
-                    @error('roles.*')
+                    @error('role')
                         <div class="invalid-feedback">{{ $message }}</div>
                     @enderror
                 </div>
-                
                 <div class="col-md-6">
-                    <label class="form-label" for="user_profile_id">Profil</label>
-                    <select id="user_profile_id" name="user_profile_id" class="form-select form-select-solid @error('user_profile_id') is-invalid @enderror">
-                        <option value="">Aucun profil</option>
-                        @foreach($profiles as $profile)
-                            <option value="{{ $profile->id }}" {{ old('user_profile_id', $user->user_profile_id) == $profile->id ? 'selected' : '' }}>
-                                {{ $profile->name }}
-                                @if(!$profile->is_active)
-                                    <span class="text-muted">(Inactif)</span>
-                                @endif
-                            </option>
-                        @endforeach
-                    </select>
-                    @if($profiles->isEmpty())
-                        <small class="form-text text-warning">Aucun profil disponible. Créez-en un d'abord.</small>
-                    @endif
-                    @error('user_profile_id')
-                        <div class="invalid-feedback">{{ $message }}</div>
-                    @enderror
-                </div>
-            </div>
-
-            <div class="row mb-5">
-                <div class="col-md-6">
-                    <label class="form-label" for="community_id">Communauté</label>
-                    <select id="community_id" name="community_id" class="form-select form-select-solid @error('community_id') is-invalid @enderror">
+                    <label class="form-label">Communaute</label>
+                    <select name="community_id" class="form-select form-select-solid @error('community_id') is-invalid @enderror">
                         <option value="">Aucune</option>
                         @foreach($communities as $community)
                             <option value="{{ $community->id }}" {{ old('community_id', $user->community_id) == $community->id ? 'selected' : '' }}>
@@ -121,16 +81,6 @@
                     @error('community_id')
                         <div class="invalid-feedback">{{ $message }}</div>
                     @enderror
-                </div>
-                
-                <div class="col-md-6">
-                    <label class="form-label">Statut</label>
-                    <div class="form-check form-switch form-check-custom form-check-solid">
-                        <input class="form-check-input" type="checkbox" id="is_active" name="is_active" value="1" {{ old('is_active', $user->is_active) ? 'checked' : '' }}>
-                        <label class="form-check-label" for="is_active">
-                            Utilisateur actif
-                        </label>
-                    </div>
                 </div>
             </div>
 
@@ -167,20 +117,4 @@
         </div>
     </form>
 </div>
-
-<script>
-function togglePassword(btn) {
-    var input = btn.parentElement.querySelector('input');
-    var icon = btn.querySelector('i');
-    if (input.type === 'password') {
-        input.type = 'text';
-        icon.className = 'ki-duotone ki-eye-slash fs-4';
-        icon.innerHTML = '<i class="path1"></i><i class="path2"></i><i class="path3"></i><i class="path4"></i>';
-    } else {
-        input.type = 'password';
-        icon.className = 'ki-duotone ki-eye fs-4';
-        icon.innerHTML = '<i class="path1"></i><i class="path2"></i><i class="path3"></i>';
-    }
-}
-</script>
 @endsection

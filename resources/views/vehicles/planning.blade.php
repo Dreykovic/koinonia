@@ -15,9 +15,6 @@
     <link href="{{ asset('assets/plugins/global/plugins.bundle.css') }}" rel="stylesheet" type="text/css">
     <link href="{{ asset('assets/css/style.bundle.css') }}" rel="stylesheet" type="text/css">
 
-    <!-- Vite for Echo/Broadcasting -->
-    @vite(['resources/js/app.js'])
-
     <style>
         :root {
             /* Tons chauds ITCJ */
@@ -48,13 +45,6 @@
         body {
             background: var(--bg-base);
             overflow: hidden;
-        }
-
-        @media (max-width: 768px) {
-            body {
-                overflow: visible;
-                overflow-x: hidden;
-            }
         }
 
         /* Layout */
@@ -603,20 +593,8 @@
         .mobile-planning {
             display: none;
             flex-direction: column;
-            min-height: 100vh;
-            min-height: 100dvh; /* Dynamic viewport height for mobile browsers */
+            height: 100vh;
             background: var(--bg-base);
-            overflow-x: hidden;
-            width: 100%;
-        }
-
-        /* Hide scrollbar on mobile */
-        .mobile-planning-content::-webkit-scrollbar {
-            display: none;
-        }
-        .mobile-planning-content {
-            -ms-overflow-style: none;
-            scrollbar-width: none;
         }
 
         @media (max-width: 768px) {
@@ -717,7 +695,7 @@
         .mobile-planning-content {
             flex: 1;
             overflow-y: auto;
-            padding-bottom: 20px;
+            padding-bottom: 80px;
             -webkit-overflow-scrolling: touch;
         }
 
@@ -1106,25 +1084,6 @@
                         </div>
                         @endif
                     @endforeach
-
-                    <!-- Mobile Legend (inside scrollable content) -->
-                    <div class="mobile-legend" id="mobile-legend-inline">
-                        <div class="mobile-legend-title">Légende</div>
-                        <div class="mobile-legend-items">
-                            <div class="mobile-legend-item">
-                                <span class="mobile-legend-dot disponible"></span>
-                                <span>Disponible</span>
-                            </div>
-                            <div class="mobile-legend-item">
-                                <span class="mobile-legend-dot reserve"></span>
-                                <span>Réservé</span>
-                            </div>
-                            <div class="mobile-legend-item">
-                                <span class="mobile-legend-dot mine"></span>
-                                <span>Ma réservation</span>
-                            </div>
-                        </div>
-                    </div>
                 </div>
 
                 <!-- Vue Détail Véhicule (créneaux horaires) -->
@@ -1136,6 +1095,25 @@
                     <div class="mobile-date-display" id="detail-date-display"></div>
                     <div id="mobile-time-slots">
                         <!-- Créneaux générés par JS -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Mobile Legend -->
+            <div class="mobile-legend" id="mobile-legend">
+                <div class="mobile-legend-title">Légende</div>
+                <div class="mobile-legend-items">
+                    <div class="mobile-legend-item">
+                        <span class="mobile-legend-dot disponible"></span>
+                        <span>Disponible</span>
+                    </div>
+                    <div class="mobile-legend-item">
+                        <span class="mobile-legend-dot reserve"></span>
+                        <span>Réservé</span>
+                    </div>
+                    <div class="mobile-legend-item">
+                        <span class="mobile-legend-dot mine"></span>
+                        <span>Ma réservation</span>
                     </div>
                 </div>
             </div>
@@ -1447,23 +1425,12 @@
             pollingInterval: null,
             searchFilter: '',
             statusFilter: 'all',
-            // Vehicle settings
-            settings: {
-                openingHour: {{ $settings->opening_hour_int }},
-                closingHour: {{ $settings->closing_hour_int }},
-                openingHourFormatted: '{{ $settings->opening_hour_formatted }}',
-                closingHourFormatted: '{{ $settings->closing_hour_formatted }}',
-                maxFutureDays: {{ $settings->max_future_days }},
-                maxReservationDate: '{{ $settings->max_reservation_date }}',
-            },
 
             init() {
                 this.bindEvents();
                 this.loadData();
                 this.startPolling();
                 this.setDefaultTimes();
-                // Set max date on date picker
-                $('#planning-date').attr('max', this.settings.maxReservationDate);
             },
 
             bindEvents() {
@@ -1547,19 +1514,8 @@
 
                 // Body with accessible cells
                 let bodyHtml = '';
-                const today = new Date().toISOString().split('T')[0];
-                const currentHour = new Date().getHours();
-                const isToday = this.selectedDate === today;
-                const isPastDate = this.selectedDate < today;
-                const isFutureDate = this.selectedDate > this.settings.maxReservationDate;
-
-                // Use settings for hour range
-                const startHour = this.settings.openingHour;
-                const endHour = this.settings.closingHour;
-
-                for (let hour = startHour; hour <= endHour; hour++) {
+                for (let hour = 0; hour < 24; hour++) {
                     const timeStr = String(hour).padStart(2, '0') + ':00';
-                    const isPastHour = isPastDate || isFutureDate || (isToday && hour <= currentHour);
                     bodyHtml += '<tr role="row">';
                     bodyHtml += `<th scope="row">${timeStr}</th>`;
 
@@ -1589,9 +1545,6 @@
                                 onkeydown="Planning.handleCellKeydown(event, this)">
                                 <div class="cell-content">${content}</div>
                             </td>`;
-                        } else if (isPastHour) {
-                            // Créneau passé - désactivé
-                            bodyHtml += `<td class="cell-disabled" role="gridcell" aria-label="${v.name} à ${timeStr} - Créneau passé"></td>`;
                         } else {
                             const ariaLabel = `${v.name} à ${timeStr} - Disponible. Appuyez sur Entrée ou Espace pour réserver.`;
                             bodyHtml += `<td class="cell-disponible"
@@ -1805,23 +1758,12 @@
             selectedDate: '{{ now()->toDateString() }}',
             currentVehicleId: null,
             pollingInterval: null,
-            // Vehicle settings
-            settings: {
-                openingHour: {{ $settings->opening_hour_int }},
-                closingHour: {{ $settings->closing_hour_int }},
-                openingHourFormatted: '{{ $settings->opening_hour_formatted }}',
-                closingHourFormatted: '{{ $settings->closing_hour_formatted }}',
-                maxFutureDays: {{ $settings->max_future_days }},
-                maxReservationDate: '{{ $settings->max_reservation_date }}',
-            },
 
             init() {
                 this.bindEvents();
                 this.loadData();
                 this.updateDateDisplay();
                 this.startPolling();
-                // Set max date on date picker
-                $('#mobile-date-input').attr('max', this.settings.maxReservationDate);
             },
 
             bindEvents() {
@@ -1951,6 +1893,7 @@
                 // Show detail view
                 $('#mobile-vehicles-list').hide();
                 $('#mobile-vehicle-detail').show();
+                $('#mobile-legend').hide();
                 $('#mobile-fab').show();
                 $('.mobile-stats').hide();
                 $('.mobile-planning-search').hide();
@@ -1961,6 +1904,7 @@
                 $('#mobile-title').text('Planning Véhicules');
                 $('#mobile-vehicles-list').show();
                 $('#mobile-vehicle-detail').hide();
+                $('#mobile-legend').show();
                 $('#mobile-fab').hide();
                 $('.mobile-stats').show();
                 $('.mobile-planning-search').show();
@@ -1968,20 +1912,10 @@
 
             renderTimeSlots(vehicleId) {
                 let html = '';
-                const today = new Date().toISOString().split('T')[0];
-                const currentHour = new Date().getHours();
-                const isToday = this.selectedDate === today;
-                const isPastDate = this.selectedDate < today;
-                const isFutureDate = this.selectedDate > this.settings.maxReservationDate;
 
-                // Use settings for hour range
-                const startHour = this.settings.openingHour;
-                const endHour = this.settings.closingHour;
-
-                for (let hour = startHour; hour <= endHour; hour++) {
+                for (let hour = 0; hour < 24; hour++) {
                     const timeStr = String(hour).padStart(2, '0') + ':00';
                     const hourStr = String(hour).padStart(2, '0') + ':00:00';
-                    const isPastHour = isPastDate || isFutureDate || (isToday && hour <= currentHour);
                     const reservation = this.reservations.find(
                         r => r.vehicle_id === vehicleId && r.start_time <= hourStr && r.end_time > hourStr
                     );
@@ -2001,26 +1935,11 @@
                                 </div>
                                 ${isMine && reservation.can_edit ? `
                                     <div class="time-slot-mobile-actions">
-                                        <button class="btn btn-sm btn-light" onclick="event.stopPropagation(); MobilePlanning.editReservation(${reservation.id})" title="Modifier">
+                                        <button class="btn btn-sm btn-light" onclick="event.stopPropagation(); MobilePlanning.editReservation(${reservation.id})">
                                             <i class="ki-duotone ki-pencil"><i class="path1"></i><i class="path2"></i></i>
                                         </button>
-                                        ${reservation.can_cancel ? `
-                                            <button class="btn btn-sm btn-danger" onclick="event.stopPropagation(); MobilePlanning.cancelReservation(${reservation.id})" title="Annuler">
-                                                <i class="ki-duotone ki-cross"><i class="path1"></i><i class="path2"></i></i>
-                                            </button>
-                                        ` : ''}
                                     </div>
                                 ` : ''}
-                            </div>
-                        `;
-                    } else if (isPastHour) {
-                        // Créneau passé - désactivé
-                        html += `
-                            <div class="time-slot-mobile" style="opacity: 0.5; cursor: not-allowed; border-left: 4px solid #ccc;">
-                                <div class="time-slot-mobile-time">${timeStr}</div>
-                                <div class="time-slot-mobile-info">
-                                    <div class="time-slot-mobile-status" style="color: #999;">Passé</div>
-                                </div>
                             </div>
                         `;
                     } else {
@@ -2111,27 +2030,6 @@
                 $('#reservationModal').modal('show');
             },
 
-            cancelReservation(reservationId) {
-                Swal.fire({
-                    title: 'Confirmer l\'annulation ?',
-                    text: 'Voulez-vous vraiment annuler cette réservation ?',
-                    icon: 'warning',
-                    showCancelButton: true,
-                    confirmButtonColor: '#e74c3c',
-                    confirmButtonText: 'Oui, annuler',
-                    cancelButtonText: 'Non'
-                }).then(result => {
-                    if (result.isConfirmed) {
-                        $.ajax({ url: `/api/v1/reservations/${reservationId}`, method: 'DELETE' })
-                            .done(() => {
-                                Swal.fire({ icon: 'success', title: 'Réservation annulée', timer: 1500, showConfirmButton: false });
-                                this.loadData();
-                            })
-                            .fail(xhr => Swal.fire('Erreur', xhr.responseJSON?.message || 'Erreur lors de l\'annulation', 'error'));
-                    }
-                });
-            },
-
             startPolling() {
                 this.pollingInterval = setInterval(() => this.loadData(), 15000);
             },
@@ -2144,60 +2042,6 @@
         // Initialize mobile planning
         $(document).ready(() => MobilePlanning.init());
         $(window).on('beforeunload', () => MobilePlanning.stopPolling());
-
-        // ==================== REAL-TIME BROADCASTING ====================
-        // Connect to vehicle-planning channel for live updates
-        if (typeof Echo !== 'undefined') {
-            function subscribeToChannel(date) {
-                return Echo.channel('vehicle-planning.' + date)
-                    .listen('ReservationCreated', (e) => {
-                        console.log('ReservationCreated:', e);
-                        // Reload data for both desktop and mobile
-                        Planning.loadData();
-                        MobilePlanning.loadData();
-
-                        // Show notification
-                        Swal.fire({
-                            toast: true,
-                            position: 'top-end',
-                            icon: 'info',
-                            title: `${e.user_name} a reserve ${e.vehicle_name}`,
-                            showConfirmButton: false,
-                            timer: 3000
-                        });
-                    })
-                    .listen('ReservationUpdated', (e) => {
-                        console.log('ReservationUpdated:', e);
-                        Planning.loadData();
-                        MobilePlanning.loadData();
-                    })
-                    .listen('ReservationCancelled', (e) => {
-                        console.log('ReservationCancelled:', e);
-                        Planning.loadData();
-                        MobilePlanning.loadData();
-
-                        Swal.fire({
-                            toast: true,
-                            position: 'top-end',
-                            icon: 'info',
-                            title: 'Une reservation a ete annulee',
-                            showConfirmButton: false,
-                            timer: 3000
-                        });
-                    });
-            }
-
-            // Subscribe to current date channel
-            let currentChannel = subscribeToChannel('{{ now()->toDateString() }}');
-
-            // Re-subscribe when date changes
-            $(document).on('change', '#planning-date, #mobile-date-input', function() {
-                const newDate = $(this).val();
-                // Leave old channel and join new one
-                Echo.leave('vehicle-planning.' + Planning.selectedDate);
-                currentChannel = subscribeToChannel(newDate);
-            });
-        }
     </script>
 </body>
 </html>

@@ -16,7 +16,6 @@ return new class extends Migration
             $table->foreignId('bulletin_id')->nullable()->constrained('bulletin_editions')->onDelete('cascade');
             $table->string('title');
             $table->text('description')->nullable();
-            $table->text('guests')->nullable();
             $table->date('activity_date')->nullable();
             $table->time('activity_time')->nullable();
             $table->string('location')->nullable();

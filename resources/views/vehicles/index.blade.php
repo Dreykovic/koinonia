@@ -108,7 +108,7 @@
                             'formation' => ['bg' => 'var(--itcj-blue-light)', 'text' => 'var(--itcj-blue)'],
                             'communautaire' => ['bg' => '#e8f5e9', 'text' => '#2e7d32'],
                         ];
-                        $type = $typeColors[$vehicle->type->name] ?? ['bg' => '#f5f5f5', 'text' => '#616161'];
+                        $type = $typeColors[$vehicle->type] ?? ['bg' => '#f5f5f5', 'text' => '#616161'];
                     @endphp
                     <tr>
                         <td>
@@ -131,7 +131,7 @@
                         </td>
                         <td>
                             <span class="badge fs-8" style="background: {{ $type['bg'] }}; color: {{ $type['text'] }};">
-                                {{ ucfirst($vehicle->type->name) }}
+                                {{ ucfirst($vehicle->type) }}
                             </span>
                         </td>
                         <td class="text-muted">{{ $vehicle->capacity }} places</td>
@@ -192,7 +192,7 @@
                         'formation' => ['bg' => 'var(--itcj-blue-light)', 'text' => 'var(--itcj-blue)'],
                         'communautaire' => ['bg' => '#e8f5e9', 'text' => '#2e7d32'],
                     ];
-                    $type = $typeColors[$vehicle->type->name] ?? ['bg' => '#f5f5f5', 'text' => '#616161'];
+                    $type = $typeColors[$vehicle->type] ?? ['bg' => '#f5f5f5', 'text' => '#616161'];
                 @endphp
                 <div class="vehicle-mobile-card">
                     <div class="vehicle-mobile-header">
@@ -211,7 +211,7 @@
                     </div>
                     <div class="vehicle-mobile-body">
                         <span class="badge fs-8" style="background: {{ $type['bg'] }}; color: {{ $type['text'] }};">
-                            {{ ucfirst($vehicle->type->name) }}
+                            {{ ucfirst($vehicle->type) }}
                         </span>
                         <span class="badge bg-light text-muted fs-8">{{ $vehicle->capacity }} places</span>
                         <span class="badge badge-itcj fs-8">{{ $vehicle->reservations_count ?? 0 }} réserv.</span>

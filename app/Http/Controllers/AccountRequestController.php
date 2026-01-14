@@ -13,7 +13,6 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 use App\Traits\SafeMailSender;
-use App\Enums\PlatformRole;
 
 class AccountRequestController extends Controller
 {
@@ -45,7 +44,7 @@ class AccountRequestController extends Controller
         $accountRequest = AccountRequest::create($validated);
 
         // Send email to all admins (non-bloquant)
-        $admins = User::active()->byRole(PlatformRole::ADMIN)->get();
+        $admins = User::where('role', 'admin')->where('is_active', true)->get();
         foreach ($admins as $admin) {
             $this->sendMailSafely($admin, new NewAccountRequestMail($accountRequest), $accountRequest);
         }
@@ -121,7 +120,7 @@ class AccountRequestController extends Controller
             'phone' => $accountRequest->phone,
             'community_id' => $accountRequest->community_id,
             'password' => Hash::make($temporaryPassword),
-            'roles' => PlatformRole::MEMBRE,
+            'role' => 'membre',
             'is_active' => true,
         ]);
 

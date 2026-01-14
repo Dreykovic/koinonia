@@ -16,13 +16,3 @@ use Illuminate\Support\Facades\Broadcast;
 Broadcast::channel('App.Models.User.{id}', function ($user, $id) {
     return (int) $user->id === (int) $id;
 });
-
-// Channel public pour le planning des vehicules (par date)
-Broadcast::channel('vehicle-planning.{date}', function ($user) {
-    return auth()->check();
-});
-
-// Channel public pour les repas du dimanche
-Broadcast::channel('meal.{mealId}', function ($user) {
-    return auth()->check();
-});

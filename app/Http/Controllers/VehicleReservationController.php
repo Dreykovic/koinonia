@@ -4,33 +4,47 @@ namespace App\Http\Controllers;
 
 use App\Models\Vehicle;
 use App\Models\VehicleReservation;
-use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
-use Illuminate\Support\Facades\DB;
 
 class VehicleReservationController extends Controller
 {
+    /**
+     * Show the vehicle planning page.
+     */
     public function planning()
     {
         $user = auth()->user();
+
+        // Get all vehicles (not just available ones, so we can show them as disabled for non-accessible)
         $vehicles = Vehicle::all();
+
         return view('vehicles.planning', compact('vehicles'));
     }
 
+    /**
+     * Get vehicles accessible to the authenticated user.
+     */
     public function getVehicles()
     {
         $user = auth()->user();
+
         $vehicles = Vehicle::available()->get()->filter(function ($vehicle) use ($user) {
             return $user->canAccessVehicle($vehicle);
         })->values();
+
         return response()->json($vehicles);
     }
 
+    /**
+     * Get reservations for a specific date.
+     */
     public function getReservations(Request $request)
     {
         $date = $request->get('date', now()->toDateString());
         $user = auth()->user();
+
+        // Get all reservations for the date (we filter access in the frontend)
         $reservations = VehicleReservation::with(['vehicle', 'user:id,name'])
             ->where('reservation_date', $date)
             ->whereIn('status', ['pending', 'approved'])
@@ -51,27 +65,39 @@ class VehicleReservationController extends Controller
                     'can_cancel' => $reservation->canBeCancelled() && ($user->id === $reservation->user_id || $user->isAdmin()),
                 ];
             });
+
         return response()->json($reservations);
     }
 
+    /**
+     * Get statistics for a specific date.
+     */
     public function getStats(Request $request)
     {
         $date = $request->get('date', now()->toDateString());
         $user = auth()->user();
+
+        // Get vehicles accessible to user
         $accessibleVehicles = Vehicle::all()->filter(function ($vehicle) use ($user) {
             return $user->canAccessVehicle($vehicle);
         });
+
         $accessibleVehicleIds = $accessibleVehicles->pluck('id');
+
         $reservationsToday = VehicleReservation::whereIn('vehicle_id', $accessibleVehicleIds)
             ->where('reservation_date', $date)
             ->whereIn('status', ['pending', 'approved'])
             ->count();
+
         return response()->json([
             'total_vehicles' => $accessibleVehicles->count(),
             'reservations_today' => $reservationsToday,
         ]);
     }
 
+    /**
+     * Store a new reservation.
+     */
     public function store(Request $request)
     {
         $validated = $request->validate([
@@ -84,186 +110,241 @@ class VehicleReservationController extends Controller
         ]);
 
         $user = auth()->user();
+        $vehicle = Vehicle::findOrFail($validated['vehicle_id']);
 
-        try {
-            return DB::transaction(function () use ($validated, $user) {
-                $vehicle = Vehicle::lockForUpdate()->findOrFail($validated['vehicle_id']);
-                if (!$user->canAccessVehicle($vehicle)) {
-                    return response()->json(['message' => 'Vous n\'avez pas acces a ce vehicule.'], 403);
-                }
-                if (!$vehicle->isAvailableAt($validated['reservation_date'], $validated['start_time'], $validated['end_time'])) {
-                    return response()->json(['message' => 'Ce creneau n\'est pas disponible.'], 422);
-                }
-                $reservation = VehicleReservation::create([
-                    'vehicle_id' => $validated['vehicle_id'],
-                    'user_id' => $user->id,
-                    'reservation_date' => $validated['reservation_date'],
-                    'start_time' => $validated['start_time'],
-                    'end_time' => $validated['end_time'],
-                    'destination' => $validated['destination'],
-                    'notes' => $validated['notes'] ?? null,
-                    'status' => 'approved',
-                ]);
-                return response()->json([
-                    'message' => 'Reservation creee avec succes.',
-                    'reservation' => $reservation->load('vehicle', 'user:id,name'),
-                ], 201);
-            });
-        } catch (QueryException $e) {
-            if (in_array($e->getCode(), ['23505', '23000'])) {
-                return response()->json(['message' => 'Ce creneau vient d\'etre reserve par un autre utilisateur.'], 409);
-            }
-            throw $e;
+        // Check access
+        if (!$user->canAccessVehicle($vehicle)) {
+            return response()->json([
+                'message' => 'Vous n\'avez pas acces a ce vehicule.',
+            ], 403);
         }
+
+        // Check availability
+        if (!$vehicle->isAvailableAt($validated['reservation_date'], $validated['start_time'], $validated['end_time'])) {
+            return response()->json([
+                'message' => 'Ce creneau n\'est pas disponible.',
+            ], 422);
+        }
+
+        $reservation = VehicleReservation::create([
+            'vehicle_id' => $validated['vehicle_id'],
+            'user_id' => $user->id,
+            'reservation_date' => $validated['reservation_date'],
+            'start_time' => $validated['start_time'],
+            'end_time' => $validated['end_time'],
+            'destination' => $validated['destination'],
+            'notes' => $validated['notes'] ?? null,
+            'status' => 'approved', // Auto-approved for simplicity
+        ]);
+
+        return response()->json([
+            'message' => 'Reservation creee avec succes.',
+            'reservation' => $reservation->load('vehicle', 'user:id,name'),
+        ]);
     }
 
+    /**
+     * Update a reservation.
+     */
     public function update(Request $request, $id)
     {
         $reservation = VehicleReservation::findOrFail($id);
         $user = auth()->user();
+
+        // Check ownership or admin
         if ($reservation->user_id !== $user->id && !$user->isAdmin()) {
-            return response()->json(['message' => 'Vous n\'etes pas autorise a modifier cette reservation.'], 403);
+            return response()->json([
+                'message' => 'Vous n\'etes pas autorise a modifier cette reservation.',
+            ], 403);
         }
+
         $validated = $request->validate([
             'start_time' => ['sometimes', 'date_format:H:i'],
             'end_time' => ['sometimes', 'date_format:H:i', 'after:start_time'],
             'destination' => ['sometimes', 'string', 'max:255'],
             'notes' => ['nullable', 'string'],
         ]);
+
+        // Check availability (excluding current reservation) only if times are being changed
         if (isset($validated['start_time']) || isset($validated['end_time'])) {
-            try {
-                return DB::transaction(function () use ($validated, $reservation) {
-                    $vehicle = Vehicle::lockForUpdate()->findOrFail($reservation->vehicle_id);
-                    $startTime = $validated['start_time'] ?? $reservation->start_time;
-                    $endTime = $validated['end_time'] ?? $reservation->end_time;
-                    if (!$vehicle->isAvailableAt($reservation->reservation_date->format('Y-m-d'), $startTime, $endTime, $reservation->id)) {
-                        return response()->json(['message' => 'Ce creneau n\'est pas disponible.'], 422);
-                    }
-                    $reservation->update($validated);
-                    return response()->json([
-                        'message' => 'Reservation mise a jour avec succes.',
-                        'reservation' => $reservation->fresh()->load('vehicle', 'user'),
-                    ]);
-                });
-            } catch (QueryException $e) {
-                if (in_array($e->getCode(), ['23505', '23000'])) {
-                    return response()->json(['message' => 'Ce creneau vient d\'etre reserve par un autre utilisateur.'], 409);
-                }
-                throw $e;
+            $startTime = $validated['start_time'] ?? $reservation->start_time;
+            $endTime = $validated['end_time'] ?? $reservation->end_time;
+
+            if (!$reservation->vehicle->isAvailableAt(
+                $reservation->reservation_date->format('Y-m-d'),
+                $startTime,
+                $endTime,
+                $reservation->id
+            )) {
+                return response()->json([
+                    'message' => 'Ce creneau n\'est pas disponible.',
+                ], 422);
             }
         }
+
         $reservation->update($validated);
+
         return response()->json([
             'message' => 'Reservation mise a jour avec succes.',
-            'reservation' => $reservation->fresh()->load('vehicle', 'user'),
+            'reservation' => $reservation->fresh()->load('vehicle', 'user:id,name'),
         ]);
     }
 
-    public function destroy(Request $request, $id)
+    /**
+     * Cancel a reservation.
+     */
+    public function destroy($id)
     {
         $reservation = VehicleReservation::findOrFail($id);
         $user = auth()->user();
+
+        // Check ownership or admin
         if ($reservation->user_id !== $user->id && !$user->isAdmin()) {
-            if ($request->expectsJson()) {
-                return response()->json(['message' => 'Vous n\'etes pas autorise a annuler cette reservation.'], 403);
-            }
-            return back()->with('error', 'Vous n\'etes pas autorise a annuler cette reservation.');
+            return response()->json([
+                'message' => 'Vous n\'etes pas autorise a annuler cette reservation.',
+            ], 403);
         }
+
+        // Check if can be cancelled
         if (!$reservation->canBeCancelled()) {
-            if ($request->expectsJson()) {
-                return response()->json(['message' => 'Cette reservation ne peut plus etre annulee.'], 422);
-            }
-            return back()->with('error', 'Cette reservation ne peut plus etre annulee.');
+            return response()->json([
+                'message' => 'Cette reservation ne peut plus etre annulee (moins de 2h avant le debut).',
+            ], 422);
         }
+
         $reservation->update(['status' => 'cancelled']);
-        if ($request->expectsJson()) {
-            return response()->json(['message' => 'Reservation annulee avec succes.']);
-        }
-        return redirect()->route('reservations.index')->with('success', 'Reservation annulee avec succes.');
+
+        return response()->json([
+            'message' => 'Reservation annulee avec succes.',
+        ]);
     }
 
-    public function index(Request $request)
+    /**
+     * Display a listing of reservations.
+     */
+    public function index()
     {
         $user = auth()->user();
-        $filter = $request->get('filter', 'all');
-        $dateFilter = $request->get('date', 'upcoming');
-        $query = VehicleReservation::with(['vehicle', 'user:id,name']);
-        if ($request->filled('search')) {
-            $search = $request->search;
-            $query->where(function ($q) use ($search) {
-                $q->where('destination', 'like', "%{$search}%")
-                  ->orWhereHas('vehicle', function ($vq) use ($search) {
-                      $vq->where('name', 'like', "%{$search}%");
-                  });
-            });
-        }
+
         if ($user->isAdmin()) {
-            if ($filter === 'mine') { $query->where('user_id', $user->id); }
-            elseif ($filter === 'others') { $query->where('user_id', '!=', $user->id); }
+            $reservations = VehicleReservation::with(['vehicle', 'user:id,name'])
+                ->orderBy('reservation_date', 'desc')
+                ->orderBy('start_time', 'desc')
+                ->paginate(20);
         } else {
-            $query->where('user_id', $user->id);
+            $reservations = VehicleReservation::with('vehicle')
+                ->where('user_id', $user->id)
+                ->orderBy('reservation_date', 'desc')
+                ->orderBy('start_time', 'desc')
+                ->paginate(20);
         }
-        $today = now()->toDateString();
-        $tomorrow = now()->addDay()->toDateString();
-        $endOfWeek = now()->endOfWeek()->toDateString();
-        switch ($dateFilter) {
-            case 'today': $query->whereDate('reservation_date', $today)->whereIn('status', ['pending', 'approved']); break;
-            case 'tomorrow': $query->whereDate('reservation_date', $tomorrow)->whereIn('status', ['pending', 'approved']); break;
-            case 'week': $query->whereDate('reservation_date', '>=', $today)->whereDate('reservation_date', '<=', $endOfWeek)->whereIn('status', ['pending', 'approved']); break;
-            case 'upcoming': $query->whereDate('reservation_date', '>=', $today)->whereIn('status', ['pending', 'approved']); break;
-            case 'past': $query->where(function ($q) use ($today) { $q->whereDate('reservation_date', '<', $today)->orWhere('status', 'cancelled'); }); break;
-        }
-        if ($dateFilter === 'past') {
-            $query->orderBy('reservation_date', 'desc')->orderBy('start_time', 'desc');
-        } else {
-            $query->orderBy('reservation_date', 'asc')->orderBy('start_time', 'asc');
-        }
-        $reservations = $query->paginate(20)->withQueryString();
-        return view('reservations.index', compact('reservations', 'filter', 'dateFilter'));
+
+        return view('reservations.index', compact('reservations'));
     }
 
+    /**
+     * Show the form for creating a new reservation.
+     */
     public function create()
     {
         $user = auth()->user();
+
         $vehicles = Vehicle::available()->get()->filter(function ($vehicle) use ($user) {
             return $user->canAccessVehicle($vehicle);
         })->values();
+
         return view('reservations.create', compact('vehicles'));
     }
 
+    /**
+     * Display the specified reservation.
+     */
     public function show(VehicleReservation $reservation)
     {
         $user = auth()->user();
-        if ($reservation->user_id !== $user->id && !$user->isAdmin()) { abort(403); }
+
+        if ($reservation->user_id !== $user->id && !$user->isAdmin()) {
+            abort(403);
+        }
+
         $reservation->load(['vehicle', 'user', 'approver']);
+
         return view('reservations.show', compact('reservation'));
     }
 
+    /**
+     * Show the form for editing the specified reservation.
+     */
     public function edit(VehicleReservation $reservation)
     {
         $user = auth()->user();
-        if ($reservation->user_id !== $user->id && !$user->isAdmin()) { abort(403); }
+
+        if ($reservation->user_id !== $user->id && !$user->isAdmin()) {
+            abort(403);
+        }
+
         $vehicles = Vehicle::available()->get()->filter(function ($vehicle) use ($user) {
             return $user->canAccessVehicle($vehicle);
         })->values();
+
         return view('reservations.edit', compact('reservation', 'vehicles'));
     }
 
+    /**
+     * Approve a reservation (admin only).
+     */
     public function approve(VehicleReservation $reservation)
     {
-        if (!auth()->user()->isAdmin()) { abort(403); }
-        $reservation->update(['status' => 'approved', 'approved_by' => auth()->id()]);
+        if (!auth()->user()->isAdmin()) {
+            abort(403);
+        }
+
+        $reservation->update([
+            'status' => 'approved',
+            'approved_by' => auth()->id(),
+        ]);
+
         return back()->with('success', 'Reservation approuvee avec succes.');
     }
 
+    /**
+     * Reject a reservation (admin only).
+     */
     public function reject(VehicleReservation $reservation)
     {
-        if (!auth()->user()->isAdmin()) { abort(403); }
-        $reservation->update(['status' => 'rejected', 'approved_by' => auth()->id()]);
+        if (!auth()->user()->isAdmin()) {
+            abort(403);
+        }
+
+        $reservation->update([
+            'status' => 'rejected',
+            'approved_by' => auth()->id(),
+        ]);
+
         return back()->with('success', 'Reservation rejetee.');
     }
 
-    public function apiStore(Request $request) { return $this->store($request); }
-    public function apiUpdate(Request $request, $id) { return $this->update($request, $id); }
-    public function apiDestroy(Request $request, $id) { return $this->destroy($request, $id); }
+    /**
+     * API: Store a new reservation.
+     */
+    public function apiStore(Request $request)
+    {
+        return $this->store($request);
+    }
+
+    /**
+     * API: Update a reservation.
+     */
+    public function apiUpdate(Request $request, $id)
+    {
+        return $this->update($request, $id);
+    }
+
+    /**
+     * API: Cancel a reservation.
+     */
+    public function apiDestroy($id)
+    {
+        return $this->destroy($id);
+    }
 }

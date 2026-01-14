@@ -60,3 +60,4 @@ class RepairLocationController extends Controller
         return back()->with('success', 'Lieu supprime avec succes.');
     }
 }
+

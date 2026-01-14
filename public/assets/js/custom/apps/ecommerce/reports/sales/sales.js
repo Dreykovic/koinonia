@@ -122,3 +122,4 @@ var KTAppEcommerceReportSales = function () {
 KTUtil.onDOMContentLoaded(function () {
     KTAppEcommerceReportSales.init();
 });
+

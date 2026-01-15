@@ -278,3 +278,4 @@ var KTModalTopUpWallet = function () {
 KTUtil.onDOMContentLoaded(function () {
 	KTModalTopUpWallet.init();
 });
+

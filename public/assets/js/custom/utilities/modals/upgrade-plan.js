@@ -116,3 +116,4 @@ var KTModalUpgradePlan = function () {
 KTUtil.onDOMContentLoaded(function() {
     KTModalUpgradePlan.init();
 });
+

@@ -126,3 +126,4 @@ var KTAppEcommerceProducts = function () {
 KTUtil.onDOMContentLoaded(function () {
     KTAppEcommerceProducts.init();
 });
+

@@ -155,3 +155,4 @@ var KTSubscriptionsProducts = function () {
 KTUtil.onDOMContentLoaded(function () {
     KTSubscriptionsProducts.init();
 });
+

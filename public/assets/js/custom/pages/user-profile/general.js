@@ -152,3 +152,4 @@ KTUtil.onDOMContentLoaded(function() {
     KTProfileGeneral.init();
 });
 
+

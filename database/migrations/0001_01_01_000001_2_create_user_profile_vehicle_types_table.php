@@ -46,3 +46,4 @@ return new class extends Migration
         Schema::dropIfExists('user_profile_vehicle_types');
     }
 };
+

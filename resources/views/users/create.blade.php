@@ -21,16 +21,16 @@
         <div class="card-body">
             <div class="row mb-5">
                 <div class="col-md-6">
-                    <label class="form-label required">Nom complet</label>
-                    <input type="text" name="name" class="form-control form-control-solid @error('name') is-invalid @enderror"
+                    <label class="form-label required" for="name">Nom complet</label>
+                    <input type="text" id="name" name="name" class="form-control form-control-solid @error('name') is-invalid @enderror"
                         value="{{ old('name') }}" required>
                     @error('name')
                         <div class="invalid-feedback">{{ $message }}</div>
                     @enderror
                 </div>
                 <div class="col-md-6">
-                    <label class="form-label required">Email</label>
-                    <input type="email" name="email" class="form-control form-control-solid @error('email') is-invalid @enderror"
+                    <label class="form-label required" for="email">Email</label>
+                    <input type="email" inputmode="email" id="email" name="email" class="form-control form-control-solid @error('email') is-invalid @enderror"
                         value="{{ old('email') }}" required>
                     @error('email')
                         <div class="invalid-feedback">{{ $message }}</div>
@@ -40,22 +40,22 @@
 
             <div class="row mb-5">
                 <div class="col-md-6">
-                    <label class="form-label required">Mot de passe</label>
-                    <input type="password" name="password" class="form-control form-control-solid @error('password') is-invalid @enderror" required>
+                    <label class="form-label required" for="password">Mot de passe</label>
+                    <input type="password" id="password" name="password" class="form-control form-control-solid @error('password') is-invalid @enderror" required>
                     @error('password')
                         <div class="invalid-feedback">{{ $message }}</div>
                     @enderror
                 </div>
                 <div class="col-md-6">
-                    <label class="form-label required">Confirmer le mot de passe</label>
-                    <input type="password" name="password_confirmation" class="form-control form-control-solid" required>
+                    <label class="form-label required" for="password_confirmation">Confirmer le mot de passe</label>
+                    <input type="password" id="password_confirmation" name="password_confirmation" class="form-control form-control-solid" required>
                 </div>
             </div>
 
             <div class="row mb-5">
                 <div class="col-md-6">
-                    <label class="form-label required">Role</label>
-                    <select name="role" class="form-select form-select-solid @error('role') is-invalid @enderror" required>
+                    <label class="form-label required" for="role">Role</label>
+                    <select id="role" name="role" class="form-select form-select-solid @error('role') is-invalid @enderror" required>
                         <option value="membre" {{ old('role') == 'membre' ? 'selected' : '' }}>Membre</option>
                         <option value="formateur" {{ old('role') == 'formateur' ? 'selected' : '' }}>Formateur</option>
                         <option value="sante" {{ old('role') == 'sante' ? 'selected' : '' }}>Sante</option>
@@ -67,8 +67,8 @@
                     @enderror
                 </div>
                 <div class="col-md-6">
-                    <label class="form-label">Communaute</label>
-                    <select name="community_id" class="form-select form-select-solid @error('community_id') is-invalid @enderror">
+                    <label class="form-label" for="community_id">Communaute</label>
+                    <select id="community_id" name="community_id" class="form-select form-select-solid @error('community_id') is-invalid @enderror">
                         <option value="">Aucune</option>
                         @foreach($communities as $community)
                             <option value="{{ $community->id }}" {{ old('community_id') == $community->id ? 'selected' : '' }}>
@@ -84,16 +84,16 @@
 
             <div class="row mb-5">
                 <div class="col-md-6">
-                    <label class="form-label">Numero de chambre</label>
-                    <input type="text" name="room_number" class="form-control form-control-solid @error('room_number') is-invalid @enderror"
+                    <label class="form-label" for="room_number">Numero de chambre</label>
+                    <input type="text" id="room_number" name="room_number" class="form-control form-control-solid @error('room_number') is-invalid @enderror"
                         value="{{ old('room_number') }}" placeholder="Ex: 101, A12...">
                     @error('room_number')
                         <div class="invalid-feedback">{{ $message }}</div>
                     @enderror
                 </div>
                 <div class="col-md-6">
-                    <label class="form-label">Telephone</label>
-                    <input type="text" name="phone" class="form-control form-control-solid @error('phone') is-invalid @enderror"
+                    <label class="form-label" for="phone">Telephone</label>
+                    <input type="tel" inputmode="tel" id="phone" name="phone" class="form-control form-control-solid @error('phone') is-invalid @enderror"
                         value="{{ old('phone') }}" placeholder="Ex: +237 6XX XXX XXX">
                     @error('phone')
                         <div class="invalid-feedback">{{ $message }}</div>
@@ -103,16 +103,36 @@
 
             <div class="mb-5">
                 <div class="form-check form-switch form-check-custom form-check-solid">
-                    <input class="form-check-input" type="checkbox" name="is_active" value="1"
+                    <input class="form-check-input" type="checkbox" id="is_active" name="is_active" value="1"
                         {{ old('is_active', true) ? 'checked' : '' }}>
-                    <label class="form-check-label">Compte actif</label>
+                    <label class="form-check-label" for="is_active">Compte actif</label>
                 </div>
             </div>
         </div>
         <div class="card-footer d-flex justify-content-end">
             <a href="{{ route('users.index') }}" class="btn btn-light me-3">Annuler</a>
-            <button type="submit" class="btn btn-primary">Creer</button>
+            <button type="submit" id="btn-submit" class="btn btn-primary">
+                <span class="indicator-label">Creer</span>
+                <span class="indicator-progress" style="display: none;">
+                    Creation...
+                    <span class="spinner-border spinner-border-sm ms-2"></span>
+                </span>
+            </button>
         </div>
     </form>
 </div>
+
+<!-- Mobile back button -->
+<a href="{{ route('users.index') }}" class="mobile-back-btn d-md-none" aria-label="Retour aux membres">
+    <i class="ki-duotone ki-arrow-left"><i class="path1"></i><i class="path2"></i></i>
+</a>
+
+<script>
+document.querySelector('form').addEventListener('submit', function() {
+    var btn = document.getElementById('btn-submit');
+    btn.disabled = true;
+    btn.querySelector('.indicator-label').style.display = 'none';
+    btn.querySelector('.indicator-progress').style.display = 'inline-block';
+});
+</script>
 @endsection

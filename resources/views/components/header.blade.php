@@ -4,7 +4,8 @@
         <!-- Mobile toggle -->
         <div class="d-flex align-items-center d-lg-none ms-n2 me-2">
             <button type="button"
-                    class="btn btn-icon btn-active-color-primary w-35px h-35px"
+                    class="btn btn-icon btn-active-color-primary"
+                    style="width: 44px; height: 44px; min-width: 44px; min-height: 44px;"
                     id="kt_app_sidebar_mobile_toggle"
                     aria-label="Ouvrir le menu de navigation"
                     aria-expanded="false"

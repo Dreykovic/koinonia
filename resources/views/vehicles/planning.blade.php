@@ -47,6 +47,13 @@
             overflow: hidden;
         }
 
+        @media (max-width: 768px) {
+            body {
+                overflow: visible;
+                overflow-x: hidden;
+            }
+        }
+
         /* Layout */
         .planning-layout {
             display: flex;
@@ -593,8 +600,20 @@
         .mobile-planning {
             display: none;
             flex-direction: column;
-            height: 100vh;
+            min-height: 100vh;
+            min-height: 100dvh; /* Dynamic viewport height for mobile browsers */
             background: var(--bg-base);
+            overflow-x: hidden;
+            width: 100%;
+        }
+
+        /* Hide scrollbar on mobile */
+        .mobile-planning-content::-webkit-scrollbar {
+            display: none;
+        }
+        .mobile-planning-content {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
         }
 
         @media (max-width: 768px) {
@@ -695,7 +714,7 @@
         .mobile-planning-content {
             flex: 1;
             overflow-y: auto;
-            padding-bottom: 80px;
+            padding-bottom: 20px;
             -webkit-overflow-scrolling: touch;
         }
 
@@ -1084,6 +1103,25 @@
                         </div>
                         @endif
                     @endforeach
+
+                    <!-- Mobile Legend (inside scrollable content) -->
+                    <div class="mobile-legend" id="mobile-legend-inline">
+                        <div class="mobile-legend-title">Légende</div>
+                        <div class="mobile-legend-items">
+                            <div class="mobile-legend-item">
+                                <span class="mobile-legend-dot disponible"></span>
+                                <span>Disponible</span>
+                            </div>
+                            <div class="mobile-legend-item">
+                                <span class="mobile-legend-dot reserve"></span>
+                                <span>Réservé</span>
+                            </div>
+                            <div class="mobile-legend-item">
+                                <span class="mobile-legend-dot mine"></span>
+                                <span>Ma réservation</span>
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- Vue Détail Véhicule (créneaux horaires) -->
@@ -1095,25 +1133,6 @@
                     <div class="mobile-date-display" id="detail-date-display"></div>
                     <div id="mobile-time-slots">
                         <!-- Créneaux générés par JS -->
-                    </div>
-                </div>
-            </div>
-
-            <!-- Mobile Legend -->
-            <div class="mobile-legend" id="mobile-legend">
-                <div class="mobile-legend-title">Légende</div>
-                <div class="mobile-legend-items">
-                    <div class="mobile-legend-item">
-                        <span class="mobile-legend-dot disponible"></span>
-                        <span>Disponible</span>
-                    </div>
-                    <div class="mobile-legend-item">
-                        <span class="mobile-legend-dot reserve"></span>
-                        <span>Réservé</span>
-                    </div>
-                    <div class="mobile-legend-item">
-                        <span class="mobile-legend-dot mine"></span>
-                        <span>Ma réservation</span>
                     </div>
                 </div>
             </div>
@@ -1893,7 +1912,6 @@
                 // Show detail view
                 $('#mobile-vehicles-list').hide();
                 $('#mobile-vehicle-detail').show();
-                $('#mobile-legend').hide();
                 $('#mobile-fab').show();
                 $('.mobile-stats').hide();
                 $('.mobile-planning-search').hide();
@@ -1904,7 +1922,6 @@
                 $('#mobile-title').text('Planning Véhicules');
                 $('#mobile-vehicles-list').show();
                 $('#mobile-vehicle-detail').hide();
-                $('#mobile-legend').show();
                 $('#mobile-fab').hide();
                 $('.mobile-stats').show();
                 $('.mobile-planning-search').show();

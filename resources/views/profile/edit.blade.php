@@ -42,8 +42,8 @@
                     </div>
 
                     <div class="mb-5">
-                        <label class="form-label">Telephone</label>
-                        <input type="text" name="phone" class="form-control form-control-solid @error('phone') is-invalid @enderror"
+                        <label class="form-label" for="phone">Telephone</label>
+                        <input type="tel" inputmode="tel" id="phone" name="phone" class="form-control form-control-solid @error('phone') is-invalid @enderror"
                             value="{{ old('phone', $user->phone) }}" placeholder="Ex: +237 6XX XXX XXX">
                         @error('phone')
                             <div class="invalid-feedback">{{ $message }}</div>
@@ -60,7 +60,13 @@
                     </div>
                 </div>
                 <div class="card-footer d-flex justify-content-end">
-                    <button type="submit" class="btn btn-primary">Enregistrer</button>
+                    <button type="submit" id="btn-submit-profile" class="btn btn-primary">
+                        <span class="indicator-label">Enregistrer</span>
+                        <span class="indicator-progress" style="display: none;">
+                            Enregistrement...
+                            <span class="spinner-border spinner-border-sm ms-2"></span>
+                        </span>
+                    </button>
                 </div>
             </form>
         </div>
@@ -72,7 +78,7 @@
             <div class="card-header pt-5">
                 <h3 class="card-title fw-bold">Changer le mot de passe</h3>
             </div>
-            <form action="{{ route('profile.password') }}" method="POST">
+            <form action="{{ route('profile.password') }}" method="POST" id="form-password">
                 @csrf
                 @method('PUT')
                 <div class="card-body">
@@ -98,10 +104,36 @@
                     </div>
                 </div>
                 <div class="card-footer d-flex justify-content-end">
-                    <button type="submit" class="btn btn-warning">Changer le mot de passe</button>
+                    <button type="submit" id="btn-submit-password" class="btn btn-warning">
+                        <span class="indicator-label">Changer le mot de passe</span>
+                        <span class="indicator-progress" style="display: none;">
+                            Modification...
+                            <span class="spinner-border spinner-border-sm ms-2"></span>
+                        </span>
+                    </button>
                 </div>
             </form>
         </div>
     </div>
 </div>
+
+<!-- Mobile back button -->
+<a href="{{ route('profile.show') }}" class="mobile-back-btn d-md-none" aria-label="Retour au profil">
+    <i class="ki-duotone ki-arrow-left"><i class="path1"></i><i class="path2"></i></i>
+</a>
+
+<script>
+document.querySelectorAll('form').forEach(function(form) {
+    form.addEventListener('submit', function() {
+        var btn = form.querySelector('button[type="submit"]');
+        if (btn) {
+            btn.disabled = true;
+            var label = btn.querySelector('.indicator-label');
+            var progress = btn.querySelector('.indicator-progress');
+            if (label) label.style.display = 'none';
+            if (progress) progress.style.display = 'inline-block';
+        }
+    });
+});
+</script>
 @endsection

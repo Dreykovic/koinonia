@@ -135,3 +135,4 @@ var KTAppEcommerceReportShipping = function () {
 KTUtil.onDOMContentLoaded(function () {
     KTAppEcommerceReportShipping.init();
 });
+

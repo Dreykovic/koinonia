@@ -153,3 +153,4 @@ var KTAccountSecuritySummary = function () {
 KTUtil.onDOMContentLoaded(function() {
     KTAccountSecuritySummary.init();
 });
+

@@ -101,3 +101,4 @@ class SpiritualReflection extends Model
         $reflection->update(['is_current' => true]);
     }
 }
+

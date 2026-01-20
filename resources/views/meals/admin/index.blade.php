@@ -52,7 +52,7 @@
                                     <div class="d-flex align-items-center">
                                         <div class="symbol symbol-45px me-3">
                                             <span class="symbol-label bg-itcj-blue-light">
-                                                <i class="ki-duotone ki-dish fs-2 text-itcj-blue"><i class="path1"></i><i class="path2"></i></i>
+                                                <i class="ki-duotone ki-gift fs-2 text-itcj-blue"><i class="path1"></i><i class="path2"></i></i>
                                             </span>
                                         </div>
                                         <div>
@@ -123,7 +123,7 @@
             </div>
         @else
             <div class="text-center py-10">
-                <i class="ki-duotone ki-dish fs-3x text-muted mb-3"><i class="path1"></i><i class="path2"></i></i>
+                <i class="ki-duotone ki-gift fs-3x text-muted mb-3"><i class="path1"></i><i class="path2"></i></i>
                 <p class="text-muted mb-3">Aucun repas programme</p>
                 <a href="{{ route('meals.admin.create') }}" class="btn btn-itcj">
                     <i class="ki-duotone ki-plus me-1"><i class="path1"></i><i class="path2"></i><i class="path3"></i></i>

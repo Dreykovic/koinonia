@@ -42,15 +42,27 @@
             <div class="row mb-5">
                 <div class="col-md-6">
                     <label class="form-label">Nouveau mot de passe</label>
-                    <input type="password" name="password" class="form-control form-control-solid @error('password') is-invalid @enderror">
+                    <div class="position-relative">
+                        <input type="password" name="password" class="form-control form-control-solid @error('password') is-invalid @enderror" style="padding-right: 45px;">
+                        <button type="button" class="btn btn-sm btn-icon position-absolute end-0 top-50 translate-middle-y me-2"
+                            onclick="togglePassword(this)" aria-label="Afficher le mot de passe">
+                            <i class="ki-duotone ki-eye fs-4"><i class="path1"></i><i class="path2"></i><i class="path3"></i></i>
+                        </button>
+                    </div>
                     @error('password')
-                        <div class="invalid-feedback">{{ $message }}</div>
+                        <div class="invalid-feedback d-block">{{ $message }}</div>
                     @enderror
                     <div class="form-text">Laisser vide pour ne pas changer.</div>
                 </div>
                 <div class="col-md-6">
                     <label class="form-label">Confirmer le mot de passe</label>
-                    <input type="password" name="password_confirmation" class="form-control form-control-solid">
+                    <div class="position-relative">
+                        <input type="password" name="password_confirmation" class="form-control form-control-solid" style="padding-right: 45px;">
+                        <button type="button" class="btn btn-sm btn-icon position-absolute end-0 top-50 translate-middle-y me-2"
+                            onclick="togglePassword(this)" aria-label="Afficher le mot de passe">
+                            <i class="ki-duotone ki-eye fs-4"><i class="path1"></i><i class="path2"></i><i class="path3"></i></i>
+                        </button>
+                    </div>
                 </div>
             </div>
 
@@ -117,4 +129,20 @@
         </div>
     </form>
 </div>
+
+<script>
+function togglePassword(btn) {
+    var input = btn.parentElement.querySelector('input');
+    var icon = btn.querySelector('i');
+    if (input.type === 'password') {
+        input.type = 'text';
+        icon.className = 'ki-duotone ki-eye-slash fs-4';
+        icon.innerHTML = '<i class="path1"></i><i class="path2"></i><i class="path3"></i><i class="path4"></i>';
+    } else {
+        input.type = 'password';
+        icon.className = 'ki-duotone ki-eye fs-4';
+        icon.innerHTML = '<i class="path1"></i><i class="path2"></i><i class="path3"></i>';
+    }
+}
+</script>
 @endsection

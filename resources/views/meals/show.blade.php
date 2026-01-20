@@ -149,7 +149,7 @@
         <section class="card mb-5" aria-labelledby="meal-info-heading">
             <div class="card-header py-4 d-flex justify-content-between align-items-center">
                 <h2 id="meal-info-heading" class="card-title fw-bold mb-0 fs-4">
-                    <i class="ki-duotone ki-dish fs-3 text-itcj-blue me-2" aria-hidden="true"><i class="path1"></i><i class="path2"></i></i>
+                    <i class="ki-duotone ki-gift fs-3 text-itcj-blue me-2" aria-hidden="true"><i class="path1"></i><i class="path2"></i></i>
                     Informations
                 </h2>
                 <div>

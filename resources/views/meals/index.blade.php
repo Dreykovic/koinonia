@@ -310,7 +310,7 @@
     <div class="col-lg-8">
         @if($upcomingMeal)
             <section class="meal-widget" role="region" aria-labelledby="upcoming-meal-heading">
-                <i class="ki-duotone ki-dish meal-widget-icon" aria-hidden="true"><i class="path1"></i><i class="path2"></i></i>
+                <i class="ki-duotone ki-gift meal-widget-icon" aria-hidden="true"><i class="path1"></i><i class="path2"></i></i>
 
                 <div class="row align-items-center">
                     <div class="col-md-7">
@@ -431,7 +431,7 @@
             </section>
         @else
             <section class="no-meal-widget" aria-label="Information sur les repas">
-                <i class="ki-duotone ki-dish fs-4x text-muted mb-4" aria-hidden="true"><i class="path1"></i><i class="path2"></i></i>
+                <i class="ki-duotone ki-gift fs-4x text-muted mb-4" aria-hidden="true"><i class="path1"></i><i class="path2"></i></i>
                 <h2 class="text-muted mb-2 fs-4">Aucun repas programmé</h2>
                 <p class="text-muted">Il n'y a pas de repas du dimanche programmé pour le moment.</p>
                 @if(auth()->user()->isAdmin())
@@ -495,7 +495,7 @@
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
             <div class="modal-body text-center py-5">
-                <i class="ki-duotone ki-dish fs-4x text-success mb-4"><i class="path1"></i><i class="path2"></i></i>
+                <i class="ki-duotone ki-gift fs-4x text-success mb-4"><i class="path1"></i><i class="path2"></i></i>
                 <h4 class="mb-3">Confirmer votre reservation ?</h4>
                 <p class="text-muted mb-5">Vous confirmez votre presence au repas de dimanche {{ $upcomingMeal ? $upcomingMeal->meal_date->format('d/m/Y') : '' }}.</p>
                 <div class="d-flex justify-content-center gap-3">
@@ -540,5 +540,17 @@ function confirmReserve() {
 function confirmCancel() {
     new bootstrap.Modal(document.getElementById('confirmCancelModal')).show();
 }
+
+// Real-time updates for meal registrations
+@if($upcomingMeal)
+if (typeof Echo !== 'undefined') {
+    Echo.channel('meal.{{ $upcomingMeal->id }}')
+        .listen('MealInscriptionChanged', (e) => {
+            console.log('MealInscriptionChanged:', e);
+            // Reload page to show updated data
+            location.reload();
+        });
+}
+@endif
 </script>
 @endpush

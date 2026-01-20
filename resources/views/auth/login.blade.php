@@ -290,8 +290,14 @@
                                 Mot de passe oublie ?
                             </a>
                         </div>
-                        <input class="form-control form-control-itcj" type="password" name="password"
-                            autocomplete="current-password" required placeholder="Votre mot de passe">
+                        <div class="position-relative">
+                            <input class="form-control form-control-itcj" type="password" name="password"
+                                autocomplete="current-password" required placeholder="Votre mot de passe" style="padding-right: 45px;">
+                            <button type="button" class="btn btn-sm btn-icon position-absolute end-0 top-50 translate-middle-y me-2"
+                                onclick="togglePassword(this)" aria-label="Afficher le mot de passe">
+                                <i class="ki-duotone ki-eye fs-4"><i class="path1"></i><i class="path2"></i><i class="path3"></i></i>
+                            </button>
+                        </div>
                     </div>
 
                     <div class="mb-5">
@@ -331,5 +337,19 @@ document.querySelector('form').addEventListener('submit', function() {
     btn.querySelector('.indicator-label').style.display = 'none';
     btn.querySelector('.indicator-progress').style.display = 'inline-block';
 });
+
+function togglePassword(btn) {
+    var input = btn.parentElement.querySelector('input');
+    var icon = btn.querySelector('i');
+    if (input.type === 'password') {
+        input.type = 'text';
+        icon.className = 'ki-duotone ki-eye-slash fs-4';
+        icon.innerHTML = '<i class="path1"></i><i class="path2"></i><i class="path3"></i><i class="path4"></i>';
+    } else {
+        input.type = 'password';
+        icon.className = 'ki-duotone ki-eye fs-4';
+        icon.innerHTML = '<i class="path1"></i><i class="path2"></i><i class="path3"></i>';
+    }
+}
 </script>
 @endsection

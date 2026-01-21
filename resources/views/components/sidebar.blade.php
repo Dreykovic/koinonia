@@ -107,7 +107,7 @@
                            aria-current="{{ request()->routeIs('meals.*') ? 'page' : 'false' }}"
                            data-tooltip="S'inscrire aux repas du dimanche">
                             <span class="menu-icon" aria-hidden="true">
-                                <i class="ki-duotone ki-dish fs-2"><i class="path1"></i><i class="path2"></i></i>
+                                <i class="ki-duotone ki-gift fs-2"><i class="path1"></i><i class="path2"></i></i>
                             </span>
                             <span class="menu-title">Repas du Dimanche</span>
                         </a>
@@ -169,7 +169,7 @@
                            aria-current="{{ request()->routeIs('meals.admin.*') ? 'page' : 'false' }}"
                            data-tooltip="Créer et gérer les repas">
                             <span class="menu-icon" aria-hidden="true">
-                                <i class="ki-duotone ki-dish fs-2"><i class="path1"></i><i class="path2"></i></i>
+                                <i class="ki-duotone ki-gift fs-2"><i class="path1"></i><i class="path2"></i></i>
                             </span>
                             <span class="menu-title">Gestion Repas</span>
                         </a>
@@ -212,7 +212,7 @@
                            aria-label="Demandes d'adhésion{{ $pendingAccountRequests > 0 ? ' - ' . $pendingAccountRequests . ' en attente' : '' }}"
                            data-tooltip="Approuver les nouvelles demandes d'adhésion">
                             <span class="menu-icon" aria-hidden="true">
-                                <i class="ki-duotone ki-add-user fs-2"><i class="path1"></i><i class="path2"></i><i class="path3"></i><i class="path4"></i></i>
+                                <i class="ki-duotone ki-profile-user fs-2"><i class="path1"></i><i class="path2"></i><i class="path3"></i><i class="path4"></i></i>
                             </span>
                             <span class="menu-title">Demandes d'adhésion</span>
                             @if($pendingAccountRequests > 0)

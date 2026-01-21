@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Events\MealInscriptionChanged;
 use App\Models\MealInscription;
 use App\Models\SundayMeal;
 use Illuminate\Http\Request;
@@ -79,6 +80,9 @@ class MealInscriptionController extends Controller
             ]);
         }
 
+        // Broadcast to other users
+        broadcast(new MealInscriptionChanged($meal->fresh(), 'inscribed'))->toOthers();
+
         return back()->with('success', 'Inscription enregistree avec succes.');
     }
 
@@ -132,6 +136,9 @@ class MealInscriptionController extends Controller
             'guest_names' => $guestNames ?: null,
         ]);
 
+        // Broadcast to other users
+        broadcast(new MealInscriptionChanged($meal->fresh(), 'updated'))->toOthers();
+
         return back()->with('success', 'Inscription mise a jour avec succes.');
     }
 
@@ -157,6 +164,9 @@ class MealInscriptionController extends Controller
         }
 
         $inscription->update(['cancelled_at' => now()]);
+
+        // Broadcast to other users
+        broadcast(new MealInscriptionChanged($meal->fresh(), 'cancelled'))->toOthers();
 
         return back()->with('success', 'Inscription annulee avec succes.');
     }

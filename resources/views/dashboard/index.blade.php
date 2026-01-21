@@ -790,7 +790,7 @@
                    data-tooltip="Gérer mes inscriptions"
                    aria-label="Repas du dimanche - Voir et gérer les inscriptions">
                     <div class="quick-action-icon meals" aria-hidden="true">
-                        <i class="ki-duotone ki-dish"><i class="path1"></i><i class="path2"></i></i>
+                        <i class="ki-duotone ki-gift"><i class="path1"></i><i class="path2"></i></i>
                     </div>
                     <span class="quick-action-label">Repas</span>
                 </a>
@@ -839,13 +839,13 @@
         $progressColor = $pct > 90 ? '#ef4444' : ($pct > 70 ? '#D4A84B' : '#5D8A66');
     @endphp
     <section class="meal-dashboard-widget" role="region" aria-labelledby="meal-widget-heading">
-        <i class="ki-duotone ki-dish meal-widget-icon-large" aria-hidden="true"><i class="path1"></i><i class="path2"></i></i>
+        <i class="ki-duotone ki-gift meal-widget-icon-large" aria-hidden="true"><i class="path1"></i><i class="path2"></i></i>
 
         <div class="meal-widget-content">
             <div class="row align-items-center">
                 <div class="col-lg-8">
                     <p class="meal-widget-title" id="meal-widget-heading">
-                        <i class="ki-duotone ki-dish me-1" aria-hidden="true"><i class="path1"></i><i class="path2"></i></i>
+                        <i class="ki-duotone ki-gift me-1" aria-hidden="true"><i class="path1"></i><i class="path2"></i></i>
                         Prochain repas du dimanche
                     </p>
                     <h3 class="meal-widget-date">{{ $upcomingMeal->formatted_date }}</h3>
@@ -922,7 +922,7 @@
     </section>
 @else
     <section class="no-meal-widget" role="region" aria-label="Repas du dimanche">
-        <i class="ki-duotone ki-dish fs-3x text-muted mb-3" aria-hidden="true"><i class="path1"></i><i class="path2"></i></i>
+        <i class="ki-duotone ki-gift fs-3x text-muted mb-3" aria-hidden="true"><i class="path1"></i><i class="path2"></i></i>
         <h4 class="text-muted mb-1">Aucun repas programmé</h4>
         <p class="text-muted fs-7 mb-0">Il n'y a pas de repas du dimanche prévu pour le moment.</p>
     </section>
@@ -968,7 +968,7 @@
            data-tooltip="Gérer les repas"
            aria-label="@if($upcomingMeal){{ $upcomingMeal->remainingSlots() }} places restantes pour le repas du {{ $upcomingMeal->meal_date->format('d/m') }}.@else Pas de repas prévu.@endif Cliquez pour plus d'infos.">
             <div class="stat-icon" style="background: #e8f5e9; color: #2e7d32;" aria-hidden="true">
-                <i class="ki-duotone ki-dish fs-1"><i class="path1"></i><i class="path2"></i></i>
+                <i class="ki-duotone ki-gift fs-1"><i class="path1"></i><i class="path2"></i></i>
             </div>
             <div class="ms-3 flex-grow-1">
                 @if($upcomingMeal)

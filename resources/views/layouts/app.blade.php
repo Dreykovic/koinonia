@@ -16,6 +16,9 @@
     <link href="{{ asset('assets/plugins/global/plugins.bundle.css') }}" rel="stylesheet" type="text/css">
     <link href="{{ asset('assets/css/style.bundle.css') }}" rel="stylesheet" type="text/css">
 
+    <!-- Vite for Echo/Broadcasting -->
+    @vite(['resources/js/app.js'])
+
     <style>
         /* ==================== ITCJ NEUMORPHISM DESIGN SYSTEM ==================== */
         /* Palette: Tons chauds - Bordeaux, Or, Crème */

@@ -15,6 +15,9 @@
     <link href="{{ asset('assets/plugins/global/plugins.bundle.css') }}" rel="stylesheet" type="text/css">
     <link href="{{ asset('assets/css/style.bundle.css') }}" rel="stylesheet" type="text/css">
 
+    <!-- Vite for Echo/Broadcasting -->
+    @vite(['resources/js/app.js'])
+
     <style>
         :root {
             /* Tons chauds ITCJ */
@@ -2059,6 +2062,60 @@
         // Initialize mobile planning
         $(document).ready(() => MobilePlanning.init());
         $(window).on('beforeunload', () => MobilePlanning.stopPolling());
+
+        // ==================== REAL-TIME BROADCASTING ====================
+        // Connect to vehicle-planning channel for live updates
+        if (typeof Echo !== 'undefined') {
+            function subscribeToChannel(date) {
+                return Echo.channel('vehicle-planning.' + date)
+                    .listen('ReservationCreated', (e) => {
+                        console.log('ReservationCreated:', e);
+                        // Reload data for both desktop and mobile
+                        Planning.loadData();
+                        MobilePlanning.loadData();
+
+                        // Show notification
+                        Swal.fire({
+                            toast: true,
+                            position: 'top-end',
+                            icon: 'info',
+                            title: `${e.user_name} a reserve ${e.vehicle_name}`,
+                            showConfirmButton: false,
+                            timer: 3000
+                        });
+                    })
+                    .listen('ReservationUpdated', (e) => {
+                        console.log('ReservationUpdated:', e);
+                        Planning.loadData();
+                        MobilePlanning.loadData();
+                    })
+                    .listen('ReservationCancelled', (e) => {
+                        console.log('ReservationCancelled:', e);
+                        Planning.loadData();
+                        MobilePlanning.loadData();
+
+                        Swal.fire({
+                            toast: true,
+                            position: 'top-end',
+                            icon: 'info',
+                            title: 'Une reservation a ete annulee',
+                            showConfirmButton: false,
+                            timer: 3000
+                        });
+                    });
+            }
+
+            // Subscribe to current date channel
+            let currentChannel = subscribeToChannel('{{ now()->toDateString() }}');
+
+            // Re-subscribe when date changes
+            $(document).on('change', '#planning-date, #mobile-date-input', function() {
+                const newDate = $(this).val();
+                // Leave old channel and join new one
+                Echo.leave('vehicle-planning.' + Planning.selectedDate);
+                currentChannel = subscribeToChannel(newDate);
+            });
+        }
     </script>
 </body>
 </html>

@@ -85,7 +85,7 @@
                                  aria-label="Voir les détails du repas du {{ $meal->formatted_date }}">
                                 <div class="meal-icon-wrapper d-flex align-items-center justify-content-center rounded-circle"
                                      style="width: 38px; height: 38px; background: rgba(212, 168, 75, 0.15);">
-                                    <i class="ki-duotone ki-dish fs-3" style="color: var(--accent);" aria-hidden="true">
+                                    <i class="ki-duotone ki-gift fs-3" style="color: var(--accent);" aria-hidden="true">
                                         <i class="path1"></i><i class="path2"></i>
                                     </i>
                                 </div>
@@ -147,7 +147,7 @@
                                     <div class="d-flex align-items-center">
                                         <div class="symbol symbol-35px me-2">
                                             <span class="symbol-label" style="background: linear-gradient(135deg, var(--accent-light), var(--accent));">
-                                                <i class="ki-duotone ki-dish fs-5 text-white" aria-hidden="true"><i class="path1"></i><i class="path2"></i></i>
+                                                <i class="ki-duotone ki-gift fs-5 text-white" aria-hidden="true"><i class="path1"></i><i class="path2"></i></i>
                                             </span>
                                         </div>
                                         <div>
@@ -290,7 +290,7 @@
 
                         <div class="menu-item px-5" role="none">
                             <a href="{{ route('meals.index') }}" class="menu-link px-5" role="menuitem">
-                                <i class="ki-duotone ki-dish fs-5 me-2" aria-hidden="true"><i class="path1"></i><i class="path2"></i></i>
+                                <i class="ki-duotone ki-gift fs-5 me-2" aria-hidden="true"><i class="path1"></i><i class="path2"></i></i>
                                 Repas Dimanche
                             </a>
                         </div>

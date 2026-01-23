@@ -84,9 +84,15 @@
                 <div class="card-body">
                     <div class="mb-5">
                         <label class="form-label required">Mot de passe actuel</label>
-                        <input type="password" name="current_password" class="form-control form-control-solid @error('current_password') is-invalid @enderror" required>
+                        <div class="position-relative">
+                            <input type="password" name="current_password" class="form-control form-control-solid @error('current_password') is-invalid @enderror" required style="padding-right: 45px;">
+                            <button type="button" class="btn btn-sm btn-icon position-absolute end-0 top-50 translate-middle-y me-2"
+                                onclick="togglePassword(this)" aria-label="Afficher le mot de passe">
+                                <i class="ki-duotone ki-eye fs-4"><i class="path1"></i><i class="path2"></i><i class="path3"></i></i>
+                            </button>
+                        </div>
                         @error('current_password')
-                            <div class="invalid-feedback">{{ $message }}</div>
+                            <div class="invalid-feedback d-block">{{ $message }}</div>
                         @enderror
                     </div>
 

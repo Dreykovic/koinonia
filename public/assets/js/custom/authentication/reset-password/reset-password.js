@@ -109,3 +109,4 @@ var KTAuthResetPassword = function() {
 KTUtil.onDOMContentLoaded(function() {
     KTAuthResetPassword.init();
 });
+

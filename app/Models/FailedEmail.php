@@ -72,3 +72,4 @@ class FailedEmail extends Model
 }
 
 
+

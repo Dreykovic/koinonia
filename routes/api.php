@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Admin\VehicleSettingController;
 use App\Http\Controllers\VehicleReservationController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -26,4 +27,7 @@ Route::middleware(['web', 'auth'])->prefix('v1')->group(function () {
     Route::post('reservations', [VehicleReservationController::class, 'apiStore']);
     Route::put('reservations/{id}', [VehicleReservationController::class, 'apiUpdate']);
     Route::delete('reservations/{id}', [VehicleReservationController::class, 'apiDestroy']);
+
+    // Vehicle Settings
+    Route::get('vehicle-settings', [VehicleSettingController::class, 'getSettings']);
 });

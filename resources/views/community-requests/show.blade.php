@@ -14,7 +14,7 @@
 @section('content')
 <div class="row g-5 g-xl-10">
     <!-- Details de la demande -->
-    <div class="col-xl-8">
+    <div class="{{ $isAdmin ? 'col-xl-8' : 'col-xl-12' }}">
         <div class="card mb-5">
             <div class="card-header">
                 <h3 class="card-title fw-bold">
@@ -117,7 +117,8 @@
         </div>
     </div>
 
-    <!-- Gestion -->
+    <!-- Gestion (admin only) -->
+    @if($isAdmin)
     <div class="col-xl-4">
         <div class="card mb-5">
             <div class="card-header">
@@ -188,5 +189,6 @@
             </div>
         </div>
     </div>
+    @endif
 </div>
 @endsection

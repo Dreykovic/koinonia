@@ -321,6 +321,76 @@
                         <a href="{{ route('account-request.create') }}" class="link-itcj fs-7 ms-1">Demander l'adhesion</a>
                     </div>
                 </form>
+
+                @if(config('app.env') === 'local' || config('app.env') === 'dev')
+                    <div class="alert mt-4 mb-0" style="background: #FFF4E6; border: 1px solid #FFB74D; border-radius: 8px; padding: 12px 16px;">
+                        <div class="d-flex align-items-start">
+                            <i class="ki-duotone ki-information fs-2 me-2" style="color: #F57C00;">
+                                <i class="path1"></i>
+                                <i class="path2"></i>
+                                <i class="path3"></i>
+                            </i>
+                            <div style="flex: 1;">
+                                <strong style="color: #E65100; font-size: 14px; margin-bottom: 8px; display: block;">Mode Test - Cliquez pour remplir</strong>
+                                <div style="font-size: 13px; color: #5D4037;">
+                                    <div class="credential-item mb-2 p-2"
+                                         style="background: #FFF; border-radius: 6px; cursor: pointer; transition: all 0.2s; border: 1px solid transparent;"
+                                         onclick="fillCredentials('recteur@itcj.org', 'password')"
+                                         onmouseover="this.style.borderColor='#FFB74D'; this.style.transform='translateX(4px)'"
+                                         onmouseout="this.style.borderColor='transparent'; this.style.transform='translateX(0)'">
+                                        <i class="ki-duotone ki-user-tick fs-5 me-1" style="color: #F57C00;">
+                                            <i class="path1"></i>
+                                            <i class="path2"></i>
+                                            <i class="path3"></i>
+                                        </i>
+                                        <strong>Admin:</strong>
+                                        <span style="color: #E65100; font-weight: 500;">recteur@itcj.org</span>
+                                        <span class="badge ms-2" style="background: #E65100; color: #FFF; font-size: 10px; padding: 2px 6px;">Cliquez ici</span>
+                                    </div>
+                                    <div class="credential-item mb-2 p-2"
+                                         style="background: #FFF; border-radius: 6px; cursor: pointer; transition: all 0.2s; border: 1px solid transparent;"
+                                         onclick="fillCredentials('jean-baptiste.fongang@itcj.org', 'password')"
+                                         onmouseover="this.style.borderColor='#FFB74D'; this.style.transform='translateX(4px)'"
+                                         onmouseout="this.style.borderColor='transparent'; this.style.transform='translateX(0)'">
+                                        <i class="ki-duotone ki-user fs-5 me-1" style="color: #F57C00;">
+                                            <i class="path1"></i>
+                                            <i class="path2"></i>
+                                        </i>
+                                        <strong>Membre:</strong>
+                                        <span style="color: #E65100; font-weight: 500;">jean-baptiste.fongang@itcj.org</span>
+                                        <span class="badge ms-2" style="background: #E65100; color: #FFF; font-size: 10px; padding: 2px 6px;">Cliquez ici</span>
+                                    </div>
+                                    <div class="credential-item mb-2 p-2"
+                                         style="background: #FFF; border-radius: 6px; cursor: pointer; transition: all 0.2s; border: 1px solid transparent;"
+                                         onclick="fillCredentials('formateur1@itcj.org', 'password')"
+                                         onmouseover="this.style.borderColor='#FFB74D'; this.style.transform='translateX(4px)'"
+                                         onmouseout="this.style.borderColor='transparent'; this.style.transform='translateX(0)'">
+                                        <i class="ki-duotone ki-teacher fs-5 me-1" style="color: #F57C00;">
+                                            <i class="path1"></i>
+                                            <i class="path2"></i>
+                                        </i>
+                                        <strong>Formateur:</strong>
+                                        <span style="color: #E65100; font-weight: 500;">formateur1@itcj.org</span>
+                                        <span class="badge ms-2" style="background: #E65100; color: #FFF; font-size: 10px; padding: 2px 6px;">Cliquez ici</span>
+                                    </div>
+                                    <div class="credential-item p-2"
+                                         style="background: #FFF; border-radius: 6px; cursor: pointer; transition: all 0.2s; border: 1px solid transparent;"
+                                         onclick="fillCredentials('sante@itcj.org', 'password')"
+                                         onmouseover="this.style.borderColor='#FFB74D'; this.style.transform='translateX(4px)'"
+                                         onmouseout="this.style.borderColor='transparent'; this.style.transform='translateX(0)'">
+                                        <i class="ki-duotone ki-medicine fs-5 me-1" style="color: #F57C00;">
+                                            <i class="path1"></i>
+                                            <i class="path2"></i>
+                                        </i>
+                                        <strong>Sante:</strong>
+                                        <span style="color: #E65100; font-weight: 500;">sante@itcj.org</span>
+                                        <span class="badge ms-2" style="background: #E65100; color: #FFF; font-size: 10px; padding: 2px 6px;">Cliquez ici</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                @endif
             </div>
         </div>
 
@@ -350,6 +420,43 @@ function togglePassword(btn) {
         icon.className = 'ki-duotone ki-eye fs-4';
         icon.innerHTML = '<i class="path1"></i><i class="path2"></i><i class="path3"></i>';
     }
+}
+
+function fillCredentials(email, password) {
+    // Fill the form fields
+    var emailInput = document.querySelector('input[name="email"]');
+    var passwordInput = document.querySelector('input[name="password"]');
+
+    emailInput.value = email;
+    passwordInput.value = password;
+
+    // Add visual feedback with animation
+    emailInput.style.transition = 'all 0.3s ease';
+    passwordInput.style.transition = 'all 0.3s ease';
+
+    emailInput.style.background = '#E8F5E9';
+    passwordInput.style.background = '#E8F5E9';
+
+    // Focus on email field briefly to show it's filled
+    emailInput.focus();
+
+    // Reset background color after animation
+    setTimeout(function() {
+        emailInput.style.background = '';
+        passwordInput.style.background = '';
+    }, 1000);
+
+    // Show success message
+    var credentialItems = document.querySelectorAll('.credential-item');
+    credentialItems.forEach(function(item) {
+        if (item.onclick.toString().includes(email)) {
+            var originalBg = item.style.background;
+            item.style.background = '#E8F5E9';
+            setTimeout(function() {
+                item.style.background = originalBg;
+            }, 800);
+        }
+    });
 }
 </script>
 @endsection

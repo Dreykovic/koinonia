@@ -214,6 +214,15 @@
                             @if($activity->description)
                                 <div class="text-muted small mt-1">{{ $activity->description }}</div>
                             @endif
+                             @if($activity->guests)
+                                    <div class="service-pill" role="listitem">
+                                        <span class=""  aria-hidden="true">
+                                            <i class="ki-duotone ki-people"><i class="path1"></i><i class="path2"></i></i>
+                                        </span>
+                                        <span>Invites: {{ Str::limit($activity->guests, 20) }}</span>
+                                    </div>
+                            @endif
+                         
                         </div>
                         <div class="d-flex gap-2">
                             <button type="button" class="btn btn-icon btn-sm btn-light-warning" data-bs-toggle="modal" data-bs-target="#editActivityModal{{ $activity->id }}">
@@ -476,6 +485,10 @@
                     <div class="mb-3">
                         <label class="form-label">Description</label>
                         <textarea name="description" class="form-control" rows="2"></textarea>
+                    </div>
+                     <div class="mb-3">
+                        <label class="form-label">Invites</label>
+                        <textarea name="guests" class="form-control" rows="2"></textarea>
                     </div>
                     <div class="form-check">
                         <input class="form-check-input" type="checkbox" name="is_highlighted" value="1">

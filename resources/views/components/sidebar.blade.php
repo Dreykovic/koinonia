@@ -99,6 +99,19 @@
                             <span class="menu-title">Mes Réservations</span>
                         </a>
                     </li>
+                    {{-- TODO: modifier l'icon --}}
+                 <li class="menu-item mb-1" role="none">
+                        <a class="menu-link py-3 {{ request()->routeIs('week-menus.index*') ? 'active' : '' }}"
+                           href="{{ route('week-menus.index') }}"
+                           role="menuitem"
+                           aria-current="{{ request()->routeIs('week-menus.index*') ? 'page' : 'false' }}"
+                           data-tooltip="Consulter le menu">
+                            <span class="menu-icon" aria-hidden="true">
+                                <i class="ki-duotone ki-coffee fs-2"><i class="path1"></i><i class="path2"></i></i>
+                            </span>
+                            <span class="menu-title">Menu de la semaine</span>
+                        </a>
+                    </li>
 
                     <li class="menu-item mb-1" role="none">
                         <a class="menu-link py-3 {{ request()->routeIs('meals.*') ? 'active' : '' }}"
@@ -174,7 +187,18 @@
                             <span class="menu-title">Gestion Véhicules</span>
                         </a>
                     </li>
-
+                    <li class="menu-item mb-1" role="none">
+                        <a class="menu-link py-3 {{ request()->routeIs('week-menus.admin*') ? 'active' : '' }}"
+                           href="{{ route('week-menus.admin.edit') }}"
+                           role="menuitem"
+                           aria-current="{{ request()->routeIs('week-menus.admin*') ? 'page' : 'false' }}"
+                           data-tooltip="Consulter le menu">
+                            <span class="menu-icon" aria-hidden="true">
+                                <i class="ki-duotone ki-coffee fs-2"><i class="path1"></i><i class="path2"></i></i>
+                            </span>
+                            <span class="menu-title">Gestion Menu</span>
+                        </a>
+                    </li>
                     <li class="menu-item mb-1" role="none">
                         <a class="menu-link py-3 {{ request()->routeIs('meals.admin.*') ? 'active' : '' }}"
                            href="{{ route('meals.admin.index') }}"

@@ -831,14 +831,16 @@
     </div>
 </section>
 
-<!-- ==================== SECTION 2: WIDGET REPAS DIMANCHE ==================== -->
+<!-- ==================== SECTION 2: WIDGET REPAS DIMANCHE  Et MENU DU JOUR==================== -->
+<div class="row g-4 mb-5">
+
 @if($upcomingMeal)
     @php
         $userInscription = $upcomingMeal->inscriptions()->where('user_id', auth()->id())->whereNull('cancelled_at')->first();
         $pct = $upcomingMeal->max_capacity > 0 ? ($upcomingMeal->confirmed_count / $upcomingMeal->max_capacity) * 100 : 0;
         $progressColor = $pct > 90 ? '#ef4444' : ($pct > 70 ? '#D4A84B' : '#5D8A66');
     @endphp
-    <section class="meal-dashboard-widget" role="region" aria-labelledby="meal-widget-heading">
+    <section class="meal-dashboard-widget col-lg-6" role="region" aria-labelledby="meal-widget-heading">
         <i class="ki-duotone ki-gift meal-widget-icon-large" aria-hidden="true"><i class="path1"></i><i class="path2"></i></i>
 
         <div class="meal-widget-content">
@@ -921,13 +923,87 @@
         </div>
     </section>
 @else
-    <section class="no-meal-widget" role="region" aria-label="Repas du dimanche">
+    <section class="no-meal-widget col-lg-6" role="region" aria-label="Repas du dimanche">
         <i class="ki-duotone ki-gift fs-3x text-muted mb-3" aria-hidden="true"><i class="path1"></i><i class="path2"></i></i>
         <h4 class="text-muted mb-1">Aucun repas programmé</h4>
         <p class="text-muted fs-7 mb-0">Il n'y a pas de repas du dimanche prévu pour le moment.</p>
     </section>
 @endif
+@if ($todaysMenus)
+     <div class="col-lg-6">
+        <section class="card" aria-labelledby="reservations-heading">
+            <div class="card-header py-2 d-flex justify-content-between align-items-center">
+                <h3 id="reservations-heading" class="card-title fw-bold mb-0">
+                    <i class="ki-duotone ki-car-2 text-itcj-blue me-2" aria-hidden="true"><i class="path1"></i><i class="path2"></i><i class="path3"></i><i class="path4"></i><i class="path5"></i></i>
+                    Menu du jour
+                </h3>
+                <a href="{{ route('week-menus.index') }}" class="btn btn-sm btn-light"
+                   aria-label="Voir tous le menu de la semaine">
+                    Voir pour la semaine
+                </a>
+            </div>
+            <div class="card-body py-3 " >
+                {{-- TODO: change icons --}}
+                
+                    
+                @foreach($todaysMenus as $menu)
+                    <article class="d-flex  align-items-center p-1 mb-2 rounded" style="background: #f8f9fc;">
+                        <span class="badge {{ $menu->period->code === 'midi' ? 'badge-itcj' : 'badge-itcj-gold' }} fs-9"
+                              role="status">
+                            {{ $menu->period->code === 'midi' ? 'Midi' : 'Soir' }}
+                        </span>
+                        <div class="symbol symbol-40px me-3" aria-hidden="true">
+                            <span class="symbol-label bg-itcj-blue-light">
+                                <i class="ki-duotone ki-coffee fs-4 text-itcj-blue"><i class="path1"></i><i class="path2"></i><i class="path3"></i><i class="path4"></i><i class="path5"></i></i>
+                            </span>
+                        </div>
+                        <div class="flex-grow-1 ">
+                            <div class="fw-bold text-dark fs-7">{{ $menu->dish_name }}</div>
+                            <p class="text-muted fs-8" >
+                                {{ $menu->description }}
+                            </p>
+                        </div>
+                     
+                    </article>
+                    
+             
+                @endforeach
+                
+            </div>
 
+             @if(auth()->user()->isAdmin())
+                 {{-- TODO: center the bouton --}}
+                    <div class="card-footer py-3 d-flex align-items-center justify-content-center">
+                        <a href="{{ route('week-menus.admin.edit') }}" class="btn btn-itcj">
+                            <i class="ki-duotone ki-pencil me-2"><i class="path1"></i><i class="path2"></i></i>
+                            Modifier le menu
+                        </a>
+                
+                    </div>
+                @endif
+        </section>
+    </div>
+@else
+    <div class="col-lg-8">
+        <section class="no-bulletin" aria-labelledby="no-bulletin-heading">
+            <div class="no-bulletin-icon" aria-hidden="true">
+                <i class="ki-duotone ki-document"><i class="path1"></i><i class="path2"></i></i>
+            </div>
+            <h4 id="no-bulletin-heading" class="text-muted mb-2">Menu Du jour</h4>
+            <p class="text-muted mb-4">Aucun menu n'a encore été publié aujourd'hui.</p>
+            @if(auth()->user()->isAdmin())
+            {{-- TODO: change the route --}}
+                <a href="{{ route('bulletin.create') }}" class="btn btn-itcj"
+                   aria-label="Publier le menu du jour">
+                    <i class="ki-duotone ki-plus me-2" aria-hidden="true"><i class="path1"></i><i class="path2"></i><i class="path3"></i></i>
+                    Publier le menu du jour
+                </a>
+            @endif
+        </section>
+    </div>
+@endif
+    
+</div>
 <!-- ==================== SECTION 3: STATS CLIQUABLES ==================== -->
 <section class="row g-4 mb-5" aria-label="Statistiques">
     <div class="col-6 col-xl-3">
@@ -1060,6 +1136,7 @@
             <div class="card-body py-3">
                 @forelse($bulletin->weeklyActivities->sortBy('activity_date')->take(5) as $activity)
                     <article class="activity-mini">
+                          <span class="badge badge-light-warning me-2">{{ $activity->type_label }}</span>
                         @if($activity->activity_date)
                             <time class="activity-mini-date" datetime="{{ $activity->activity_date->format('Y-m-d') }}">
                                 {{ $activity->formatted_date }}
@@ -1069,12 +1146,21 @@
                             </time>
                         @endif
                         <div class="fw-semibold">{{ $activity->title }}</div>
-                        @if($activity->location)
+                        @if($activity->description)
                             <div class="text-muted small">
                                 <i class="ki-duotone ki-geolocation fs-8 me-1" aria-hidden="true"><i class="path1"></i><i class="path2"></i></i>
-                                {{ $activity->location }}
+                                {{ $activity->description }}
                             </div>
                         @endif
+                          @if($activity->guests)
+                                    <div class="service-pill" role="listitem">
+                                        <span class=""  aria-hidden="true">
+                                            <i class="ki-duotone ki-people"><i class="path1"></i><i class="path2"></i></i>
+                                        </span>
+                                        <span>Invites: {{ Str::limit($activity->guests, 20) }}</span>
+                                    </div>
+                            @endif
+                         
                     </article>
                 @empty
                     <div class="text-center text-muted py-4">

@@ -337,22 +337,30 @@ class VehicleReservationController extends Controller
 
         switch ($dateFilter) {
             case 'today':
-                $query->whereDate('reservation_date', $today);
+                $query->whereDate('reservation_date', $today)
+                      ->whereIn('status', ['pending', 'approved']);
                 break;
             case 'tomorrow':
-                $query->whereDate('reservation_date', $tomorrow);
+                $query->whereDate('reservation_date', $tomorrow)
+                      ->whereIn('status', ['pending', 'approved']);
                 break;
             case 'week':
                 $query->whereDate('reservation_date', '>=', $today)
-                      ->whereDate('reservation_date', '<=', $endOfWeek);
+                      ->whereDate('reservation_date', '<=', $endOfWeek)
+                      ->whereIn('status', ['pending', 'approved']);
                 break;
             case 'upcoming':
-                $query->whereDate('reservation_date', '>=', $today);
+                $query->whereDate('reservation_date', '>=', $today)
+                      ->whereIn('status', ['pending', 'approved']);
                 break;
             case 'past':
-                $query->whereDate('reservation_date', '<', $today);
+                // Archives: show all past + cancelled
+                $query->where(function ($q) use ($today) {
+                    $q->whereDate('reservation_date', '<', $today)
+                      ->orWhere('status', 'cancelled');
+                });
                 break;
-            // 'all' = no date filter
+            // 'all' = no date filter, show everything
         }
 
         // Order: upcoming dates first for non-past, past dates most recent first

@@ -47,7 +47,8 @@ class WeekMenu extends Model
      */
     public function scopeAvailable(Builder $query): Builder
     {
-        return $query->where('available', true);
+        // return $query->where('available', true);
+        return $query;
     }
 
     /**

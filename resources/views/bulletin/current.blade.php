@@ -577,6 +577,7 @@
                         <p class="activity-intro">Les activites suivantes auront lieu au cours de cette semaine :</p>
                         @foreach($bulletin->weeklyActivities->sortBy('activity_date') as $activity)
                             <div class="activity-item">
+                                  <span class="badge badge-light-warning me-2">{{ $activity->type_label }}</span>
                                 @if($activity->activity_date)
                                     <span class="activity-date-badge">{{ $activity->formatted_date }}</span>
                                     @if($activity->activity_time)
@@ -592,6 +593,15 @@
                                         <i class="ki-duotone ki-geolocation fs-8"><i class="path1"></i><i class="path2"></i></i>
                                         {{ $activity->location }}
                                     </span>
+                                @endif
+                                  
+                                @if($activity->guests)
+                                            <div class="service-pill" role="listitem">
+                                                <span class=""  aria-hidden="true">
+                                                    <i class="ki-duotone ki-people"><i class="path1"></i><i class="path2"></i></i>
+                                                </span>
+                                                <span>Invites: {{ Str::limit($activity->guests, 20) }}</span>
+                                            </div>
                                 @endif
                             </div>
                         @endforeach

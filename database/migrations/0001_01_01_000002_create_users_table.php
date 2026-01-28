@@ -18,7 +18,7 @@ return new class extends Migration
             $table->string('email')->unique();
             $table->timestamp('email_verified_at')->nullable();
             $table->string('password');
-            $table->enum('role', ['admin', 'communication', 'sante', 'formateur', 'membre'])->default('membre');
+            $table->enum('role', ['admin', 'communication', 'sante', 'formateur', 'membre','chauffeur','autre'])->default('membre');
             $table->foreignId('community_id')->nullable()->constrained('communities')->nullOnDelete();
             $table->string('room_number')->nullable();
             $table->string('phone')->nullable();

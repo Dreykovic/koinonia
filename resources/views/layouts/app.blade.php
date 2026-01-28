@@ -839,7 +839,7 @@
             border-radius: 20px;
             padding: 6px 14px;
             font-weight: 600;
-            box-shadow: var(--neu-shadow-sm);
+            /* box-shadow: var(--neu-shadow-sm); */
         }
 
         .badge-itcj-gold, .badge-accent {

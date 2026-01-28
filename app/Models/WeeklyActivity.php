@@ -13,6 +13,7 @@ class WeeklyActivity extends Model
     protected $fillable = [
         'bulletin_id',
         'title',
+        'guests',
         'description',
         'activity_date',
         'activity_time',

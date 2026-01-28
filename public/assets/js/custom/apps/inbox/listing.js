@@ -56,3 +56,4 @@ var KTAppInboxListing = function () {
 KTUtil.onDOMContentLoaded(function () {
     KTAppInboxListing.init();
 });
+

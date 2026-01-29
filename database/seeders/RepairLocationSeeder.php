@@ -20,6 +20,7 @@ class RepairLocationSeeder extends Seeder
             'Chapelle',
             'Salle informatique',
             'Parloir',
+            'autre'
         ];
 
         foreach ($locations as $name) {

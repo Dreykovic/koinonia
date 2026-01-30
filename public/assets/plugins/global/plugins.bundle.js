@@ -72270,3 +72270,4 @@ swal.mixin({
 	cancelButtonClass: 'btn btn-secondary',
 	cancelButtonColor: null
 });
+

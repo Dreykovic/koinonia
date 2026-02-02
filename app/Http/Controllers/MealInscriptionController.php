@@ -171,3 +171,4 @@ class MealInscriptionController extends Controller
         return back()->with('success', 'Inscription annulee avec succes.');
     }
 }
+

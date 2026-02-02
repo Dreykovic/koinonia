@@ -35,3 +35,4 @@ class RepairLocation extends Model
         return $query->where('is_active', true);
     }
 }
+

@@ -26,3 +26,4 @@ Broadcast::channel('vehicle-planning.{date}', function ($user) {
 Broadcast::channel('meal.{mealId}', function ($user) {
     return auth()->check();
 });
+

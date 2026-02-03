@@ -192,3 +192,4 @@ var KTUsersUpdatePassword = function () {
 KTUtil.onDOMContentLoaded(function () {
     KTUsersUpdatePassword.init();
 });
+

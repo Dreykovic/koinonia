@@ -958,10 +958,16 @@
                             </span>
                         </div>
                         <div class="flex-grow-1 ">
-                            <div class="fw-bold text-dark fs-7">{{ $menu->dish_name }}</div>
-                            <p class="text-muted fs-8" >
-                                {{ $menu->description }}
-                            </p>
+                            @if ($menu->available)
+                                <div class="fw-bold text-dark fs-7">{{ $menu->dish_name }}</div>
+                                <p class="text-muted fs-8" >
+                                    {{ $menu->description }}
+                                </p>
+                            @else
+                                <div class="fw-bold text-dark fs-7">Neant</div>
+                            
+                            @endif
+                         
                         </div>
                      
                     </article>

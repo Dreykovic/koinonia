@@ -108,3 +108,4 @@ var KTCustomerViewPaymentTable = function () {
 KTUtil.onDOMContentLoaded(function () {
     KTCustomerViewPaymentTable.init();
 });
+

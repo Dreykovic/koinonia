@@ -169,3 +169,4 @@ var KTModalCreateProjectSettings = function () {
 if (typeof module !== 'undefined' && typeof module.exports !== 'undefined') {
 	window.KTModalCreateProjectSettings = module.exports = KTModalCreateProjectSettings;
 }
+

@@ -355,3 +355,4 @@ var KTCreateAccount = function () {
 KTUtil.onDOMContentLoaded(function() {
     KTCreateAccount.init();
 });
+

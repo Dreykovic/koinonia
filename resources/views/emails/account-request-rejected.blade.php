@@ -17,3 +17,4 @@ Si vous pensez qu'il s'agit d'une erreur ou si vous souhaitez obtenir plus d'inf
 Cordialement,<br>
 {{ config('app.name') }}
 @endcomponent
+

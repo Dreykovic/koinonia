@@ -157,7 +157,7 @@
                         Communaute
                     </label>
                     <div class="col-lg-8">
-                        <span class="fw-bold" style="color: var(--itcj-dark);">{{ $user->community ?? '-' }}</span>
+                        <span class="fw-bold" style="color: var(--itcj-dark);">{{ $user->community->name ?? '-' }}</span>
                     </div>
                 </div>
 

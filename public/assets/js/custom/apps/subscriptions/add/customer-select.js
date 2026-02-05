@@ -83,3 +83,4 @@ var KTModalCustomerSelect = function() {
 KTUtil.onDOMContentLoaded(function () {
     KTModalCustomerSelect.init();
 });
+

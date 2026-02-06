@@ -283,6 +283,18 @@
                     </li>
 
                     <li class="menu-item mb-1" role="none">
+                        <a class="menu-link py-3 {{ request()->routeIs('user-profile-vehicle-types.*') ? 'active' : '' }}"
+                           href="{{ route('user-profile-vehicle-types.index') }}"
+                           role="menuitem"
+                           aria-current="{{ request()->routeIs('user-profile-vehicle-types.*') ? 'page' : 'false' }}"
+                           data-tooltip="Gérer les lieux de réparation">
+                            <span class="menu-icon" aria-hidden="true">
+                                <i class="ki-duotone ki-car fs-2"><i class="path1"></i><i class="path2"></i></i>
+                            </span>
+                            <span class="menu-title">Acces Vehicule</span>
+                        </a>
+                    </li>
+                    <li class="menu-item mb-1" role="none">
                         <a class="menu-link py-3 {{ request()->routeIs('repair-locations.*') ? 'active' : '' }}"
                            href="{{ route('repair-locations.index') }}"
                            role="menuitem"

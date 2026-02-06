@@ -72,17 +72,29 @@
                         <div class="invalid-feedback">{{ $message }}</div>
                     @enderror
                 </div>
-                <div class="col-md-6">
-                    <label class="form-label required">Type</label>
-                    <select name="type" class="form-select form-select-solid @error('type') is-invalid @enderror" required>
-                        <option value="communautaire" {{ old('type', $vehicle->type) == 'communautaire' ? 'selected' : '' }}>Communautaire</option>
-                        <option value="sante" {{ old('type', $vehicle->type) == 'sante' ? 'selected' : '' }}>Sante</option>
-                        <option value="formation" {{ old('type', $vehicle->type) == 'formation' ? 'selected' : '' }}>Formation</option>
-                    </select>
-                    @error('type')
-                        <div class="invalid-feedback">{{ $message }}</div>
-                    @enderror
-                </div>
+            <div class="col-md-6">
+                <label class="form-label required" for="vehicle_type_id">Type de véhicule</label>
+                <select id="vehicle_type_id" name="vehicle_type_id" class="form-select form-select-solid @error('vehicle_type_id') is-invalid @enderror" required>
+                    <option value="">-- Sélectionner un type --</option>
+                    @foreach($vehicleTypes as $type)
+                        <option value="{{ $type->id }}" {{ old('vehicle_type_id', $vehicle->vehicle_type_id ?? '') == $type->id ? 'selected' : '' }}>
+                            {{ $type->name }}
+                        </option>
+                    @endforeach
+                </select>
+                @error('vehicle_type_id')
+                    <div class="invalid-feedback">{{ $message }}</div>
+                @enderror
+                @if(isset($vehicleTypes) && $vehicleTypes->isNotEmpty())
+                    <div class="form-text" id="vehicle_type_help">
+                        @foreach($vehicleTypes as $type)
+                            @if($type->description)
+                                <strong>{{ $type->name }}:</strong> {{ $type->description }}<br>
+                            @endif
+                        @endforeach
+                    </div>
+                @endif
+            </div>
             </div>
 
             <div class="row mb-5">

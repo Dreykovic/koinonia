@@ -126,8 +126,9 @@
                     <tr>
                         <th>Nom</th>
                         <th>Email</th>
-                        <th>Role</th>
-                        <th>Communaute</th>
+                        <th>Rôles</th>
+                        <th>Profil</th>
+                        <th>Communauté</th>
                         <th>Statut</th>
                         <th class="text-end">Actions</th>
                     </tr>
@@ -154,19 +155,41 @@
                         <td>
                             @php
                                 $roleColors = [
-                                    
                                     'admin' => ['bg' => 'var(--itcj-red-light)', 'text' => 'var(--itcj-red)'],
                                     'communication' => ['bg' => 'var(--itcj-gold-light)', 'text' => '#9a7a30'],
+                                    'gestion_plateforme' => ['bg' => '#e3f2fd', 'text' => '#1976d2'],
                                     'sante' => ['bg' => '#e8f5e9', 'text' => '#2e7d32'],
-                                    'chauffeur' => ['bg' => '#e8f5e9', 'text' => '#2e7d82'],
+                                    'chauffeur' => ['bg' => '#e0f2f1', 'text' => '#00796b'],
                                     'formateur' => ['bg' => 'var(--itcj-blue-light)', 'text' => 'var(--itcj-blue)'],
                                     'membre' => ['bg' => '#f5f5f5', 'text' => '#616161'],
+                                    'autre' => ['bg' => '#fce4ec', 'text' => '#c2185b'],
                                 ];
-                                $role = $roleColors[$user->role] ?? $roleColors['membre'];
                             @endphp
-                            <span class="badge fs-8" style="background: {{ $role['bg'] }}; color: {{ $role['text'] }};">
-                                {{ $user->role_label }}
-                            </span>
+                            
+                            @if(!empty($user->roles))
+                                <div class="d-flex flex-wrap gap-1">
+                                    @foreach($user->role_labels as $index => $label)
+                                        @php
+                                            $roleKey = $user->roles[$index] ?? 'autre';
+                                            $colors = $roleColors[$roleKey] ?? $roleColors['autre'];
+                                        @endphp
+                                        <span class="badge fs-8" style="background: {{ $colors['bg'] }}; color: {{ $colors['text'] }};">
+                                            {{ $label }}
+                                        </span>
+                                    @endforeach
+                                </div>
+                            @else
+                                <span class="text-muted fs-8">Aucun rôle</span>
+                            @endif
+                        </td>
+                        <td>
+                            @if($user->profile)
+                                <span class="badge fs-8" style="background: var(--itcj-blue-light); color: var(--itcj-blue);">
+                                    {{ $user->profile ? $user->profile->name :'Profile Non Defini'  }}
+                                </span>
+                            @else
+                                <span class="text-muted fs-8">Aucun profil</span>
+                            @endif
                         </td>
                         <td class="text-muted">{{ $user->community_label }}</td>
                         <td>
@@ -185,7 +208,7 @@
                                 <form action="{{ route('users.toggle-active', $user) }}" method="POST">
                                     @csrf
                                     @if($user->is_active)
-                                    <button type="submit" class="btn btn-icon btn-sm btn-itcj-red" title="Desactiver">
+                                    <button type="submit" class="btn btn-icon btn-sm btn-itcj-red" title="Désactiver">
                                         <i class="ki-duotone ki-cross fs-4"><i class="path1"></i><i class="path2"></i></i>
                                     </button>
                                     @else
@@ -202,6 +225,8 @@
                     @endforeach
                 </tbody>
             </table>
+
+
         </div>
 
         <!-- Mobile Cards -->
@@ -211,12 +236,13 @@
                     $roleColors = [
                         'admin' => ['bg' => 'var(--itcj-red-light)', 'text' => 'var(--itcj-red)'],
                         'communication' => ['bg' => 'var(--itcj-gold-light)', 'text' => '#9a7a30'],
+                        'gestion_plateforme' => ['bg' => '#e3f2fd', 'text' => '#1976d2'],
                         'sante' => ['bg' => '#e8f5e9', 'text' => '#2e7d32'],
-                        'chauffeur' => ['bg' => '#e8f5e9', 'text' => '#2e7d82'],
+                        'chauffeur' => ['bg' => '#e0f2f1', 'text' => '#00796b'],
                         'formateur' => ['bg' => 'var(--itcj-blue-light)', 'text' => 'var(--itcj-blue)'],
                         'membre' => ['bg' => '#f5f5f5', 'text' => '#616161'],
+                        'autre' => ['bg' => '#fce4ec', 'text' => '#c2185b'],
                     ];
-                    $role = $roleColors[$user->role] ?? $roleColors['membre'];
                 @endphp
                 <div class="member-mobile-card">
                     <div class="member-mobile-header">
@@ -239,9 +265,35 @@
                         @endif
                     </div>
                     <div class="member-mobile-meta">
-                        <span class="badge fs-8" style="background: {{ $role['bg'] }}; color: {{ $role['text'] }};">
-                            {{ $user->role_label }}
-                        </span>
+                        {{-- Affichage des rôles --}}
+                        @if(!empty($user->roles))
+                            @foreach($user->role_labels as $index => $label)
+                                @php
+                                    $roleKey = $user->roles[$index] ?? 'autre';
+                                    $colors = $roleColors[$roleKey] ?? $roleColors['autre'];
+                                @endphp
+                                <span class="badge fs-8" style="background: {{ $colors['bg'] }}; color: {{ $colors['text'] }};">
+                                    {{ $label }}
+                                </span>
+                            @endforeach
+                        @else
+                            <span class="badge badge-light fs-8">Aucun rôle</span>
+                        @endif
+
+                        {{-- Affichage du profil --}}
+                        @if($user->profile)
+                            <span class="badge fs-8" style="background: var(--itcj-blue-light); color: var(--itcj-blue);">
+                                <i class="ki-duotone ki-profile-user fs-7">
+                                    <i class="path1"></i>
+                                    <i class="path2"></i>
+                                    <i class="path3"></i>
+                                    <i class="path4"></i>
+                                </i>
+                                {{ $user->profile ? $user->profile->name :'Profile Non Defini'  }}
+                            </span>
+                        @endif
+
+                        {{-- Affichage de la communauté --}}
                         @if($user->community)
                             <span class="badge badge-light-primary fs-8">{{ $user->community->name }}</span>
                         @endif
@@ -272,13 +324,7 @@
             @endforeach
         </div>
 
-        @if($users->hasPages())
-        <div class="d-flex justify-content-center mt-4">
-            {{ $users->links() }}
-        </div>
-        @endif
-    </div>
-</div>
+
 
 <!-- FAB for mobile -->
 <a href="{{ route('users.create') }}" class="fab" aria-label="Nouveau membre">

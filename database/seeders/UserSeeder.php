@@ -20,7 +20,7 @@ class UserSeeder extends Seeder
             [
                 'name' => 'Jean-Marie NDONGO',
                 'password' => Hash::make('password'),
-                'role' => 'admin',
+                'roles' => 'admin',
                 'community_id' => $communities['Matungulu'] ?? null,
                 'room_number' => 'R01',
                 'phone' => '+237 6 99 00 00 01',

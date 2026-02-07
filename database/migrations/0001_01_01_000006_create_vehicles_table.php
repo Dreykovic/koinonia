@@ -15,7 +15,7 @@ return new class extends Migration
             $table->id();
             $table->string('name');
             $table->string('license_plate')->unique()->nullable();
-            $table->enum('type', ['sante', 'formation', 'communautaire','autres']);
+            $table->foreignId('vehicle_type_id')->constrained('vehicle_types')->onDelete('cascade');
             $table->integer('capacity')->default(5);
             $table->boolean('is_available')->default(true);
             $table->text('description')->nullable();

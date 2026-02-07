@@ -66,21 +66,45 @@
 
             <div class="row mb-5">
                 <div class="col-md-6">
-                    <label class="form-label required" for="role">Role</label>
-                    <select id="role" name="role" class="form-select form-select-solid @error('role') is-invalid @enderror" required>
-                        <option value="membre" {{ old('role') == 'membre' ? 'selected' : '' }}>Membre</option>
-                        <option value="formateur" {{ old('role') == 'formateur' ? 'selected' : '' }}>Formateur</option>
-                        <option value="sante" {{ old('role') == 'sante' ? 'selected' : '' }}>Sante</option>
-                        <option value="chauffeur" {{ old('role') == 'chauffeur' ? 'selected' : '' }}>Chauffeur</option>
-                        <option value="communication" {{ old('role') == 'communication' ? 'selected' : '' }}>Communication</option>
-                        <option value="admin" {{ old('role') == 'admin' ? 'selected' : '' }}>Administrateur</option>
+                    <label class="form-label required" for="roles">Rôles</label>
+                    <select id="roles" name="roles[]" class="form-select form-select-solid @error('roles') is-invalid @enderror @error('roles.*') is-invalid @enderror" multiple required>
+                        @foreach(\App\Enums\PlatformRole::options() as $value => $label)
+                            <option value="{{ $value }}" {{ in_array($value, old('roles', [])) ? 'selected' : '' }}>
+                                {{ $label }}
+                            </option>
+                        @endforeach
                     </select>
-                    @error('role')
+                    <small class="form-text text-muted">Maintenez Ctrl (Cmd sur Mac) pour sélectionner plusieurs rôles</small>
+                    @error('roles')
+                        <div class="invalid-feedback">{{ $message }}</div>
+                    @enderror
+                    @error('roles.*')
                         <div class="invalid-feedback">{{ $message }}</div>
                     @enderror
                 </div>
+                
                 <div class="col-md-6">
-                    <label class="form-label" for="community_id">Communaute</label>
+                    <label class="form-label" for="user_profile_id">Profil</label>
+                    <select id="user_profile_id" name="user_profile_id" class="form-select form-select-solid @error('user_profile_id') is-invalid @enderror">
+                        <option value="">Aucun profil</option>
+                        @foreach($profiles as $profile)
+                            <option value="{{ $profile->id }}" {{ old('user_profile_id') == $profile->id ? 'selected' : '' }}>
+                                {{ $profile->name }}
+                            </option>
+                        @endforeach
+                    </select>
+                    @if($profiles->isEmpty())
+                        <small class="form-text text-warning">Aucun profil disponible. Créez-en un d'abord.</small>
+                    @endif
+                    @error('user_profile_id')
+                        <div class="invalid-feedback">{{ $message }}</div>
+                    @enderror
+                </div>
+            </div>
+
+            <div class="row mb-5">
+                <div class="col-md-6">
+                    <label class="form-label" for="community_id">Communauté</label>
                     <select id="community_id" name="community_id" class="form-select form-select-solid @error('community_id') is-invalid @enderror">
                         <option value="">Aucune</option>
                         @foreach($communities as $community)
@@ -92,6 +116,16 @@
                     @error('community_id')
                         <div class="invalid-feedback">{{ $message }}</div>
                     @enderror
+                </div>
+                
+                <div class="col-md-6">
+                    <label class="form-label">Statut</label>
+                    <div class="form-check form-switch form-check-custom form-check-solid">
+                        <input class="form-check-input" type="checkbox" id="is_active" name="is_active" value="1" {{ old('is_active', true) ? 'checked' : '' }}>
+                        <label class="form-check-label" for="is_active">
+                            Utilisateur actif
+                        </label>
+                    </div>
                 </div>
             </div>
 

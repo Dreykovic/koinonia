@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Vehicle;
+use App\Models\VehicleType;
 use Illuminate\Http\Request;
 
 class VehicleController extends Controller
@@ -25,7 +26,10 @@ class VehicleController extends Controller
      */
     public function create()
     {
-        return view('vehicles.create');
+
+        $vehicleTypes = VehicleType::active()->orderBy('name')->get();
+    
+        return view('vehicles.create', compact('vehicleTypes'));
     }
 
     /**
@@ -35,8 +39,9 @@ class VehicleController extends Controller
     {
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
+            'vehicle_type_id' => 'required|exists:vehicle_types,id',
+
             'license_plate' => ['nullable', 'string', 'max:20', 'unique:vehicles'],
-            'type' => ['required', 'in:sante,formation,communautaire'],
             'capacity' => ['nullable', 'integer', 'min:1', 'max:50'],
             'description' => ['nullable', 'string'],
             'is_available' => ['boolean'],
@@ -56,7 +61,7 @@ class VehicleController extends Controller
      */
     public function show(Vehicle $vehicle)
     {
-        $vehicle->load(['reservations' => function ($query) {
+        $vehicle->load(['type','reservations' => function ($query) {
             $query->with('user')
                   ->where('reservation_date', '>=', now()->toDateString())
                   ->orderBy('reservation_date')
@@ -71,7 +76,9 @@ class VehicleController extends Controller
      */
     public function edit(Vehicle $vehicle)
     {
-        return view('vehicles.edit', compact('vehicle'));
+        $vehicleTypes = VehicleType::active()->orderBy('name')->get();
+        
+        return view('vehicles.edit', compact('vehicle', 'vehicleTypes'));
     }
 
     /**
@@ -82,10 +89,11 @@ class VehicleController extends Controller
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'license_plate' => ['nullable', 'string', 'max:20', 'unique:vehicles,license_plate,' . $vehicle->id],
-            'type' => ['required', 'in:sante,formation,communautaire'],
             'capacity' => ['nullable', 'integer', 'min:1', 'max:50'],
             'description' => ['nullable', 'string'],
             'is_available' => ['boolean'],
+            'vehicle_type_id' => 'required|exists:vehicle_types,id',
+
         ]);
 
         $validated['is_available'] = $request->boolean('is_available', true);

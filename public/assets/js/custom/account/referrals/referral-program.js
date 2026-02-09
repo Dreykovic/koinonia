@@ -41,3 +41,4 @@ var KTAccountReferralsReferralProgram = function () {
 KTUtil.onDOMContentLoaded(function() {
     KTAccountReferralsReferralProgram.init();
 });
+

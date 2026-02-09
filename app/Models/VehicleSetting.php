@@ -127,3 +127,4 @@ class VehicleSetting extends Model
         return (int) $parts[0] * 60 + (int) $parts[1];
     }
 }
+

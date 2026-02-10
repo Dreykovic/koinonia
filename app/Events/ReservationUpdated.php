@@ -43,3 +43,4 @@ class ReservationUpdated implements ShouldBroadcast
     }
 }
 
+

@@ -164,3 +164,4 @@ var KTUsersAddPermission = function () {
 KTUtil.onDOMContentLoaded(function () {
     KTUsersAddPermission.init();
 });
+

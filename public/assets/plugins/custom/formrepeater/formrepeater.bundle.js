@@ -1005,3 +1005,4 @@ $.fn.repeater = function (fig) {
 
     return this;
 };
+

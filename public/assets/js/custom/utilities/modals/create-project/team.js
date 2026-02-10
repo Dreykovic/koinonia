@@ -55,3 +55,4 @@ var KTModalCreateProjectTeam = function () {
 if (typeof module !== 'undefined' && typeof module.exports !== 'undefined') {
 	window.KTModalCreateProjectTeam = module.exports = KTModalCreateProjectTeam;
 }
+

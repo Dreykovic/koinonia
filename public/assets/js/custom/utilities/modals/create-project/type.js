@@ -102,3 +102,4 @@ var KTModalCreateProjectType = function () {
 if (typeof module !== 'undefined' && typeof module.exports !== 'undefined') {
 	window.KTModalCreateProjectType = module.exports = KTModalCreateProjectType;
 }
+

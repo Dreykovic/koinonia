@@ -16,7 +16,7 @@ return new class extends Migration
            $table->foreignId('user_profile_id')->constrained('user_profiles')->onDelete('cascade');
             $table->foreignId('vehicle_type_id')->constrained('vehicle_types')->onDelete('cascade');
             $table->boolean('is_active')->default(true);
-            $table->unique(['user_profile_id','vehicle_type_id']);
+            $table->unique(['user_profile_id','vehicle_type_id'],'profile_vehicle_unique');
             $table->timestamps();
         });
 

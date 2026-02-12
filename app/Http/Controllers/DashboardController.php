@@ -48,15 +48,25 @@ class DashboardController extends Controller
             ->limit(5)
             ->get();
 
-        // Stats for all users (no role restriction)
-        $stats = [
-            'total_users' => User::count(),
-            'active_users' => User::active()->count(),
-            'pending_reservations' => VehicleReservation::byStatus('pending')->count(),
-            'pending_requests' => CommunityRequest::pending()->count(),
-            'available_vehicles' => Vehicle::available()->count(),
-            'reservations_today' => VehicleReservation::whereDate('reservation_date', now()->toDateString())->count(),
-        ];
+        // Stats for admin
+        $stats = null;
+        if ($user->isAdmin()) {
+            $stats = [
+                'total_users' => User::count(),
+                'active_users' => User::active()->count(),
+                'pending_reservations' => VehicleReservation::byStatus('pending')->count(),
+                'pending_requests' => CommunityRequest::pending()->count(),
+                'available_vehicles' => Vehicle::available()->count(),
+                'reservations_today' => VehicleReservation::whereDate('reservation_date', now()->toDateString())->count(),
+            ];
+        } else {
+            $stats = [
+                'available_vehicles' => Vehicle::available()->count(),
+                'reservations_today' => VehicleReservation::whereDate('reservation_date', now()->toDateString())
+                    ->where('user_id', $user->id)->count(),
+                'pending_requests' => CommunityRequest::where('email', $user->email)->pending()->count(),
+            ];
+        }
 
         // Get current bulletin
         $bulletin = BulletinEdition::with([
@@ -107,6 +117,7 @@ class DashboardController extends Controller
     protected function getWeekBirthdays(?BulletinEdition $bulletin): \Illuminate\Support\Collection
     {
         if (!$bulletin) {
+            // Get this week's birthdays if no bulletin
             $weekStart = Carbon::now()->startOfWeek();
             $weekEnd = Carbon::now()->endOfWeek();
         } else {

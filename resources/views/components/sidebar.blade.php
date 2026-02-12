@@ -64,19 +64,6 @@
                             <span class="menu-title">Tableau de bord</span>
                         </a>
                     </li>
-
-                    <li class="menu-item mb-1" role="none">
-                        <a class="menu-link py-3 {{ request()->routeIs('guide') ? 'active' : '' }}"
-                           href="{{ route('guide') }}"
-                           role="menuitem"
-                           aria-current="{{ request()->routeIs('guide') ? 'page' : 'false' }}"
-                           data-tooltip="Consulter le guide d'utilisation">
-                            <span class="menu-icon" aria-hidden="true">
-                                <i class="ki-duotone ki-information fs-2"><i class="path1"></i><i class="path2"></i><i class="path3"></i></i>
-                            </span>
-                            <span class="menu-title">Guide</span>
-                        </a>
-                    </li>
                 </ul>
 
                 <!-- === SECTION: Services === -->

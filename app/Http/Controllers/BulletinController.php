@@ -3,8 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Enums\PlatformRole;
-use App\Http\Requests\StoreWeeklyActivityRequest;
-use App\Http\Requests\UpdateWeeklyActivityRequest;
 use App\Models\BulletinEdition;
 use App\Models\SpiritualReflection;
 use App\Models\User;
@@ -53,36 +51,16 @@ class BulletinController extends Controller
     /**
      * Display a listing of all bulletin editions.
      */
-    public function index(Request $request)
+    public function index()
     {
         $this->authorizeAdminOrCommunicator();
 
-        $query = BulletinEdition::with('creator');
-
-        if ($request->filled('search')) {
-            $search = $request->search;
-            $query->where(function ($q) use ($search) {
-                $q->where('title', 'like', "%{$search}%")
-                  ->orWhere('edition_number', 'like', "%{$search}%");
-            });
-        }
-
-        if ($request->filled('year')) {
-            $query->where('year', $request->year);
-        }
-
-        if ($request->filled('status')) {
-            $query->where('is_published', $request->status === 'published');
-        }
-
-        $bulletins = $query->orderBy('year', 'desc')
+        $bulletins = BulletinEdition::with('creator')
+            ->orderBy('year', 'desc')
             ->orderBy('edition_number', 'desc')
-            ->paginate(15)
-            ->withQueryString();
+            ->paginate(15);
 
-        $years = BulletinEdition::selectRaw('DISTINCT year')->orderBy('year', 'desc')->pluck('year');
-
-        return view('bulletin.index', compact('bulletins', 'years'));
+        return view('bulletin.index', compact('bulletins'));
     }
 
     /**
@@ -299,22 +277,45 @@ class BulletinController extends Controller
     // Weekly Activities Management
     // ========================================
 
-    public function storeActivity(StoreWeeklyActivityRequest $request, BulletinEdition $bulletin)
+    public function storeActivity(Request $request, BulletinEdition $bulletin)
     {
-        $validated = $request->validated();
+        $this->authorizeAdminOrCommunicator();
+
+        $validated = $request->validate([
+            'title' => 'required|string|max:255',
+            'description' => 'nullable|string',
+            'guests' => 'nullable|string',
+            'activity_date' => 'nullable|date',
+            'activity_time' => 'nullable|date_format:H:i',
+            'location' => 'nullable|string|max:255',
+            'type' => 'required|string|in:' . implode(',', array_keys(WeeklyActivity::ACTIVITY_TYPES)),
+            'is_highlighted' => 'boolean',
+        ]);
+
+        $validated['bulletin_id'] = $bulletin->id;
+        $validated['created_by'] = auth()->id();
         $validated['is_highlighted'] = $request->boolean('is_highlighted');
 
-        $activity = new WeeklyActivity($validated);
-        $activity->bulletin_id = $bulletin->id;
-        $activity->created_by = auth()->id();
-        $activity->save();
+        WeeklyActivity::create($validated);
 
         return back()->with('success', 'Activite ajoutee avec succes.');
     }
 
-    public function updateActivity(UpdateWeeklyActivityRequest $request, WeeklyActivity $activity)
+    public function updateActivity(Request $request, WeeklyActivity $activity)
     {
-        $validated = $request->validated();
+        $this->authorizeAdminOrCommunicator();
+
+        $validated = $request->validate([
+            'title' => 'required|string|max:255',
+            'description' => 'nullable|string',
+            'guests' => 'nullable|string',
+            'activity_date' => 'nullable|date',
+            'activity_time' => 'nullable|date_format:H:i',
+            'location' => 'nullable|string|max:255',
+            'type' => 'required|string|in:' . implode(',', array_keys(WeeklyActivity::ACTIVITY_TYPES)),
+            'is_highlighted' => 'boolean',
+        ]);
+
         $validated['is_highlighted'] = $request->boolean('is_highlighted');
 
         $activity->update($validated);

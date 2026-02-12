@@ -113,11 +113,6 @@
                 </span>
             </div>
             <div class="d-flex flex-wrap gap-2 align-items-center">
-                <!-- Search -->
-                <div class="position-relative">
-                    <i class="ki-duotone ki-magnifier fs-3 position-absolute" style="left: 12px; top: 50%; transform: translateY(-50%); color: var(--text-muted);"><i class="path1"></i><i class="path2"></i></i>
-                    <input type="text" id="search-input" class="form-control form-control-sm ps-10" placeholder="Vehicule, destination..." value="{{ request('search') }}" style="min-width: 180px;" onkeydown="if(event.key==='Enter'){updateFilters();}">
-                </div>
                 <!-- Date filter -->
                 <select class="form-select form-select-sm" style="min-width: 140px;" onchange="updateFilters();" id="date-filter">
                     <option value="upcoming" {{ ($dateFilter ?? 'upcoming') === 'upcoming' ? 'selected' : '' }}>A venir</option>
@@ -361,16 +356,11 @@
 function updateFilters() {
     const dateFilter = document.getElementById('date-filter').value;
     const userFilter = document.getElementById('filter-reservations');
-    const searchInput = document.getElementById('search-input');
 
     let url = '{{ route('reservations.index') }}?date=' + dateFilter;
 
     if (userFilter) {
         url += '&filter=' + userFilter.value;
-    }
-
-    if (searchInput && searchInput.value.trim()) {
-        url += '&search=' + encodeURIComponent(searchInput.value.trim());
     }
 
     window.location.href = url;

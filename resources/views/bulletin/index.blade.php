@@ -102,37 +102,10 @@
 @endphp
 
 <div class="card">
-    <div class="card-header py-4">
-        <div class="d-flex flex-column w-100">
-            <div class="d-flex justify-content-between align-items-center mb-3">
-                <div>
-                    <h3 class="card-title fw-bold mb-0">Editions du Bulletin</h3>
-                    <span class="text-muted fs-7">Gestion des bulletins hebdomadaires</span>
-                </div>
-            </div>
-            <form method="GET" class="d-flex align-items-center gap-3 flex-wrap">
-                <div class="position-relative">
-                    <i class="ki-duotone ki-magnifier fs-3 position-absolute" style="left: 12px; top: 50%; transform: translateY(-50%); color: var(--text-muted);"><i class="path1"></i><i class="path2"></i></i>
-                    <input type="text" name="search" class="form-control form-control-sm ps-10" placeholder="Rechercher titre, numero..." value="{{ request('search') }}" style="min-width: 200px;">
-                </div>
-                <select name="year" class="form-select form-select-sm" style="min-width: 120px;" onchange="this.form.submit()">
-                    <option value="">Toutes les annees</option>
-                    @foreach($years as $year)
-                        <option value="{{ $year }}" {{ request('year') == $year ? 'selected' : '' }}>{{ $year }}</option>
-                    @endforeach
-                </select>
-                <select name="status" class="form-select form-select-sm" style="min-width: 130px;" onchange="this.form.submit()">
-                    <option value="">Tous les statuts</option>
-                    <option value="published" {{ request('status') == 'published' ? 'selected' : '' }}>Publie</option>
-                    <option value="draft" {{ request('status') == 'draft' ? 'selected' : '' }}>Brouillon</option>
-                </select>
-                @if(request()->hasAny(['search', 'year', 'status']))
-                    <a href="{{ route('bulletin.index') }}" class="btn btn-sm btn-light">
-                        <i class="ki-duotone ki-cross fs-4"></i>
-                        Reinitialiser
-                    </a>
-                @endif
-            </form>
+    <div class="card-header d-flex justify-content-between align-items-center py-4">
+        <div>
+            <h3 class="card-title fw-bold mb-0">Editions du Bulletin</h3>
+            <span class="text-muted fs-7">Gestion des bulletins hebdomadaires</span>
         </div>
     </div>
     <div class="card-body py-4">

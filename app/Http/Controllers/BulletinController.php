@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\PlatformRole;
 use App\Models\BulletinEdition;
 use App\Models\SpiritualReflection;
 use App\Models\User;
@@ -52,7 +53,7 @@ class BulletinController extends Controller
      */
     public function index()
     {
-        $this->authorizeAdmin();
+        $this->authorizeAdminOrCommunicator();
 
         $bulletins = BulletinEdition::with('creator')
             ->orderBy('year', 'desc')
@@ -67,7 +68,7 @@ class BulletinController extends Controller
      */
     public function create()
     {
-        $this->authorizeAdmin();
+        $this->authorizeAdminOrCommunicator();
 
         // Get next edition number for display
         $lastEdition = BulletinEdition::where('year', now()->year)
@@ -102,7 +103,7 @@ class BulletinController extends Controller
      */
     public function store(Request $request)
     {
-        $this->authorizeAdmin();
+        $this->authorizeAdminOrCommunicator();
 
         $validated = $request->validate([
             'title' => 'required|string|max:255',
@@ -146,7 +147,7 @@ class BulletinController extends Controller
      */
     public function edit(BulletinEdition $bulletin)
     {
-        $this->authorizeAdmin();
+        $this->authorizeAdminOrCommunicator();
 
         $bulletin->load([
             'weeklyServices.assignedUser',
@@ -173,7 +174,7 @@ class BulletinController extends Controller
      */
     public function update(Request $request, BulletinEdition $bulletin)
     {
-        $this->authorizeAdmin();
+        $this->authorizeAdminOrCommunicator();
 
         $validated = $request->validate([
             'title' => 'required|string|max:255',
@@ -198,7 +199,7 @@ class BulletinController extends Controller
      */
     public function destroy(BulletinEdition $bulletin)
     {
-        $this->authorizeAdmin();
+        $this->authorizeAdminOrCommunicator();
 
         $bulletin->delete();
 
@@ -212,7 +213,7 @@ class BulletinController extends Controller
      */
     public function togglePublish(BulletinEdition $bulletin)
     {
-        $this->authorizeAdmin();
+        $this->authorizeAdminOrCommunicator();
 
         $bulletin->update(['is_published' => !$bulletin->is_published]);
 
@@ -226,7 +227,7 @@ class BulletinController extends Controller
 
     public function storeService(Request $request, BulletinEdition $bulletin)
     {
-        $this->authorizeAdmin();
+        $this->authorizeAdminOrCommunicator();
 
         $validated = $request->validate([
             'service_type' => 'required|string|in:' . implode(',', array_keys(WeeklyService::SERVICE_TYPES)),
@@ -248,7 +249,7 @@ class BulletinController extends Controller
 
     public function updateService(Request $request, WeeklyService $service)
     {
-        $this->authorizeAdmin();
+        $this->authorizeAdminOrCommunicator();
 
         $validated = $request->validate([
             'service_type' => 'required|string|in:' . implode(',', array_keys(WeeklyService::SERVICE_TYPES)),
@@ -265,7 +266,7 @@ class BulletinController extends Controller
 
     public function destroyService(WeeklyService $service)
     {
-        $this->authorizeAdmin();
+        $this->authorizeAdminOrCommunicator();
 
         $service->delete();
 
@@ -278,7 +279,7 @@ class BulletinController extends Controller
 
     public function storeActivity(Request $request, BulletinEdition $bulletin)
     {
-        $this->authorizeAdmin();
+        $this->authorizeAdminOrCommunicator();
 
         $validated = $request->validate([
             'title' => 'required|string|max:255',
@@ -302,7 +303,7 @@ class BulletinController extends Controller
 
     public function updateActivity(Request $request, WeeklyActivity $activity)
     {
-        $this->authorizeAdmin();
+        $this->authorizeAdminOrCommunicator();
 
         $validated = $request->validate([
             'title' => 'required|string|max:255',
@@ -324,7 +325,7 @@ class BulletinController extends Controller
 
     public function destroyActivity(WeeklyActivity $activity)
     {
-        $this->authorizeAdmin();
+        $this->authorizeAdminOrCommunicator();
 
         $activity->delete();
 
@@ -337,7 +338,7 @@ class BulletinController extends Controller
 
     public function storeReflection(Request $request, BulletinEdition $bulletin)
     {
-        $this->authorizeAdmin();
+        $this->authorizeAdminOrCommunicator();
 
         $validated = $request->validate([
             'title' => 'required|string|max:255',
@@ -364,7 +365,7 @@ class BulletinController extends Controller
 
     public function updateReflection(Request $request, SpiritualReflection $reflection)
     {
-        $this->authorizeAdmin();
+        $this->authorizeAdminOrCommunicator();
 
         $validated = $request->validate([
             'title' => 'required|string|max:255',
@@ -380,7 +381,7 @@ class BulletinController extends Controller
 
     public function destroyReflection(SpiritualReflection $reflection)
     {
-        $this->authorizeAdmin();
+        $this->authorizeAdminOrCommunicator();
 
         $reflection->delete();
 
@@ -426,9 +427,9 @@ class BulletinController extends Controller
     /**
      * Check if user is admin.
      */
-    protected function authorizeAdmin(): void
+    protected function authorizeAdminOrCommunicator(): void
     {
-        if (!auth()->user()->isAdmin()) {
+        if (!auth()->user()->hasAnyRole([PlatformRole::ADMIN,PlatformRole::COMMUNICATION]) ){
             abort(403, 'Acces non autorise.');
         }
     }

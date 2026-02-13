@@ -31,3 +31,4 @@ Route::middleware(['web', 'auth'])->prefix('v1')->group(function () {
     // Vehicle Settings
     Route::get('vehicle-settings', [VehicleSettingController::class, 'getSettings']);
 });
+

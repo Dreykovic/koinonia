@@ -36,3 +36,4 @@ var KTProjectTargets = function () {
 KTUtil.onDOMContentLoaded(function() {
     KTProjectTargets.init();
 });
+

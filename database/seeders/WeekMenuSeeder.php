@@ -68,3 +68,4 @@ class WeekMenuSeeder extends Seeder
         }
     }
 }
+

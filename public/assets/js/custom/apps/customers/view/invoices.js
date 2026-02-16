@@ -127,3 +127,4 @@ var KTCustomerViewInvoices = function () {
 KTUtil.onDOMContentLoaded(function () {
     KTCustomerViewInvoices.init();
 });
+

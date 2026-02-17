@@ -23,3 +23,4 @@ class AuthServiceProvider extends ServiceProvider
         //
     }
 }
+

@@ -109,3 +109,4 @@ var KTAppInvoicesCreate = function () {
 KTUtil.onDOMContentLoaded(function () {
     KTAppInvoicesCreate.init();
 });
+

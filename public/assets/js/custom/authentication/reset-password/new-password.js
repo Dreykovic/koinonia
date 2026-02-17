@@ -152,3 +152,4 @@ var KTAuthNewPassword = function() {
 KTUtil.onDOMContentLoaded(function() {
     KTAuthNewPassword.init();
 });
+

@@ -28,6 +28,18 @@ class CommunityRequestController extends Controller
             $query->where('email', $user->email);
         }
 
+        // Recherche
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->where('email', 'like', "%{$search}%")
+                  ->orWhere('problem_description', 'like', "%{$search}%")
+                  ->orWhere('purchase_description', 'like', "%{$search}%")
+                  ->orWhere('repair_location_text', 'like', "%{$search}%")
+                  ->orWhere('room_number', 'like', "%{$search}%");
+            });
+        }
+
         // Filtres
         if ($request->filled('status')) {
             $query->status($request->status);
@@ -39,7 +51,7 @@ class CommunityRequestController extends Controller
             $query->byCommunity($request->community_id);
         }
 
-        $requests = $query->latest()->paginate(20);
+        $requests = $query->latest()->paginate(20)->withQueryString();
         $communities = $user->isAdmin() ? Community::active()->ordered()->get() : collect();
         $statuses = CommunityRequest::STATUSES;
         $isAdmin = $user->isAdmin();
@@ -84,12 +96,16 @@ class CommunityRequestController extends Controller
 
         $oldStatus = $communityRequest->status;
 
-        // Marquer comme complete si le statut change vers completed
-        if ($validated['status'] === 'completed' && $communityRequest->status !== 'completed') {
-            $validated['completed_at'] = now();
+        // Explicit assignment for admin-only fields
+        $communityRequest->status = $validated['status'];
+        $communityRequest->admin_notes = $validated['admin_notes'] ?? $communityRequest->admin_notes;
+        $communityRequest->assigned_to = $validated['assigned_to'] ?? $communityRequest->assigned_to;
+
+        if ($validated['status'] === 'completed' && $oldStatus !== 'completed') {
+            $communityRequest->completed_at = now();
         }
 
-        $communityRequest->update($validated);
+        $communityRequest->save();
 
         // Notifier le demandeur si le statut a change (non-bloquant)
         if ($oldStatus !== $validated['status']) {

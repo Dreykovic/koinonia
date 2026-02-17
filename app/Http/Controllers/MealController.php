@@ -138,8 +138,46 @@ class MealController extends Controller
     /**
      * Admin: list all meals.
      */
-    public function adminIndex()
+    public function adminIndex(Request $request)
     {
+        $statusFilter = $request->get('status', '');
+        $periodFilter = $request->get('period', '');
+
+        $query = SundayMeal::withCount(['activeInscriptions']);
+
+        // Period filter
+        if ($periodFilter === 'upcoming') {
+            $query->where('meal_date', '>=', now()->toDateString());
+        } elseif ($periodFilter === 'past') {
+            $query->where('meal_date', '<', now()->toDateString());
+        }
+
+        // Status filter
+        if ($statusFilter === 'open') {
+            $query->where('is_open', true)
+                  ->where('meal_date', '>=', now()->toDateString());
+        } elseif ($statusFilter === 'closed') {
+            $query->where('is_open', false);
+        }
+
+        $hasFilters = $statusFilter || $periodFilter;
+
+        if ($hasFilters) {
+            $meals = $query->orderBy('meal_date', 'desc')->get();
+
+            // "full" filter must be done in PHP since confirmed_count is an accessor
+            if ($statusFilter === 'full') {
+                $meals = $meals->filter(fn($m) => $m->isFull());
+            }
+
+            return view('meals.admin.index', [
+                'upcomingMeals' => $periodFilter !== 'past' ? $meals->filter(fn($m) => $m->meal_date >= now()->startOfDay()) : collect(),
+                'pastMeals' => $periodFilter !== 'upcoming' ? $meals->filter(fn($m) => $m->meal_date < now()->startOfDay()) : collect(),
+                'statusFilter' => $statusFilter,
+                'periodFilter' => $periodFilter,
+            ]);
+        }
+
         $upcomingMeals = SundayMeal::upcoming()
             ->withCount(['activeInscriptions'])
             ->get();
@@ -149,7 +187,10 @@ class MealController extends Controller
             ->limit(20)
             ->get();
 
-        return view('meals.admin.index', compact('upcomingMeals', 'pastMeals'));
+        return view('meals.admin.index', compact('upcomingMeals', 'pastMeals') + [
+            'statusFilter' => '',
+            'periodFilter' => '',
+        ]);
     }
 
     /**

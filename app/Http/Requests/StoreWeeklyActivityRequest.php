@@ -27,3 +27,4 @@ class StoreWeeklyActivityRequest extends FormRequest
         ];
     }
 }
+

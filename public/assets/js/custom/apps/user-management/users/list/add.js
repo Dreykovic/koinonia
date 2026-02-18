@@ -181,3 +181,4 @@ var KTUsersAddUser = function () {
 KTUtil.onDOMContentLoaded(function () {
     KTUsersAddUser.init();
 });
+

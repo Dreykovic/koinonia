@@ -19,10 +19,6 @@ class CommunityRequest extends Model
         'room_number',
         'problem_description',
         'purchase_description',
-        'status',
-        'admin_notes',
-        'assigned_to',
-        'completed_at',
     ];
 
     protected $casts = [

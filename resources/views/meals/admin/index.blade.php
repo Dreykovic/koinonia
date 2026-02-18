@@ -19,7 +19,33 @@
     $today = now();
 @endphp
 
+<!-- Filtres -->
+<div class="card mb-5">
+    <div class="card-body py-4">
+        <form method="GET" class="d-flex align-items-center gap-3 flex-wrap">
+            <select name="status" class="form-select form-select-sm" style="min-width: 140px;" onchange="this.form.submit()">
+                <option value="">Tous les statuts</option>
+                <option value="open" {{ ($statusFilter ?? '') === 'open' ? 'selected' : '' }}>Ouvert</option>
+                <option value="closed" {{ ($statusFilter ?? '') === 'closed' ? 'selected' : '' }}>Ferme</option>
+                <option value="full" {{ ($statusFilter ?? '') === 'full' ? 'selected' : '' }}>Complet</option>
+            </select>
+            <select name="period" class="form-select form-select-sm" style="min-width: 140px;" onchange="this.form.submit()">
+                <option value="">Toutes les periodes</option>
+                <option value="upcoming" {{ ($periodFilter ?? '') === 'upcoming' ? 'selected' : '' }}>A venir</option>
+                <option value="past" {{ ($periodFilter ?? '') === 'past' ? 'selected' : '' }}>Passes</option>
+            </select>
+            @if(($statusFilter ?? '') || ($periodFilter ?? ''))
+                <a href="{{ route('meals.admin.index') }}" class="btn btn-sm btn-light">
+                    <i class="ki-duotone ki-cross fs-4"></i>
+                    Reinitialiser
+                </a>
+            @endif
+        </form>
+    </div>
+</div>
+
 <!-- Repas a venir -->
+@if(($periodFilter ?? '') !== 'past')
 <div class="card mb-5">
     <div class="card-header py-4">
         <h3 class="card-title fw-bold mb-0">
@@ -133,9 +159,10 @@
         @endif
     </div>
 </div>
+@endif
 
 <!-- Repas passes -->
-@if($pastMeals->count() > 0)
+@if(($periodFilter ?? '') !== 'upcoming' && $pastMeals->count() > 0)
 <div class="card">
     <div class="card-header py-4">
         <h3 class="card-title fw-bold mb-0">

@@ -163,7 +163,7 @@
 
                     <!-- Submit -->
                     <div class="d-flex justify-content-end">
-                        <button type="submit" class="btn btn-itcj">
+                        <button type="submit" class="btn btn-itcj" id="submitBtn">
                             Suivant
                             <i class="ki-duotone ki-arrow-right fs-3 ms-2"><i class="path1"></i><i class="path2"></i></i>
                         </button>
@@ -174,18 +174,22 @@
     </div>
 </div>
 <!-- Share Modal -->
-<div id="shareModal" class="share-modal">
+<div id="shareModal" class="share-modal" role="dialog" aria-labelledby="shareModalTitle" aria-modal="true">
     <div class="share-modal-content">
-        <span class="close" onclick="closeShareModal()">&times;</span>
+        <span class="close" onclick="closeShareModal()" aria-label="Fermer">&times;</span>
 
-        <h4>Partager le formulaire</h4>
+        <h4 id="shareModalTitle">Partager le formulaire</h4>
 <div class="d-flex flex-column align-items-center ">
     <!-- QR Code -->
         <div id="qrcode"></div>
 
         <a id="downloadQR" class="btn btn-sm btn-itcj mt-2" download="formulaire-qrcode.png">
              <i class="ki-duotone ki-arrow-down fs-3 me-1"><i class="path1"></i><i class="path2"></i><i class="path3"></i></i>
-            Télécharger le QR Code
+            Telecharger (apercu)
+        </a>
+        <a href="{{ route('community-requests.form.qr-download') }}" class="btn btn-sm btn-itcj-outline mt-2">
+             <i class="ki-duotone ki-arrow-down fs-3 me-1"><i class="path1"></i><i class="path2"></i><i class="path3"></i></i>
+            Telecharger en haute qualite (SVG)
         </a>
 </div>
     
@@ -193,7 +197,7 @@
         <!-- Link -->
         <div class="mt-3 d-flex align-items-center ">
             <input type="text" id="shareLink" readonly class="form-control" disabled>
-            <button class="btn btn-icon btn-light ms-2" onclick="copyLink()">
+            <button class="btn btn-icon btn-light ms-2" onclick="copyLink()" aria-label="Copier le lien">
                      <i class="ki-duotone ki-copy fs-3 me-1"><i class="path1"></i><i class="path2"></i><i class="path3"></i></i>
             </button>
         </div>
@@ -203,26 +207,25 @@
 @endsection
 
 @push('scripts')
-<script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js" integrity="sha384-3zSEDfvllQohrq0PHL1fOXJuC/jSOO34H46t6UQfobFOmxE5BpjjaIJY5F2/bMnU" crossorigin="anonymous"></script>
 <script>
 let qr;
+const formUrl = "{{ route('community-requests.form.step1') }}";
 
 function openShareModal() {
-    const link = window.location.href; // 🔥 lien réel de la page actuelle
-
     document.getElementById('shareModal').style.display = 'block';
-    document.getElementById('shareLink').value = link;
+    document.getElementById('shareLink').value = formUrl;
 
     // Nettoyer ancien QR
     document.getElementById('qrcode').innerHTML = "";
 
     qr = new QRCode(document.getElementById("qrcode"), {
-        text: link,
+        text: formUrl,
         width: 200,
         height: 200,
     });
 
-    // Attendre que le canvas soit généré
+    // Attendre que le canvas soit genere
     setTimeout(() => {
         const canvas = document.querySelector("#qrcode canvas");
         if (canvas) {
@@ -240,12 +243,19 @@ function copyLink() {
     input.select();
     input.setSelectionRange(0, 99999);
     navigator.clipboard.writeText(input.value);
-    alert("Lien copié !");
+    alert("Lien copie !");
 }
 </script>
 
 <script>
 $(document).ready(function() {
+    // Loading state on submit
+    $('form').on('submit', function() {
+        var btn = $('#submitBtn');
+        btn.prop('disabled', true);
+        btn.html('<span class="spinner-border spinner-border-sm me-2"></span> Chargement...');
+    });
+
     // Highlight selected radio on change
     $('input[name="community_id"]').on('change', function() {
         $('input[name="community_id"]').closest('label').removeClass('border-primary bg-light-primary');

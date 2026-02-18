@@ -27,3 +27,4 @@ Broadcast::channel('meal.{mealId}', function ($user) {
     return auth()->check();
 });
 
+

@@ -162,3 +162,4 @@ var KTSignupComingSoon = function() {
 KTUtil.onDOMContentLoaded(function() {
     KTSignupComingSoon.init();
 });
+

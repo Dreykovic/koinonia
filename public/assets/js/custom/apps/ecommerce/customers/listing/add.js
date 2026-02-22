@@ -236,3 +236,4 @@ var KTModalCustomersAdd = function () {
 KTUtil.onDOMContentLoaded(function () {
 	KTModalCustomersAdd.init();
 });
+

@@ -116,3 +116,4 @@ return [
     'view'            => 'Voir',
     'yes'             => 'Oui',
 ];
+

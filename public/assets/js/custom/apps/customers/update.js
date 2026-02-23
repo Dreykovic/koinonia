@@ -129,3 +129,4 @@ var KTModalUpdateCustomer = function () {
 KTUtil.onDOMContentLoaded(function () {
     KTModalUpdateCustomer.init();
 });
+

@@ -25,3 +25,4 @@ return new class extends Migration {
         Schema::dropIfExists('week_menu_periods');
     }
 };
+

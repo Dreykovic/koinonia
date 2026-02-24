@@ -36,3 +36,4 @@ return new class extends Migration
         Schema::dropIfExists('spiritual_reflections');
     }
 };
+

@@ -30,3 +30,4 @@ var KTModalCreateProjectComplete = function () {
 if (typeof module !== 'undefined' && typeof module.exports !== 'undefined') {
 	window.KTModalCreateProjectComplete = module.exports = KTModalCreateProjectComplete;
 }
+

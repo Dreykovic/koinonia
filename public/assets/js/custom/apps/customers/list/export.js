@@ -187,3 +187,4 @@ var KTCustomersExport = function () {
 KTUtil.onDOMContentLoaded(function () {
     KTCustomersExport.init();
 });
+

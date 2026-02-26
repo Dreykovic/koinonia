@@ -18,8 +18,17 @@ Community management web application built with Laravel, designed to centralize 
 
 ### Screenshots
 
-<!-- TODO: Add screenshots -->
-> *Screenshots coming soon*
+| Login | Dashboard |
+|:---:|:---:|
+| ![Login](screens/connexion.png) | ![Dashboard](screens/dashboard.png) |
+
+| Vehicle Reservations | Week Menu |
+|:---:|:---:|
+| ![Reservations](screens/reserve-car.png) | ![Menu](screens/menu-edit.png) |
+
+| Vehicle & Profile Management |
+|:---:|
+| ![Profiles](screens/car-profile-access.png) |
 
 ### Tech Stack
 
@@ -156,8 +165,17 @@ Application web de gestion communautaire construite avec Laravel, permettant de 
 
 ### Captures d'ecran
 
-<!-- TODO: Ajouter des captures d'ecran -->
-> *Captures d'ecran a venir*
+| Connexion | Tableau de bord |
+|:---:|:---:|
+| ![Connexion](screens/connexion.png) | ![Dashboard](screens/dashboard.png) |
+
+| Reservations vehicules | Menu de la semaine |
+|:---:|:---:|
+| ![Reservations](screens/reserve-car.png) | ![Menu](screens/menu-edit.png) |
+
+| Gestion vehicules et profils |
+|:---:|
+| ![Profils](screens/car-profile-access.png) |
 
 ### Stack technique
 

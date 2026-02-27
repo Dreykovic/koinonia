@@ -128,3 +128,4 @@ class VehicleSetting extends Model
     }
 }
 
+

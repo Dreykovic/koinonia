@@ -11,7 +11,6 @@ class WeeklyActivity extends Model
     use HasFactory;
 
     protected $fillable = [
-        'bulletin_id',
         'title',
         'guests',
         'description',
@@ -19,10 +18,7 @@ class WeeklyActivity extends Model
         'activity_time',
         'location',
         'type',
-        'is_recurring',
-        'recurrence_pattern',
         'is_highlighted',
-        'created_by',
     ];
 
     protected $casts = [

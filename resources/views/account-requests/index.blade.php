@@ -218,7 +218,7 @@
                             <div class="d-flex align-items-center">
                                 <div class="symbol symbol-45px me-4" aria-hidden="true">
                                     <span class="symbol-label bg-itcj-blue-light text-itcj-blue fw-bold fs-5">
-                                        {{ strtoupper(substr($request->name, 0, 2)) }}
+                                        {{ strtoupper(substr($request->name, 0, 1)) }}
                                     </span>
                                 </div>
                                 <div>
@@ -284,7 +284,7 @@
                 <div class="request-mobile-card">
                     <div class="request-mobile-header">
                         <div class="request-mobile-avatar bg-itcj-blue-light text-itcj-blue">
-                            {{ strtoupper(substr($request->name, 0, 2)) }}
+                            {{ strtoupper(substr($request->name, 0, 1)) }}
                         </div>
                         <div class="request-mobile-info">
                             <div class="request-mobile-name">{{ $request->name }}</div>

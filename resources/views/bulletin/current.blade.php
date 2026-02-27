@@ -726,7 +726,7 @@
                 Institut de Theologie de la Compagnie de Jesus<br>
                 Communaute Jesuite - {{ $bulletin->year }}
             </p>
-            @if(auth()->user()->isAdmin() || auth()->user()->isCommunicateur() )
+            @if(auth()->user()->isAdmin())
                 <div class="footer-actions">
                     <a href="{{ route('bulletin.edit', $bulletin) }}" class="btn btn-itcj">
                         <i class="ki-duotone ki-pencil me-2"><i class="path1"></i><i class="path2"></i></i>
@@ -747,7 +747,7 @@
             </div>
             <h4>Aucun bulletin disponible</h4>
             <p>Le bulletin hebdomadaire n'a pas encore ete publie pour cette semaine.</p>
-            @if(auth()->user()->isAdmin() || auth()->user()->isCommunicateur())
+            @if(auth()->user()->isAdmin())
                 <a href="{{ route('bulletin.create') }}" class="btn btn-itcj">
                     <i class="ki-duotone ki-plus me-2"><i class="path1"></i><i class="path2"></i><i class="path3"></i></i>
                     Creer un bulletin

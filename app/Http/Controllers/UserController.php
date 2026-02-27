@@ -15,15 +15,40 @@ class UserController extends Controller
     /**
      * Display a listing of users.
      */
-    public function index()
+    public function index(Request $request)
     {
+        $query = User::with(['profile', 'community']);
 
-        $users = User::with(['profile', 'community'])
-            ->latest()
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                  ->orWhere('email', 'like', "%{$search}%");
+            });
+        }
+
+        if ($request->filled('role')) {
+            $role = $request->role;
+            $query->whereJsonContains('roles', $role);
+        }
+
+        if ($request->filled('status')) {
+            $query->where('is_active', $request->status === 'active');
+        }
+
+        if ($request->filled('community_id')) {
+            $query->where('community_id', $request->community_id);
+        }
+
+        $users = $query->latest()
             ->orderBy('name')
-            ->paginate(20);
+            ->paginate(20)
+            ->withQueryString();
 
-        return view('users.index', compact('users'));
+        $communities = Community::active()->ordered()->get();
+        $roles = PlatformRole::options();
+
+        return view('users.index', compact('users', 'communities', 'roles'));
     }
 
     /**

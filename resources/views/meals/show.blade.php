@@ -392,7 +392,7 @@
                                     <div class="d-flex align-items-center">
                                         <div class="symbol symbol-35px me-3" aria-hidden="true">
                                             <span class="symbol-label bg-itcj-blue-light text-itcj-blue fw-bold fs-7">
-                                                {{ strtoupper(substr($inscription->user->name, 0, 2)) }}
+                                                {{ strtoupper(substr($inscription->user->name, 0, 1)) }}
                                             </span>
                                         </div>
                                         <div>
@@ -443,7 +443,7 @@
                         <div class="inscription-mobile-card">
                             <div class="inscription-mobile-header">
                                 <div class="inscription-mobile-avatar bg-itcj-blue-light text-itcj-blue">
-                                    {{ strtoupper(substr($inscription->user->name, 0, 2)) }}
+                                    {{ strtoupper(substr($inscription->user->name, 0, 1)) }}
                                 </div>
                                 <div class="inscription-mobile-info">
                                     <div class="inscription-mobile-name">{{ $inscription->user->name }}</div>

@@ -321,3 +321,4 @@ var KTAppInboxReply = function () {
 KTUtil.onDOMContentLoaded(function () {
     KTAppInboxReply.init();
 });
+

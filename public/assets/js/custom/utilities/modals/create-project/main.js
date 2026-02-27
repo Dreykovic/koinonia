@@ -56,3 +56,4 @@ KTUtil.onDOMContentLoaded(function () {
 if (typeof module !== 'undefined' && typeof module.exports !== 'undefined') {
 	window.KTModalCreateProject = module.exports = KTModalCreateProject;
 }
+

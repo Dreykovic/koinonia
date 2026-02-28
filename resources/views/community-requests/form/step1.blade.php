@@ -91,7 +91,7 @@
                         <div class="d-flex align-items-center p-5 rounded" style="background: var(--itcj-blue-light, #f0f4f8);">
                             <div class="symbol symbol-40px me-4">
                                 <span class="symbol-label bg-primary text-white fw-bold fs-6">
-                                    {{ strtoupper(substr($user->name, 0, 1)) }}
+                                    {{ strtoupper(substr($user->name, 0, 2)) }}
                                 </span>
                             </div>
                             <div>

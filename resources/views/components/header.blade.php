@@ -242,7 +242,7 @@
                             aria-label="Menu utilisateur - {{ auth()->user()->name }}">
                         <div class="symbol symbol-35px">
                             <span class="symbol-label bg-itcj-blue text-white fw-bold fs-6" aria-hidden="true">
-                                {{ strtoupper(substr(auth()->user()->name, 0, 1)) }}
+                                {{ strtoupper(substr(auth()->user()->name, 0, 2)) }}
                             </span>
                         </div>
                         <div class="d-none d-md-flex flex-column ms-3 me-2">
@@ -262,7 +262,7 @@
                             <div class="menu-content d-flex align-items-center px-3">
                                 <div class="symbol symbol-50px me-4" aria-hidden="true">
                                     <span class="symbol-label bg-itcj-blue text-white fw-bold fs-3">
-                                        {{ strtoupper(substr(auth()->user()->name, 0, 1)) }}
+                                        {{ strtoupper(substr(auth()->user()->name, 0, 2)) }}
                                     </span>
                                 </div>
                                 <div>

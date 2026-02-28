@@ -692,8 +692,8 @@
             Institut de Theologie de la Compagnie de Jesus<br>
             Communaute Jesuite - {{ $bulletin->year }}
         </p>
-        <div class="footer-actions">
-            @if(auth()->user()->isAdmin())
+        <div class="footer-actions"> 
+            @if(auth()->user()->isAdmin() || auth()->user()->isCommunicateur())
                 <a href="{{ route('bulletin.edit', $bulletin) }}" class="btn btn-itcj">
                     <i class="ki-duotone ki-pencil me-2"><i class="path1"></i><i class="path2"></i></i>
                     Modifier

@@ -133,7 +133,7 @@
                                             <div class="d-flex align-items-center">
                                                 <div class="symbol symbol-40px me-3">
                                                     <span class="symbol-label bg-itcj-blue-light text-itcj-blue fw-bold">
-                                                        {{ strtoupper(substr($inscription->user->name, 0, 1)) }}
+                                                        {{ strtoupper(substr($inscription->user->name, 0, 2)) }}
                                                     </span>
                                                 </div>
                                                 <div>
@@ -187,7 +187,7 @@
                                             <div class="d-flex align-items-center">
                                                 <div class="symbol symbol-40px me-3">
                                                     <span class="symbol-label bg-light text-muted fw-bold">
-                                                        {{ strtoupper(substr($inscription->user->name, 0, 1)) }}
+                                                        {{ strtoupper(substr($inscription->user->name, 0, 2)) }}
                                                     </span>
                                                 </div>
                                                 <span class="text-muted">{{ $inscription->user->name }}</span>

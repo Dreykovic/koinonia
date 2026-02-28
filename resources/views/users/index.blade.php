@@ -175,7 +175,7 @@
                             <div class="d-flex align-items-center">
                                 <div class="symbol symbol-45px me-4">
                                     <span class="symbol-label bg-itcj-blue-light text-itcj-blue fw-bold fs-5">
-                                        {{ strtoupper(substr($user->name, 0, 1)) }}
+                                        {{ strtoupper(substr($user->name, 0, 2)) }}
                                     </span>
                                 </div>
                                 <div>
@@ -289,7 +289,7 @@
                     <div class="member-mobile-header">
                         <div class="symbol symbol-40px">
                             <span class="symbol-label bg-itcj-blue-light text-itcj-blue fw-bold">
-                                {{ strtoupper(substr($user->name, 0, 1)) }}
+                                {{ strtoupper(substr($user->name, 0, 2)) }}
                             </span>
                         </div>
                         <div class="member-mobile-info">

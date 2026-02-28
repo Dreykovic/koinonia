@@ -1193,7 +1193,7 @@
                         <li class="d-flex align-items-center py-2 {{ !$loop->last ? 'border-bottom' : '' }}">
                             <div class="symbol symbol-35px me-3" aria-hidden="true">
                                 <span class="symbol-label bg-itcj-gold-light text-itcj-gold fw-bold">
-                                    {{ strtoupper(substr($person->name, 0, 1)) }}
+                                    {{ strtoupper(substr($person->name, 0, 2)) }}
                                 </span>
                             </div>
                             <div>
@@ -1322,7 +1322,7 @@
             </div>
             <h4 id="no-bulletin-heading" class="text-muted mb-2">Bulletin Hebdomadaire</h4>
             <p class="text-muted mb-4">Aucun bulletin n'a encore été publié cette semaine.</p>
-            @if(auth()->user()->isAdmin())
+            @if(auth()->user()->isAdmin() || auth()->user()->isCommunicateur())
                 <a href="{{ route('bulletin.create') }}" class="btn btn-itcj"
                    aria-label="Créer le premier bulletin de la semaine">
                     <i class="ki-duotone ki-plus me-2" aria-hidden="true"><i class="path1"></i><i class="path2"></i><i class="path3"></i></i>

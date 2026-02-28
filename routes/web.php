@@ -20,6 +20,7 @@ use App\Http\Controllers\VehicleController;
 use App\Http\Controllers\WeekMenuController;
 use App\Http\Controllers\VehicleReservationController;
 use Illuminate\Support\Facades\Route;
+use App\Enums\PlatformRole;
 
 /*
 |--------------------------------------------------------------------------
@@ -73,7 +74,7 @@ Route::middleware('auth')->group(function () {
     });
 
     // Vehicles Management (admin only)
-    Route::middleware('role:admin')->group(function () {
+    Route::middleware(roleMiddleware([PlatformRole::ADMIN]))->group(function () {
         Route::resource('vehicles', VehicleController::class)->except(['show']);
         Route::get('vehicles/{vehicle}', [VehicleController::class, 'show'])->name('vehicles.show');
         Route::post('vehicles/{vehicle}/toggle-availability', [VehicleController::class, 'toggleAvailability'])->name('vehicles.toggle-availability');
@@ -90,7 +91,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/widget-data', [MealController::class, 'widgetData'])->name('widget-data');
 
         // Admin routes
-        Route::middleware('role:admin')->group(function () {
+        Route::middleware(roleMiddleware([PlatformRole::ADMIN]))->group(function () {
             Route::get('/admin', [MealController::class, 'adminIndex'])->name('admin.index');
             Route::get('/admin/create', [MealController::class, 'create'])->name('admin.create');
             Route::post('/admin', [MealController::class, 'store'])->name('admin.store');
@@ -108,7 +109,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/current', [BulletinController::class, 'current'])->name('current');
 
         // Admin only routes (defined BEFORE the show route to avoid conflict)
-        Route::middleware('role:admin')->group(function () {
+        Route::middleware(roleMiddleware([PlatformRole::ADMIN,PlatformRole::COMMUNICATION]))->group(function () {
             Route::get('/', [BulletinController::class, 'index'])->name('index');
             Route::get('/create', [BulletinController::class, 'create'])->name('create');
             Route::post('/', [BulletinController::class, 'store'])->name('store');
@@ -138,7 +139,7 @@ Route::middleware('auth')->group(function () {
     });
 
     // Users Management (admin only)
-    Route::middleware('role:admin')->group(function () {
+    Route::middleware(roleMiddleware([PlatformRole::ADMIN]))->group(function () {
         Route::resource('users', UserController::class);
         Route::post('users/{user}/toggle-active', [UserController::class, 'toggleActive'])->name('users.toggle-active');
     });
@@ -167,7 +168,7 @@ Route::middleware('auth')->group(function () {
     });
 
     // Repair Locations & Communities Management (admin only)
-    Route::middleware('role:admin')->group(function () {
+    Route::middleware(roleMiddleware([PlatformRole::ADMIN]))->group(function () {
         Route::resource('repair-locations', RepairLocationController::class)->except(['create', 'show', 'edit']);
         Route::resource('communities', CommunityController::class)->except(['create', 'show', 'edit']);
 
@@ -212,7 +213,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/', [WeekMenuController::class, 'index'])->name('index');
 
         // Admin routes
-        Route::middleware('role:admin')->group(function () {
+        Route::middleware(roleMiddleware([PlatformRole::ADMIN]))->group(function () {
             Route::get('/admin/edit', [WeekMenuController::class, 'edit'])
                 ->name('admin.edit');
 
@@ -226,7 +227,7 @@ Route::middleware('auth')->group(function () {
 
 
     // uSER pROFILE & vehicle type
-    Route::middleware(['role:admin'])->group(function () {
+    Route::middleware([roleMiddleware([PlatformRole::ADMIN])])->group(function () {
         Route::prefix('user-profile-vehicle-types')->name('user-profile-vehicle-types.')->group(function () {
         Route::get('/', [UserProfileVehicleTypeController::class, 'index'])
             ->name('index');

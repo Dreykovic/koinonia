@@ -38,7 +38,7 @@ class VehicleReservationController extends Controller
     {
         $user = auth()->user();
 
-        $vehicles = Vehicle::available()->get()->filter(function ($vehicle) use ($user) {
+        $vehicles = Vehicle::available()->with('type')->get()->filter(function ($vehicle) use ($user) {
             return $user->canAccessVehicle($vehicle);
         })->values();
 
@@ -87,7 +87,7 @@ class VehicleReservationController extends Controller
         $user = auth()->user();
 
         // Get vehicles accessible to user
-        $accessibleVehicles = Vehicle::all()->filter(function ($vehicle) use ($user) {
+        $accessibleVehicles = Vehicle::with('type')->get()->filter(function ($vehicle) use ($user) {
             return $user->canAccessVehicle($vehicle);
         });
 
@@ -144,7 +144,7 @@ class VehicleReservationController extends Controller
         try {
             return DB::transaction(function () use ($validated, $user) {
                 // Lock the vehicle row to prevent concurrent reservations
-                $vehicle = Vehicle::lockForUpdate()->findOrFail($validated['vehicle_id']);
+                $vehicle = Vehicle::lockForUpdate()->with('type')->findOrFail($validated['vehicle_id']);
 
                 // Check access
                 if (!$user->canAccessVehicle($vehicle)) {
@@ -392,7 +392,7 @@ class VehicleReservationController extends Controller
     {
         $user = auth()->user();
 
-        $vehicles = Vehicle::available()->get()->filter(function ($vehicle) use ($user) {
+        $vehicles = Vehicle::available()->with('type')->get()->filter(function ($vehicle) use ($user) {
             return $user->canAccessVehicle($vehicle);
         })->values();
 
@@ -426,7 +426,7 @@ class VehicleReservationController extends Controller
             abort(403);
         }
 
-        $vehicles = Vehicle::available()->get()->filter(function ($vehicle) use ($user) {
+        $vehicles = Vehicle::available()->with('type')->get()->filter(function ($vehicle) use ($user) {
             return $user->canAccessVehicle($vehicle);
         })->values();
 

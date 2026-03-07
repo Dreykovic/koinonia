@@ -243,8 +243,17 @@ function copyLink() {
     const input = document.getElementById('shareLink');
     input.select();
     input.setSelectionRange(0, 99999);
-    navigator.clipboard.writeText(input.value);
-    alert("Lien copie !");
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(input.value).then(function() {
+            alert("Lien copie !");
+        }).catch(function() {
+            document.execCommand('copy');
+            alert("Lien copie !");
+        });
+    } else {
+        document.execCommand('copy');
+        alert("Lien copie !");
+    }
 }
 </script>
 

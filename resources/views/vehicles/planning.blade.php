@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>Planning Vehicules - ITCJ Community</title>
 
@@ -61,6 +61,7 @@
         .planning-layout {
             display: flex;
             height: 100vh;
+            height: 100dvh;
         }
 
         /* Sidebar - Neumorphism crème */

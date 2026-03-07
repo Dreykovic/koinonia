@@ -86,8 +86,7 @@
         <div class="members-mobile-list">
             @foreach($menusPerDays as $day => $menuCollection)
                  @php
-                                $roleColors = [
-                                    
+                                $dayColors = [
                                     'lundi' => ['bg' => 'var(--itcj-red-light)', 'text' => 'var(--itcj-red)'],
                                     'mardi' => ['bg' => 'var(--itcj-gold-light)', 'text' => '#9a7a30'],
                                     'mercredi' => ['bg' => '#e8f5e9', 'text' => '#2e7d32'],
@@ -96,34 +95,25 @@
                                     'samedi' => ['bg' => '#f5f5f5', 'text' => '#616161'],
                                     'dimanche' => ['bg' => '#f5f5f5', 'text' => '#5151a1'],
                                 ];
-                                $role = $roleColors[$day] ?? $roleColors['lundi'];
+                                $dc = $dayColors[$day] ?? $dayColors['lundi'];
                             @endphp
                 <div class="member-mobile-card">
-                    <div class="member-mobile-header">
+                    <div class="d-flex align-items-center gap-3 mb-3">
                         <div class="symbol symbol-40px">
-                            <span class="symbol-label  fw-bold"  style="background: {{ $role['bg'] }}; color: {{ $role['text'] }};">
+                            <span class="symbol-label fw-bold" style="background: {{ $dc['bg'] }}; color: {{ $dc['text'] }};">
                                 {{ strtoupper(substr($day, 0, 3)) }}
                             </span>
                         </div>
-                        <div class="member-mobile-info">
-                            <div class="member-mobile-name"  style="background: {{ $role['bg'] }}; color: {{ $role['text'] }};">{{ $day }}</div>
-                        </div>
-                 
-                     
+                        <span class="fw-bold fs-5 text-capitalize">{{ $day }}</span>
                     </div>
-                    <div class="member-mobile-header">
+                    <div class="d-flex flex-column gap-2">
                         @foreach ($menuCollection as $menu)
-                            
-                                <div class="member-mobile-info">
-                                    <div class="member-mobile-name"   style="background: {{ $role['bg'] }}; color: {{ $role['text'] }};">{{ $menu->period->code }}</div>
-                                    @if($day)
-                                        <div class="member-mobile-room"> {{ $menu->dish_name }}</div>
-                                    @endif
-                                </div>
+                            <div class="d-flex align-items-center gap-3 p-2 rounded" style="background: {{ $dc['bg'] }};">
+                                <span class="badge fw-semibold text-uppercase fs-9" style="color: {{ $dc['text'] }}; min-width: 40px;">{{ $menu->period->code }}</span>
+                                <span class="fw-semibold" style="color: {{ $dc['text'] }};">{{ $menu->dish_name }}</span>
+                            </div>
                         @endforeach
                     </div>
-                
-             
                 </div>
             @endforeach
         </div>

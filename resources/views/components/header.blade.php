@@ -84,7 +84,7 @@
                                  aria-haspopup="true"
                                  aria-label="Voir les détails du repas du {{ $meal->formatted_date }}">
                                 <div class="meal-icon-wrapper d-flex align-items-center justify-content-center rounded-circle"
-                                     style="width: 38px; height: 38px; background: rgba(212, 168, 75, 0.15);">
+                                     style="width: 44px; height: 44px; background: rgba(212, 168, 75, 0.15);">
                                     <i class="ki-duotone ki-gift fs-3" style="color: var(--accent);" aria-hidden="true">
                                         <i class="path1"></i><i class="path2"></i>
                                     </i>
@@ -138,7 +138,7 @@
                             @endif
 
                             <!-- Dropdown menu compact -->
-                            <div class="menu menu-sub menu-sub-dropdown menu-column menu-rounded menu-gray-800 menu-state-bg menu-state-color fw-semibold py-3 fs-7 w-250px"
+                            <div class="menu menu-sub menu-sub-dropdown menu-column menu-rounded menu-gray-800 menu-state-bg menu-state-color fw-semibold py-3 fs-7" style="width: min(250px, 90vw);"
                                  data-kt-menu="true"
                                  role="menu"
                                  aria-label="Détails du repas">

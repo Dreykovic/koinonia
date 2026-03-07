@@ -17,7 +17,8 @@
 
 .share-modal-content {
     background: #fff;
-    width: 350px;
+    width: 90vw;
+    max-width: 350px;
     margin: 10% auto;
     padding: 20px;
     border-radius: 8px;

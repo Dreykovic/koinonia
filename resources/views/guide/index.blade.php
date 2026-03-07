@@ -422,7 +422,11 @@ document.addEventListener('DOMContentLoaded', function () {
             const targetId = this.getAttribute('href').substring(1);
             const target = document.getElementById(targetId);
             if (target) {
-                target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                try {
+                    target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                } catch (e) {
+                    target.scrollIntoView(true);
+                }
                 // Open the accordion
                 const collapseEl = target.querySelector('.collapse');
                 if (collapseEl && !collapseEl.classList.contains('show')) {

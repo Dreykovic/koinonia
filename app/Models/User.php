@@ -239,14 +239,24 @@ class User extends Authenticatable
 
     /**
      * Check if user can access a specific vehicle based on its type.
+     *
+     * @param Vehicle|string $vehicle Vehicle instance or vehicle type name
      */
-    public function canAccessVehicle(string $vehicleTypeName): bool
+    public function canAccessVehicle($vehicle): bool
     {
         if ($this->isAdmin()) {
             return true;
         }
 
         if (!$this->is_active || !$this->profile || !$this->profile->is_active) {
+            return false;
+        }
+
+        $vehicleTypeName = $vehicle instanceof Vehicle
+            ? $vehicle->type?->name
+            : $vehicle;
+
+        if (!$vehicleTypeName) {
             return false;
         }
 

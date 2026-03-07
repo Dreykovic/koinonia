@@ -1,5 +1,6 @@
 <?php
 
+use App\Enums\PlatformRole;
 use App\Http\Controllers\AccountRequestController;
 use App\Http\Controllers\Admin\FailedEmailController;
 use App\Http\Controllers\Admin\VehicleSettingController;

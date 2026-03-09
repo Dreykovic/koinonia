@@ -165,7 +165,11 @@
             border-radius: 10px;
             background: #fff;
             color: var(--text-primary);
-            font-size: 14px;
+            font-size: 16px;
+            min-height: 44px;
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            appearance: none;
             box-shadow: inset 2px 2px 4px rgba(60, 50, 40, 0.06);
         }
 
@@ -997,6 +1001,38 @@
             color: var(--text-muted);
             text-transform: uppercase;
             letter-spacing: 0.5px;
+        }
+
+        /* Date/Time inputs - Mobile compatibility */
+        input[type="date"],
+        input[type="time"],
+        input[type="datetime-local"] {
+            font-size: 16px;
+            min-height: 44px;
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            appearance: none;
+        }
+
+        @media (max-width: 768px) {
+            input[type="date"],
+            input[type="time"],
+            input[type="datetime-local"] {
+                min-height: 48px;
+                padding: 12px 14px;
+                font-size: 16px;
+                line-height: 1.5;
+                cursor: pointer;
+            }
+
+            input[type="date"]::-webkit-calendar-picker-indicator,
+            input[type="time"]::-webkit-calendar-picker-indicator,
+            input[type="datetime-local"]::-webkit-calendar-picker-indicator {
+                padding: 8px;
+                margin: 0;
+                cursor: pointer;
+                opacity: 0.6;
+            }
         }
 
         /* Hidden date input for mobile picker */

@@ -892,6 +892,50 @@
             color: var(--text-muted);
         }
 
+        /* ==================== DATE/TIME INPUTS - Mobile compatibility ==================== */
+        /* Prevent iOS auto-zoom on focus (requires font-size >= 16px) */
+        input[type="date"],
+        input[type="time"],
+        input[type="datetime-local"] {
+            font-size: 16px;
+            min-height: 44px;
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            appearance: none;
+            position: relative;
+        }
+
+        /* Better touch targets and styling on mobile */
+        @media (max-width: 768px) {
+            input[type="date"],
+            input[type="time"],
+            input[type="datetime-local"] {
+                min-height: 48px;
+                padding: 12px 14px;
+                font-size: 16px;
+                line-height: 1.5;
+                cursor: pointer;
+            }
+
+            /* Ensure the native picker icon is tappable */
+            input[type="date"]::-webkit-calendar-picker-indicator,
+            input[type="time"]::-webkit-calendar-picker-indicator,
+            input[type="datetime-local"]::-webkit-calendar-picker-indicator {
+                padding: 8px;
+                margin: 0;
+                cursor: pointer;
+                opacity: 0.6;
+            }
+        }
+
+        /* Firefox: remove inner focus ring */
+        input[type="date"]::-moz-focus-inner,
+        input[type="time"]::-moz-focus-inner,
+        input[type="datetime-local"]::-moz-focus-inner {
+            border: 0;
+            padding: 0;
+        }
+
         .form-label {
             color: var(--text-secondary);
             font-weight: 500;

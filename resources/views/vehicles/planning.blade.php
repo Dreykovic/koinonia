@@ -533,7 +533,10 @@
         /* Loading overlay */
         .loading-overlay {
             position: absolute;
-            inset: 0;
+            top: 0;
+            right: 0;
+            bottom: 0;
+            left: 0;
             background: rgba(255,255,255,0.9);
             display: flex;
             align-items: center;
@@ -1490,7 +1493,8 @@
                 $('#btn-cancel-reservation').on('click', () => this.cancelReservation());
 
                 $('#reservationModal').on('hidden.bs.modal', function() {
-                    $(this).find('form')[0]?.reset();
+                    var form = $(this).find('form')[0];
+                    if (form) form.reset();
                     $(this).find('.alert').addClass('d-none');
                 });
             },
@@ -1760,7 +1764,7 @@
                         Swal.fire({ icon: 'success', title: isEdit ? 'Modifie' : 'Reserve', timer: 1500, showConfirmButton: false });
                         this.loadData();
                     })
-                    .fail(xhr => $('#reservation-error').removeClass('d-none').text(xhr.responseJSON?.message || 'Erreur'));
+                    .fail(xhr => $('#reservation-error').removeClass('d-none').text((xhr.responseJSON && xhr.responseJSON.message ? xhr.responseJSON.message : null) || 'Erreur'));
             },
 
             cancelReservation() {
@@ -1781,7 +1785,7 @@
                                 Swal.fire({ icon: 'success', title: 'Annule', timer: 1500, showConfirmButton: false });
                                 this.loadData();
                             })
-                            .fail(xhr => Swal.fire('Erreur', xhr.responseJSON?.message || 'Erreur', 'error'));
+                            .fail(xhr => Swal.fire('Erreur', (xhr.responseJSON && xhr.responseJSON.message ? xhr.responseJSON.message : null) || 'Erreur', 'error'));
                     }
                 });
             },
@@ -1800,7 +1804,7 @@
 
         // ==================== MOBILE PLANNING ====================
         const MobilePlanning = {
-            vehicles: @json($vehicles->filter(fn($v) => auth()->user()->canAccessVehicle($v))),
+            vehicles: @json($vehicles->filter(fn($v) => auth()->user()->canAccessVehicle($v))->values()),
             reservations: [],
             currentUserId: {{ auth()->id() }},
             selectedDate: '{{ now()->toDateString() }}',
@@ -1887,6 +1891,14 @@
                         // Sync with desktop
                         Planning.reservations = data;
                         Planning.renderTable();
+                    })
+                    .fail((error) => {
+                        console.error('Erreur chargement mobile:', error);
+                        // Update all vehicle statuses to show error
+                        this.vehicles.forEach(function(v) {
+                            var $status = $('#mobile-vehicle-status-' + v.id);
+                            $status.html('<span style="color:#c0392b;">Erreur de chargement</span>');
+                        });
                     });
             },
 
@@ -2128,7 +2140,7 @@
                                 Swal.fire({ icon: 'success', title: 'Réservation annulée', timer: 1500, showConfirmButton: false });
                                 this.loadData();
                             })
-                            .fail(xhr => Swal.fire('Erreur', xhr.responseJSON?.message || 'Erreur lors de l\'annulation', 'error'));
+                            .fail(xhr => Swal.fire('Erreur', (xhr.responseJSON && xhr.responseJSON.message ? xhr.responseJSON.message : null) || 'Erreur lors de l\'annulation', 'error'));
                     }
                 });
             },

@@ -1699,7 +1699,10 @@
         /* Bottom Sheet */
         .bottom-sheet-backdrop {
             position: fixed;
-            inset: 0;
+            top: 0;
+            right: 0;
+            bottom: 0;
+            left: 0;
             background: rgba(0,0,0,0.5);
             z-index: 1040;
             opacity: 0;
@@ -1869,7 +1872,10 @@
            ============================================ */
         .confirm-modal-overlay {
             position: fixed;
-            inset: 0;
+            top: 0;
+            right: 0;
+            bottom: 0;
+            left: 0;
             background: rgba(44, 36, 32, 0.7);
             backdrop-filter: blur(4px);
             -webkit-backdrop-filter: blur(4px);
@@ -2639,7 +2645,8 @@
 
             // Convert flash messages to toasts
             document.querySelectorAll('.alert.alert-success, .alert.alert-danger, .alert.alert-warning, .alert.alert-info').forEach(alert => {
-                const text = alert.querySelector('span')?.textContent?.trim() || alert.textContent.trim();
+                var spanEl = alert.querySelector('span');
+                const text = (spanEl && spanEl.textContent ? spanEl.textContent.trim() : '') || alert.textContent.trim();
                 const type = alert.classList.contains('alert-success') ? 'success' :
                              alert.classList.contains('alert-danger') ? 'error' :
                              alert.classList.contains('alert-warning') ? 'warning' : 'info';

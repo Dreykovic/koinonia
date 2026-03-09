@@ -983,30 +983,6 @@
             min-height: 32px;
         }
 
-        /* Mobile FAB */
-        .mobile-fab {
-            position: fixed;
-            bottom: calc(24px + env(safe-area-inset-bottom));
-            right: 20px;
-            width: 56px;
-            height: 56px;
-            border-radius: 50%;
-            background: var(--primary);
-            color: #fff;
-            border: none;
-            font-size: 24px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            box-shadow: 0 4px 16px rgba(139, 35, 50, 0.4);
-            z-index: 100;
-            transition: all 0.2s;
-        }
-
-        .mobile-fab:active {
-            transform: scale(0.95);
-        }
-
         /* Mobile Legend */
         .mobile-legend {
             padding: 16px;
@@ -1258,15 +1234,6 @@
                 </div>
             </div>
 
-            <!-- Mobile FAB -->
-            <button type="button"
-                    class="mobile-fab"
-                    id="mobile-fab"
-                    style="display: none;"
-                    onclick="MobilePlanning.openReservationModal()"
-                    aria-label="Nouvelle réservation">
-                <i class="ki-duotone ki-plus"><i class="path1"></i><i class="path2"></i><i class="path3"></i></i>
-            </button>
         </div>
 
         <!-- ==================== DESKTOP VIEW ==================== -->
@@ -1406,94 +1373,6 @@
         </main>
     </div>
 
-    <!-- Modal Reservation -->
-    <div class="modal fade"
-         id="reservationModal"
-         tabindex="-1"
-         role="dialog"
-         aria-labelledby="reservation-modal-title"
-         aria-modal="true">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="reservation-modal-title">Nouvelle Réservation</h5>
-                    <button type="button"
-                            class="btn-close"
-                            data-bs-dismiss="modal"
-                            aria-label="Fermer la fenêtre de réservation"></button>
-                </div>
-                <form id="reservationForm" aria-describedby="reservation-form-help">
-                    <input type="hidden" id="reservation-id">
-                    <div class="modal-body">
-                        <p id="reservation-form-help" class="visually-hidden">
-                            Remplissez ce formulaire pour réserver un véhicule. Les champs marqués d'un astérisque sont obligatoires.
-                        </p>
-                        <div class="mb-3">
-                            <label for="reservation-vehicle" class="form-label fw-semibold">
-                                Véhicule <span class="text-danger" aria-hidden="true">*</span>
-                                <span class="visually-hidden">(obligatoire)</span>
-                            </label>
-                            <select class="form-select" id="reservation-vehicle" required aria-required="true">
-                                <option value="">Sélectionnez un véhicule...</option>
-                                @foreach($vehicles as $vehicle)
-                                    @if(auth()->user()->canAccessVehicle($vehicle))
-                                    <option value="{{ $vehicle->id }}">{{ $vehicle->name }} ({{ $vehicle->license_plate }})</option>
-                                    @endif
-                                @endforeach
-                            </select>
-                        </div>
-                        <div class="mb-3">
-                            <label for="reservation-driver" class="form-label fw-semibold">
-                                Conducteur <span class="text-danger" aria-hidden="true">*</span>
-                                <span class="visually-hidden">(obligatoire)</span>
-                            </label>
-                            <input type="text" class="form-control" id="reservation-driver" value="{{ auth()->user()->name }}" required aria-required="true">
-                        </div>
-                        <fieldset class="mb-3">
-                            <legend class="form-label fw-semibold fs-6">Horaires <span class="text-danger" aria-hidden="true">*</span></legend>
-                            <div class="row">
-                                <div class="col-6">
-                                    <label for="reservation-start" class="form-label">Heure début</label>
-                                    <input type="time" class="form-control" id="reservation-start" required aria-required="true">
-                                </div>
-                                <div class="col-6">
-                                    <label for="reservation-end" class="form-label">Heure fin</label>
-                                    <input type="time" class="form-control" id="reservation-end" required aria-required="true">
-                                </div>
-                            </div>
-                        </fieldset>
-                        <div class="mb-3">
-                            <label for="reservation-destination" class="form-label fw-semibold">Destination</label>
-                            <input type="text"
-                                   class="form-control"
-                                   id="reservation-destination"
-                                   placeholder="Optionnel"
-                                   aria-describedby="destination-help">
-                            <span id="destination-help" class="form-text">Indiquez votre destination pour informer les autres membres</span>
-                        </div>
-                        <div class="mb-3">
-                            <label for="reservation-notes" class="form-label fw-semibold">Notes</label>
-                            <textarea class="form-control" id="reservation-notes" rows="2" placeholder="Optionnel"></textarea>
-                        </div>
-                        <div id="reservation-error" class="alert alert-danger py-2 d-none" role="alert" aria-live="assertive"></div>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-light" data-bs-dismiss="modal">Annuler</button>
-                        <button type="button"
-                                class="btn btn-danger d-none"
-                                id="btn-cancel-reservation"
-                                aria-label="Annuler cette réservation">
-                            Annuler réservation
-                        </button>
-                        <button type="submit" class="btn btn-primary" aria-label="Confirmer la réservation">
-                            Confirmer
-                        </button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div>
-
     <!-- Modal Details -->
     <div class="modal fade"
          id="detailsModal"
@@ -1579,7 +1458,6 @@
                 this.bindEvents();
                 this.loadData();
                 this.startPolling();
-                this.setDefaultTimes();
                 // Set max date on date picker
                 $('#planning-date').attr('max', this.settings.maxReservationDate);
             },
@@ -1602,15 +1480,6 @@
                 });
 
                 $('#btn-refresh').on('click', () => this.loadData());
-
-                $('#reservationForm').on('submit', (e) => { e.preventDefault(); this.submitReservation(); });
-                $('#btn-cancel-reservation').on('click', () => this.cancelReservation());
-
-                $('#reservationModal').on('hidden.bs.modal', function() {
-                    var form = $(this).find('form')[0];
-                    if (form) form.reset();
-                    $(this).find('.alert').addClass('d-none');
-                });
             },
 
             updateDateDisplay() {
@@ -1809,34 +1678,51 @@
             },
 
             openNewReservation(vehicleId, hour) {
-                $('#reservation-id').val('');
-                $('#reservation-modal-title').text('Nouvelle Reservation');
-                $('#reservation-vehicle').val(vehicleId).prop('disabled', false);
-                $('#reservation-start').val(String(hour).padStart(2, '0') + ':00');
-                $('#reservation-end').val(String(hour + 1).padStart(2, '0') + ':00');
-                $('#reservation-driver').val('{{ auth()->user()->name }}');
-                $('#reservation-destination').val('');
-                $('#reservation-notes').val('');
-                $('#btn-cancel-reservation').addClass('d-none');
-                $('#reservationModal').modal('show');
+                var self = this;
+                var data = {
+                    vehicle_id: vehicleId,
+                    reservation_date: this.selectedDate,
+                    start_time: String(hour).padStart(2, '0') + ':00',
+                    end_time: String(hour + 1).padStart(2, '0') + ':00'
+                };
+
+                $.ajax({ url: '/api/v1/reservations', method: 'POST', data: data })
+                    .done(function() {
+                        self.loadData();
+                    })
+                    .fail(function(xhr) {
+                        var msg = (xhr.responseJSON && xhr.responseJSON.message) ? xhr.responseJSON.message : 'Erreur lors de la reservation';
+                        Swal.fire('Erreur', msg, 'error');
+                    });
             },
 
             showDetails(el) {
-                const r = JSON.parse($(el).attr('data-reservation'));
-                const isMine = r.user_id === this.currentUserId;
+                var r = JSON.parse($(el).attr('data-reservation'));
+                var isMine = r.user_id === this.currentUserId;
+                var self = this;
 
-                if (isMine && r.can_edit) {
-                    $('#reservation-id').val(r.id);
-                    $('#reservation-modal-title').text('Modifier');
-                    $('#reservation-vehicle').val(r.vehicle_id).prop('disabled', true);
-                    $('#reservation-start').val(r.start_time.substring(0, 5));
-                    $('#reservation-end').val(r.end_time.substring(0, 5));
-                    $('#reservation-driver').val(r.user_name);
-                    $('#reservation-destination').val(r.destination || '');
-                    $('#reservation-notes').val(r.notes || '');
-                    r.can_cancel ? $('#btn-cancel-reservation').removeClass('d-none') : $('#btn-cancel-reservation').addClass('d-none');
-                    $('#reservationModal').modal('show');
-                } else {
+                if (isMine && r.can_cancel) {
+                    Swal.fire({
+                        title: 'Annuler cette reservation ?',
+                        text: r.vehicle_name + ' — ' + r.start_time.substring(0, 5) + ' à ' + r.end_time.substring(0, 5),
+                        icon: 'warning',
+                        showCancelButton: true,
+                        confirmButtonColor: '#e74c3c',
+                        confirmButtonText: 'Oui, annuler',
+                        cancelButtonText: 'Non'
+                    }).then(function(result) {
+                        if (result.isConfirmed) {
+                            $.ajax({ url: '/api/v1/reservations/' + r.id, method: 'DELETE' })
+                                .done(function() {
+                                    self.loadData();
+                                })
+                                .fail(function(xhr) {
+                                    var msg = (xhr.responseJSON && xhr.responseJSON.message) ? xhr.responseJSON.message : 'Erreur';
+                                    Swal.fire('Erreur', msg, 'error');
+                                });
+                        }
+                    });
+                } else if (!isMine) {
                     $('#detail-user').text(r.user_name);
                     $('#detail-vehicle').text(r.vehicle_name);
                     $('#detail-start').text(r.start_time.substring(0, 5));
@@ -1858,50 +1744,6 @@
 
                     $('#detailsModal').modal('show');
                 }
-            },
-
-            submitReservation() {
-                const id = $('#reservation-id').val();
-                const isEdit = !!id;
-                const data = {
-                    vehicle_id: $('#reservation-vehicle').val(),
-                    reservation_date: this.selectedDate,
-                    start_time: $('#reservation-start').val(),
-                    end_time: $('#reservation-end').val(),
-                    destination: $('#reservation-destination').val() || null,
-                    notes: $('#reservation-notes').val() || null
-                };
-
-                $.ajax({ url: isEdit ? `/api/v1/reservations/${id}` : '/api/v1/reservations', method: isEdit ? 'PUT' : 'POST', data })
-                    .done(() => {
-                        $('#reservationModal').modal('hide');
-                        Swal.fire({ icon: 'success', title: isEdit ? 'Modifie' : 'Reserve', timer: 1500, showConfirmButton: false });
-                        this.loadData();
-                    })
-                    .fail(xhr => $('#reservation-error').removeClass('d-none').text((xhr.responseJSON && xhr.responseJSON.message ? xhr.responseJSON.message : null) || 'Erreur'));
-            },
-
-            cancelReservation() {
-                const id = $('#reservation-id').val();
-                Swal.fire({
-                    title: 'Confirmer?',
-                    text: 'Annuler cette reservation?',
-                    icon: 'warning',
-                    showCancelButton: true,
-                    confirmButtonColor: '#e74c3c',
-                    confirmButtonText: 'Oui',
-                    cancelButtonText: 'Non'
-                }).then(result => {
-                    if (result.isConfirmed) {
-                        $.ajax({ url: `/api/v1/reservations/${id}`, method: 'DELETE' })
-                            .done(() => {
-                                $('#reservationModal').modal('hide');
-                                Swal.fire({ icon: 'success', title: 'Annule', timer: 1500, showConfirmButton: false });
-                                this.loadData();
-                            })
-                            .fail(xhr => Swal.fire('Erreur', (xhr.responseJSON && xhr.responseJSON.message ? xhr.responseJSON.message : null) || 'Erreur', 'error'));
-                    }
-                });
             },
 
             startPolling() {
@@ -2124,7 +1966,6 @@
                 // Show detail view
                 $('#mobile-vehicles-list').hide();
                 $('#mobile-vehicle-detail').show();
-                $('#mobile-fab').show();
                 $('.mobile-stats').hide();
                 $('.mobile-planning-search').hide();
             },
@@ -2134,7 +1975,6 @@
                 $('#mobile-title').text('Planning Véhicules');
                 $('#mobile-vehicles-list').show();
                 $('#mobile-vehicle-detail').hide();
-                $('#mobile-fab').hide();
                 $('.mobile-stats').show();
                 $('.mobile-planning-search').show();
             },
@@ -2172,16 +2012,9 @@
                                     <div class="time-slot-mobile-driver">${reservation.user_name}</div>
                                     ${reservation.destination ? `<div class="time-slot-mobile-destination"><i class="ki-duotone ki-geolocation"><i class="path1"></i><i class="path2"></i></i> ${reservation.destination}</div>` : ''}
                                 </div>
-                                ${isMine && reservation.can_edit ? `
+                                ${isMine && reservation.can_cancel ? `
                                     <div class="time-slot-mobile-actions">
-                                        <button class="btn btn-sm btn-light" onclick="event.stopPropagation(); MobilePlanning.editReservation(${reservation.id})" title="Modifier">
-                                            <i class="ki-duotone ki-pencil"><i class="path1"></i><i class="path2"></i></i>
-                                        </button>
-                                        ${reservation.can_cancel ? `
-                                            <button class="btn btn-sm btn-danger" onclick="event.stopPropagation(); MobilePlanning.cancelReservation(${reservation.id})" title="Annuler">
-                                                <i class="ki-duotone ki-cross"><i class="path1"></i><i class="path2"></i></i>
-                                            </button>
-                                        ` : ''}
+                                        <span class="text-danger small">Tap pour annuler</span>
                                     </div>
                                 ` : ''}
                             </div>
@@ -2218,13 +2051,31 @@
             },
 
             showSlotDetails(el) {
-                const r = JSON.parse($(el).attr('data-reservation'));
-                const isMine = r.user_id === this.currentUserId;
+                var r = JSON.parse($(el).attr('data-reservation'));
+                var isMine = r.user_id === this.currentUserId;
+                var self = this;
 
-                if (isMine && r.can_edit) {
-                    this.editReservation(r.id);
-                } else {
-                    // Show details modal
+                if (isMine && r.can_cancel) {
+                    Swal.fire({
+                        title: 'Annuler cette réservation ?',
+                        text: r.vehicle_name + ' — ' + r.start_time.substring(0, 5) + ' à ' + r.end_time.substring(0, 5),
+                        icon: 'warning',
+                        showCancelButton: true,
+                        confirmButtonColor: '#e74c3c',
+                        confirmButtonText: 'Oui, annuler',
+                        cancelButtonText: 'Non'
+                    }).then(function(result) {
+                        if (result.isConfirmed) {
+                            $.ajax({ url: '/api/v1/reservations/' + r.id, method: 'DELETE' })
+                                .done(function() { self.loadData(); })
+                                .fail(function(xhr) {
+                                    var msg = (xhr.responseJSON && xhr.responseJSON.message) ? xhr.responseJSON.message : 'Erreur lors de l\'annulation';
+                                    Swal.fire('Erreur', msg, 'error');
+                                });
+                        }
+                    });
+                } else if (!isMine) {
+                    // Show read-only details
                     $('#detail-user').text(r.user_name);
                     $('#detail-vehicle').text(r.vehicle_name);
                     $('#detail-start').text(r.start_time.substring(0, 5));
@@ -2249,60 +2100,19 @@
             },
 
             openReservation(vehicleId, hour) {
-                $('#reservation-id').val('');
-                $('#reservation-modal-title').text('Nouvelle Réservation');
-                $('#reservation-vehicle').val(vehicleId).prop('disabled', false);
-                $('#reservation-start').val(String(hour).padStart(2, '0') + ':00');
-                $('#reservation-end').val(String(hour + 1).padStart(2, '0') + ':00');
-                $('#reservation-driver').val('{{ auth()->user()->name }}');
-                $('#reservation-destination').val('');
-                $('#reservation-notes').val('');
-                $('#btn-cancel-reservation').addClass('d-none');
-                $('#reservationModal').modal('show');
-            },
-
-            openReservationModal() {
-                // Open modal for current vehicle with current hour
-                const now = new Date();
-                const hour = now.getHours();
-                this.openReservation(this.currentVehicleId, hour);
-            },
-
-            editReservation(reservationId) {
-                const r = this.reservations.find(res => res.id === reservationId);
-                if (!r) return;
-
-                $('#reservation-id').val(r.id);
-                $('#reservation-modal-title').text('Modifier la réservation');
-                $('#reservation-vehicle').val(r.vehicle_id).prop('disabled', true);
-                $('#reservation-start').val(r.start_time.substring(0, 5));
-                $('#reservation-end').val(r.end_time.substring(0, 5));
-                $('#reservation-driver').val(r.user_name);
-                $('#reservation-destination').val(r.destination || '');
-                $('#reservation-notes').val(r.notes || '');
-                r.can_cancel ? $('#btn-cancel-reservation').removeClass('d-none') : $('#btn-cancel-reservation').addClass('d-none');
-                $('#reservationModal').modal('show');
-            },
-
-            cancelReservation(reservationId) {
-                Swal.fire({
-                    title: 'Confirmer l\'annulation ?',
-                    text: 'Voulez-vous vraiment annuler cette réservation ?',
-                    icon: 'warning',
-                    showCancelButton: true,
-                    confirmButtonColor: '#e74c3c',
-                    confirmButtonText: 'Oui, annuler',
-                    cancelButtonText: 'Non'
-                }).then(result => {
-                    if (result.isConfirmed) {
-                        $.ajax({ url: `/api/v1/reservations/${reservationId}`, method: 'DELETE' })
-                            .done(() => {
-                                Swal.fire({ icon: 'success', title: 'Réservation annulée', timer: 1500, showConfirmButton: false });
-                                this.loadData();
-                            })
-                            .fail(xhr => Swal.fire('Erreur', (xhr.responseJSON && xhr.responseJSON.message ? xhr.responseJSON.message : null) || 'Erreur lors de l\'annulation', 'error'));
-                    }
-                });
+                var self = this;
+                var data = {
+                    vehicle_id: vehicleId,
+                    reservation_date: this.selectedDate,
+                    start_time: String(hour).padStart(2, '0') + ':00',
+                    end_time: String(hour + 1).padStart(2, '0') + ':00'
+                };
+                $.ajax({ url: '/api/v1/reservations', method: 'POST', data: data })
+                    .done(function() { self.loadData(); })
+                    .fail(function(xhr) {
+                        var msg = (xhr.responseJSON && xhr.responseJSON.message) ? xhr.responseJSON.message : 'Erreur lors de la réservation';
+                        Swal.fire('Erreur', msg, 'error');
+                    });
             },
 
             startPolling() {

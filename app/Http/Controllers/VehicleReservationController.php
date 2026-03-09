@@ -313,7 +313,7 @@ class VehicleReservationController extends Controller
             \Log::warning('Broadcast ReservationCancelled failed: ' . $e->getMessage());
         }
 
-        $reservation->update(['status' => 'cancelled']);
+        $reservation->delete();
 
         if ($request->expectsJson()) {
             return response()->json([

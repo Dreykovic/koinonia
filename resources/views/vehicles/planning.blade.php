@@ -1435,13 +1435,87 @@
             headers: { 'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content') }
         });
 
+        // ==================== DATA COORDINATOR ====================
+        // Single source of truth for date, fetching, and polling
+        const DataCoordinator = {
+            selectedDate: '{{ now()->toDateString() }}',
+            pollingInterval: null,
+            isFetching: false,
+
+            fetchData(showOverlay) {
+                if (this.isFetching) return;
+                this.isFetching = true;
+
+                if (showOverlay) {
+                    $('#loading-overlay').removeClass('hidden');
+                }
+
+                $.when(
+                    $.get('/api/v1/reservations', { date: this.selectedDate }),
+                    $.get('/api/v1/vehicles/stats', { date: this.selectedDate })
+                ).done((reservationsRes, statsRes) => {
+                    const reservations = reservationsRes[0];
+                    const stats = statsRes[0];
+
+                    // Distribute to both views
+                    Planning.reservations = reservations;
+                    Planning.updateStats(stats);
+                    Planning.renderTable();
+
+                    MobilePlanning.reservations = reservations;
+                    MobilePlanning.updateVehicleStatuses();
+                    MobilePlanning.updateStats();
+                    if (MobilePlanning.currentVehicleId) {
+                        MobilePlanning.renderTimeSlots(MobilePlanning.currentVehicleId);
+                    }
+                }).fail((error) => {
+                    console.error('Error:', error);
+                    if (showOverlay) {
+                        Swal.fire('Erreur', 'Impossible de charger le planning', 'error');
+                    }
+                }).always(() => {
+                    this.isFetching = false;
+                    $('#loading-overlay').addClass('hidden');
+                });
+            },
+
+            setDate(dateStr, showOverlay) {
+                this.selectedDate = dateStr;
+
+                // Sync date on both views
+                Planning.selectedDate = dateStr;
+                $('#planning-date').val(dateStr);
+                Planning.updateDateDisplay();
+
+                MobilePlanning.selectedDate = dateStr;
+                $('#mobile-date-input').val(dateStr);
+                MobilePlanning.updateDateDisplay();
+
+                // Re-subscribe realtime channel
+                resubscribeChannel(dateStr);
+
+                this.fetchData(showOverlay);
+            },
+
+            startPolling() {
+                this.stopPolling();
+                this.pollingInterval = setInterval(() => this.fetchData(false), 15000);
+            },
+
+            stopPolling() {
+                if (this.pollingInterval) {
+                    clearInterval(this.pollingInterval);
+                    this.pollingInterval = null;
+                }
+            }
+        };
+
         const Planning = {
             vehicles: @json($vehicles),
             accessibleVehicles: @json($vehicles->filter(fn($v) => auth()->user()->canAccessVehicle($v))->pluck('id')),
             reservations: [],
             currentUserId: {{ auth()->id() }},
             selectedDate: '{{ now()->toDateString() }}',
-            pollingInterval: null,
             isSubmitting: false,
             searchFilter: '',
             statusFilter: 'all',
@@ -1457,17 +1531,13 @@
 
             init() {
                 this.bindEvents();
-                this.loadData();
-                this.startPolling();
-                // Set max date on date picker
+                this.updateDateDisplay();
                 $('#planning-date').attr('max', this.settings.maxReservationDate);
             },
 
             bindEvents() {
                 $('#planning-date').on('change', () => {
-                    this.selectedDate = $('#planning-date').val();
-                    this.updateDateDisplay();
-                    this.loadData();
+                    DataCoordinator.setDate($('#planning-date').val(), true);
                 });
 
                 $('#search-vehicle').on('input', () => {
@@ -1480,30 +1550,12 @@
                     this.renderTable();
                 });
 
-                $('#btn-refresh').on('click', () => this.loadData());
+                $('#btn-refresh').on('click', () => DataCoordinator.fetchData(true));
             },
 
             updateDateDisplay() {
                 const date = new Date(this.selectedDate);
                 $('#date-display').text(date.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' }));
-            },
-
-            loadData() {
-                $('#loading-overlay').removeClass('hidden');
-
-                $.when(
-                    $.get('/api/v1/reservations', { date: this.selectedDate }),
-                    $.get('/api/v1/vehicles/stats', { date: this.selectedDate })
-                ).done((reservationsRes, statsRes) => {
-                    this.reservations = reservationsRes[0];
-                    this.updateStats(statsRes[0]);
-                    this.renderTable();
-                    $('#loading-overlay').addClass('hidden');
-                }).fail((error) => {
-                    console.error('Error:', error);
-                    Swal.fire('Erreur', 'Impossible de charger le planning', 'error');
-                    $('#loading-overlay').addClass('hidden');
-                });
             },
 
             updateStats(stats) {
@@ -1691,7 +1743,7 @@
 
                 $.ajax({ url: '/api/v1/reservations', method: 'POST', data: data })
                     .done(function() {
-                        self.loadData();
+                        DataCoordinator.fetchData(false);
                     })
                     .fail(function(xhr) {
                         var msg = (xhr.responseJSON && xhr.responseJSON.message) ? xhr.responseJSON.message : 'Erreur lors de la reservation';
@@ -1703,7 +1755,6 @@
             showDetails(el) {
                 var r = JSON.parse($(el).attr('data-reservation'));
                 var isMine = r.user_id === this.currentUserId;
-                var self = this;
 
                 if (isMine && r.can_cancel) {
                     Swal.fire({
@@ -1718,7 +1769,7 @@
                         if (result.isConfirmed) {
                             $.ajax({ url: '/api/v1/reservations/' + r.id, method: 'DELETE' })
                                 .done(function() {
-                                    self.loadData();
+                                    DataCoordinator.fetchData(false);
                                 })
                                 .fail(function(xhr) {
                                     var msg = (xhr.responseJSON && xhr.responseJSON.message) ? xhr.responseJSON.message : 'Erreur';
@@ -1750,17 +1801,7 @@
                 }
             },
 
-            startPolling() {
-                this.pollingInterval = setInterval(() => this.loadData(), 15000);
-            },
-
-            stopPolling() {
-                if (this.pollingInterval) clearInterval(this.pollingInterval);
-            }
         };
-
-        $(document).ready(() => Planning.init());
-        $(window).on('beforeunload', () => Planning.stopPolling());
 
         // ==================== MOBILE PLANNING ====================
         const MobilePlanning = {
@@ -1769,7 +1810,6 @@
             currentUserId: {{ auth()->id() }},
             selectedDate: '{{ now()->toDateString() }}',
             currentVehicleId: null,
-            pollingInterval: null,
             isSubmitting: false,
             // Vehicle settings
             settings: {
@@ -1783,10 +1823,7 @@
 
             init() {
                 this.bindEvents();
-                this.loadData();
                 this.updateDateDisplay();
-                this.startPolling();
-                // Set max date on date picker
                 $('#mobile-date-input').attr('max', this.settings.maxReservationDate);
             },
 
@@ -1803,12 +1840,12 @@
 
                 // Date picker (native input overlaid on label)
                 $('#mobile-date-input').on('change', (e) => {
-                    this.setDate(e.target.value);
+                    DataCoordinator.setDate(e.target.value, true);
                 });
 
                 // Today button
                 $('#mobile-date-today').on('click', () => {
-                    this.setDate(new Date().toISOString().split('T')[0]);
+                    DataCoordinator.setDate(new Date().toISOString().split('T')[0], true);
                 });
 
                 // Search
@@ -1830,18 +1867,7 @@
                 // Don't go beyond max date
                 if (newDate > this.settings.maxReservationDate) return;
 
-                this.setDate(newDate);
-            },
-
-            setDate(dateStr) {
-                this.selectedDate = dateStr;
-                $('#mobile-date-input').val(dateStr);
-                this.updateDateDisplay();
-                this.loadData();
-
-                // Sync with desktop
-                $('#planning-date').val(dateStr);
-                Planning.selectedDate = dateStr;
+                DataCoordinator.setDate(newDate, true);
             },
 
             updateDateDisplay() {
@@ -1881,32 +1907,6 @@
                 $('#detail-date-display').text(
                     selected.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
                 );
-            },
-
-            loadData() {
-                $.get('/api/v1/reservations', { date: this.selectedDate })
-                    .done((data) => {
-                        this.reservations = data;
-                        this.updateVehicleStatuses();
-                        this.updateStats();
-
-                        // If in detail view, refresh it
-                        if (this.currentVehicleId) {
-                            this.renderTimeSlots(this.currentVehicleId);
-                        }
-
-                        // Sync with desktop
-                        Planning.reservations = data;
-                        Planning.renderTable();
-                    })
-                    .fail((error) => {
-                        console.error('Erreur chargement mobile:', error);
-                        // Update all vehicle statuses to show error
-                        this.vehicles.forEach(function(v) {
-                            var $status = $('#mobile-vehicle-status-' + v.id);
-                            $status.html('<span style="color:#c0392b;">Erreur de chargement</span>');
-                        });
-                    });
             },
 
             updateStats() {
@@ -2072,7 +2072,7 @@
                     }).then(function(result) {
                         if (result.isConfirmed) {
                             $.ajax({ url: '/api/v1/reservations/' + r.id, method: 'DELETE' })
-                                .done(function() { self.loadData(); })
+                                .done(function() { DataCoordinator.fetchData(false); })
                                 .fail(function(xhr) {
                                     var msg = (xhr.responseJSON && xhr.responseJSON.message) ? xhr.responseJSON.message : 'Erreur lors de l\'annulation';
                                     Swal.fire('Erreur', msg, 'error');
@@ -2115,80 +2115,71 @@
                     end_time: String(hour + 1).padStart(2, '0') + ':00'
                 };
                 $.ajax({ url: '/api/v1/reservations', method: 'POST', data: data })
-                    .done(function() { self.loadData(); })
+                    .done(function() { DataCoordinator.fetchData(false); })
                     .fail(function(xhr) {
                         var msg = (xhr.responseJSON && xhr.responseJSON.message) ? xhr.responseJSON.message : 'Erreur lors de la réservation';
                         Swal.fire('Erreur', msg, 'error');
                     })
                     .always(function() { self.isSubmitting = false; });
-            },
-
-            startPolling() {
-                this.pollingInterval = setInterval(() => this.loadData(), 15000);
-            },
-
-            stopPolling() {
-                if (this.pollingInterval) clearInterval(this.pollingInterval);
             }
         };
 
-        // Initialize mobile planning
-        $(document).ready(() => MobilePlanning.init());
-        $(window).on('beforeunload', () => MobilePlanning.stopPolling());
-
         // ==================== REAL-TIME BROADCASTING ====================
-        // Connect to vehicle-planning channel for live updates
-        if (typeof Echo !== 'undefined') {
-            function subscribeToChannel(date) {
-                return Echo.channel('vehicle-planning.' + date)
-                    .listen('ReservationCreated', (e) => {
-                        console.log('ReservationCreated:', e);
-                        // Reload data for both desktop and mobile
-                        Planning.loadData();
-                        MobilePlanning.loadData();
+        let currentChannel = null;
+        let currentChannelDate = null;
 
-                        // Show notification
-                        Swal.fire({
-                            toast: true,
-                            position: 'top-end',
-                            icon: 'info',
-                            title: `${e.user_name} a reserve ${e.vehicle_name}`,
-                            showConfirmButton: false,
-                            timer: 3000
-                        });
-                    })
-                    .listen('ReservationUpdated', (e) => {
-                        console.log('ReservationUpdated:', e);
-                        Planning.loadData();
-                        MobilePlanning.loadData();
-                    })
-                    .listen('ReservationCancelled', (e) => {
-                        console.log('ReservationCancelled:', e);
-                        Planning.loadData();
-                        MobilePlanning.loadData();
-
-                        Swal.fire({
-                            toast: true,
-                            position: 'top-end',
-                            icon: 'info',
-                            title: 'Une reservation a ete annulee',
-                            showConfirmButton: false,
-                            timer: 3000
-                        });
+        function subscribeToChannel(date) {
+            if (typeof Echo === 'undefined') return null;
+            return Echo.channel('vehicle-planning.' + date)
+                .listen('ReservationCreated', (e) => {
+                    console.log('ReservationCreated:', e);
+                    DataCoordinator.fetchData(false);
+                    Swal.fire({
+                        toast: true,
+                        position: 'top-end',
+                        icon: 'info',
+                        title: `${e.user_name} a reserve ${e.vehicle_name}`,
+                        showConfirmButton: false,
+                        timer: 3000
                     });
-            }
-
-            // Subscribe to current date channel
-            let currentChannel = subscribeToChannel('{{ now()->toDateString() }}');
-
-            // Re-subscribe when date changes
-            $(document).on('change', '#planning-date, #mobile-date-input', function() {
-                const newDate = $(this).val();
-                // Leave old channel and join new one
-                Echo.leave('vehicle-planning.' + Planning.selectedDate);
-                currentChannel = subscribeToChannel(newDate);
-            });
+                })
+                .listen('ReservationUpdated', (e) => {
+                    console.log('ReservationUpdated:', e);
+                    DataCoordinator.fetchData(false);
+                })
+                .listen('ReservationCancelled', (e) => {
+                    console.log('ReservationCancelled:', e);
+                    DataCoordinator.fetchData(false);
+                    Swal.fire({
+                        toast: true,
+                        position: 'top-end',
+                        icon: 'info',
+                        title: 'Une reservation a ete annulee',
+                        showConfirmButton: false,
+                        timer: 3000
+                    });
+                });
         }
+
+        function resubscribeChannel(newDate) {
+            if (typeof Echo === 'undefined') return;
+            if (currentChannelDate === newDate) return;
+            if (currentChannelDate) {
+                Echo.leave('vehicle-planning.' + currentChannelDate);
+            }
+            currentChannel = subscribeToChannel(newDate);
+            currentChannelDate = newDate;
+        }
+
+        // ==================== UNIFIED INITIALIZATION ====================
+        $(document).ready(() => {
+            Planning.init();
+            MobilePlanning.init();
+            resubscribeChannel('{{ now()->toDateString() }}');
+            DataCoordinator.fetchData(true);
+            DataCoordinator.startPolling();
+        });
+        $(window).on('beforeunload', () => DataCoordinator.stopPolling());
     </script>
 </body>
 </html>

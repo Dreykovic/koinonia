@@ -166,7 +166,7 @@ class VehicleReservationController extends Controller
                     'reservation_date' => $validated['reservation_date'],
                     'start_time' => $validated['start_time'],
                     'end_time' => $validated['end_time'],
-                    'destination' => $validated['destination'],
+                    'destination' => $validated['destination'] ?? null,
                     'notes' => $validated['notes'] ?? null,
                     'status' => 'approved', // Auto-approved for simplicity
                 ]);

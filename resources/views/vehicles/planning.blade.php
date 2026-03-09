@@ -165,7 +165,11 @@
             border-radius: 10px;
             background: #fff;
             color: var(--text-primary);
-            font-size: 14px;
+            font-size: 16px;
+            min-height: 44px;
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            appearance: none;
             box-shadow: inset 2px 2px 4px rgba(60, 50, 40, 0.06);
         }
 
@@ -533,7 +537,10 @@
         /* Loading overlay */
         .loading-overlay {
             position: absolute;
-            inset: 0;
+            top: 0;
+            right: 0;
+            bottom: 0;
+            left: 0;
             background: rgba(255,255,255,0.9);
             display: flex;
             align-items: center;
@@ -637,12 +644,12 @@
             top: 0;
             z-index: 100;
             background: var(--bg-card);
-            padding: 16px;
+            padding: 12px 16px;
             display: flex;
             align-items: center;
-            justify-content: space-between;
+            flex-wrap: wrap;
             box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-            gap: 12px;
+            gap: 8px 12px;
         }
 
         .mobile-planning-header .btn-back {
@@ -671,22 +678,98 @@
             text-overflow: ellipsis;
         }
 
-        .mobile-date-picker {
+        /* Mobile Date Navigator */
+        .mobile-date-nav {
             display: flex;
             align-items: center;
             gap: 6px;
-            padding: 8px 14px;
+            margin-left: auto;
+        }
+
+        .mobile-date-nav-btn {
+            width: 36px;
+            height: 36px;
+            min-width: 36px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(139, 35, 50, 0.08);
+            border: none;
+            color: var(--primary);
+            font-size: 16px;
+            cursor: pointer;
+            transition: background 0.15s;
+        }
+
+        .mobile-date-nav-btn:active {
+            background: rgba(139, 35, 50, 0.2);
+            transform: scale(0.92);
+        }
+
+        .mobile-date-nav-btn:disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+        }
+
+        .mobile-date-label {
+            position: relative;
+            padding: 6px 12px;
             background: rgba(139, 35, 50, 0.1);
-            border-radius: 20px;
+            border-radius: 10px;
             font-weight: 600;
             font-size: 13px;
             color: var(--primary);
-            border: none;
             cursor: pointer;
+            min-width: 100px;
+            text-align: center;
+            overflow: hidden;
         }
 
-        .mobile-date-picker i {
+        .mobile-date-label span {
+            position: relative;
+            z-index: 1;
+            pointer-events: none;
+        }
+
+        /* Date input overlaid on the label — native picker opens on tap */
+        .mobile-date-label input[type="date"] {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            opacity: 0;
+            cursor: pointer;
+            min-height: unset;
+            padding: 0;
+            margin: 0;
+            border: none;
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            appearance: none;
             font-size: 16px;
+        }
+
+        .mobile-date-today {
+            padding: 6px 10px;
+            border-radius: 10px;
+            background: var(--primary);
+            color: #fff;
+            border: none;
+            font-size: 11px;
+            font-weight: 700;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: opacity 0.15s;
+        }
+
+        .mobile-date-today:active {
+            opacity: 0.8;
+        }
+
+        .mobile-date-today.hidden {
+            display: none;
         }
 
         /* Mobile Search */
@@ -900,30 +983,6 @@
             min-height: 32px;
         }
 
-        /* Mobile FAB */
-        .mobile-fab {
-            position: fixed;
-            bottom: calc(24px + env(safe-area-inset-bottom));
-            right: 20px;
-            width: 56px;
-            height: 56px;
-            border-radius: 50%;
-            background: var(--primary);
-            color: #fff;
-            border: none;
-            font-size: 24px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            box-shadow: 0 4px 16px rgba(139, 35, 50, 0.4);
-            z-index: 100;
-            transition: all 0.2s;
-        }
-
-        .mobile-fab:active {
-            transform: scale(0.95);
-        }
-
         /* Mobile Legend */
         .mobile-legend {
             padding: 16px;
@@ -996,13 +1055,39 @@
             letter-spacing: 0.5px;
         }
 
-        /* Hidden date input for mobile picker */
-        .hidden-date-input {
-            position: absolute;
-            opacity: 0;
-            width: 0;
-            height: 0;
+        /* Date/Time inputs - Mobile compatibility */
+        input[type="date"],
+        input[type="time"],
+        input[type="datetime-local"] {
+            font-size: 16px;
+            min-height: 44px;
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            appearance: none;
         }
+
+        @media (max-width: 768px) {
+            input[type="date"],
+            input[type="time"],
+            input[type="datetime-local"] {
+                min-height: 48px;
+                padding: 12px 14px;
+                font-size: 16px;
+                line-height: 1.5;
+                cursor: pointer;
+            }
+
+            input[type="date"]::-webkit-calendar-picker-indicator,
+            input[type="time"]::-webkit-calendar-picker-indicator,
+            input[type="datetime-local"]::-webkit-calendar-picker-indicator {
+                padding: 8px;
+                margin: 0;
+                cursor: pointer;
+                opacity: 0.6;
+            }
+        }
+
+        /* Hidden date input (legacy, kept for desktop sidebar sync) */
 
         /* Scrollbar styling */
         .table-wrapper::-webkit-scrollbar {
@@ -1052,11 +1137,19 @@
                     <i class="ki-duotone ki-arrow-left"><i class="path1"></i><i class="path2"></i></i>
                 </a>
                 <h1 class="mobile-planning-title" id="mobile-title">Planning Véhicules</h1>
-                <button type="button" class="mobile-date-picker" id="mobile-date-btn" aria-label="Changer la date">
-                    <i class="ki-duotone ki-calendar"><i class="path1"></i><i class="path2"></i></i>
-                    <span id="mobile-date-display">Aujourd'hui</span>
-                </button>
-                <input type="date" class="hidden-date-input" id="mobile-date-input" value="{{ now()->toDateString() }}">
+                <nav class="mobile-date-nav" aria-label="Navigation par date">
+                    <button type="button" class="mobile-date-nav-btn" id="mobile-date-prev" aria-label="Jour précédent">
+                        <i class="ki-duotone ki-arrow-left"><i class="path1"></i><i class="path2"></i></i>
+                    </button>
+                    <div class="mobile-date-label" id="mobile-date-label">
+                        <span id="mobile-date-display">Aujourd'hui</span>
+                        <input type="date" id="mobile-date-input" value="{{ now()->toDateString() }}" aria-label="Choisir une date">
+                    </div>
+                    <button type="button" class="mobile-date-nav-btn" id="mobile-date-next" aria-label="Jour suivant">
+                        <i class="ki-duotone ki-arrow-right"><i class="path1"></i><i class="path2"></i></i>
+                    </button>
+                    <button type="button" class="mobile-date-today hidden" id="mobile-date-today" aria-label="Revenir à aujourd'hui">Auj.</button>
+                </nav>
             </header>
 
             <!-- Mobile Search -->
@@ -1141,15 +1234,6 @@
                 </div>
             </div>
 
-            <!-- Mobile FAB -->
-            <button type="button"
-                    class="mobile-fab"
-                    id="mobile-fab"
-                    style="display: none;"
-                    onclick="MobilePlanning.openReservationModal()"
-                    aria-label="Nouvelle réservation">
-                <i class="ki-duotone ki-plus"><i class="path1"></i><i class="path2"></i><i class="path3"></i></i>
-            </button>
         </div>
 
         <!-- ==================== DESKTOP VIEW ==================== -->
@@ -1289,94 +1373,6 @@
         </main>
     </div>
 
-    <!-- Modal Reservation -->
-    <div class="modal fade"
-         id="reservationModal"
-         tabindex="-1"
-         role="dialog"
-         aria-labelledby="reservation-modal-title"
-         aria-modal="true">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="reservation-modal-title">Nouvelle Réservation</h5>
-                    <button type="button"
-                            class="btn-close"
-                            data-bs-dismiss="modal"
-                            aria-label="Fermer la fenêtre de réservation"></button>
-                </div>
-                <form id="reservationForm" aria-describedby="reservation-form-help">
-                    <input type="hidden" id="reservation-id">
-                    <div class="modal-body">
-                        <p id="reservation-form-help" class="visually-hidden">
-                            Remplissez ce formulaire pour réserver un véhicule. Les champs marqués d'un astérisque sont obligatoires.
-                        </p>
-                        <div class="mb-3">
-                            <label for="reservation-vehicle" class="form-label fw-semibold">
-                                Véhicule <span class="text-danger" aria-hidden="true">*</span>
-                                <span class="visually-hidden">(obligatoire)</span>
-                            </label>
-                            <select class="form-select" id="reservation-vehicle" required aria-required="true">
-                                <option value="">Sélectionnez un véhicule...</option>
-                                @foreach($vehicles as $vehicle)
-                                    @if(auth()->user()->canAccessVehicle($vehicle))
-                                    <option value="{{ $vehicle->id }}">{{ $vehicle->name }} ({{ $vehicle->license_plate }})</option>
-                                    @endif
-                                @endforeach
-                            </select>
-                        </div>
-                        <div class="mb-3">
-                            <label for="reservation-driver" class="form-label fw-semibold">
-                                Conducteur <span class="text-danger" aria-hidden="true">*</span>
-                                <span class="visually-hidden">(obligatoire)</span>
-                            </label>
-                            <input type="text" class="form-control" id="reservation-driver" value="{{ auth()->user()->name }}" required aria-required="true">
-                        </div>
-                        <fieldset class="mb-3">
-                            <legend class="form-label fw-semibold fs-6">Horaires <span class="text-danger" aria-hidden="true">*</span></legend>
-                            <div class="row">
-                                <div class="col-6">
-                                    <label for="reservation-start" class="form-label">Heure début</label>
-                                    <input type="time" class="form-control" id="reservation-start" required aria-required="true">
-                                </div>
-                                <div class="col-6">
-                                    <label for="reservation-end" class="form-label">Heure fin</label>
-                                    <input type="time" class="form-control" id="reservation-end" required aria-required="true">
-                                </div>
-                            </div>
-                        </fieldset>
-                        <div class="mb-3">
-                            <label for="reservation-destination" class="form-label fw-semibold">Destination</label>
-                            <input type="text"
-                                   class="form-control"
-                                   id="reservation-destination"
-                                   placeholder="Optionnel"
-                                   aria-describedby="destination-help">
-                            <span id="destination-help" class="form-text">Indiquez votre destination pour informer les autres membres</span>
-                        </div>
-                        <div class="mb-3">
-                            <label for="reservation-notes" class="form-label fw-semibold">Notes</label>
-                            <textarea class="form-control" id="reservation-notes" rows="2" placeholder="Optionnel"></textarea>
-                        </div>
-                        <div id="reservation-error" class="alert alert-danger py-2 d-none" role="alert" aria-live="assertive"></div>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-light" data-bs-dismiss="modal">Annuler</button>
-                        <button type="button"
-                                class="btn btn-danger d-none"
-                                id="btn-cancel-reservation"
-                                aria-label="Annuler cette réservation">
-                            Annuler réservation
-                        </button>
-                        <button type="submit" class="btn btn-primary" aria-label="Confirmer la réservation">
-                            Confirmer
-                        </button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div>
-
     <!-- Modal Details -->
     <div class="modal fade"
          id="detailsModal"
@@ -1462,7 +1458,6 @@
                 this.bindEvents();
                 this.loadData();
                 this.startPolling();
-                this.setDefaultTimes();
                 // Set max date on date picker
                 $('#planning-date').attr('max', this.settings.maxReservationDate);
             },
@@ -1485,14 +1480,6 @@
                 });
 
                 $('#btn-refresh').on('click', () => this.loadData());
-
-                $('#reservationForm').on('submit', (e) => { e.preventDefault(); this.submitReservation(); });
-                $('#btn-cancel-reservation').on('click', () => this.cancelReservation());
-
-                $('#reservationModal').on('hidden.bs.modal', function() {
-                    $(this).find('form')[0]?.reset();
-                    $(this).find('.alert').addClass('d-none');
-                });
             },
 
             updateDateDisplay() {
@@ -1691,34 +1678,51 @@
             },
 
             openNewReservation(vehicleId, hour) {
-                $('#reservation-id').val('');
-                $('#reservation-modal-title').text('Nouvelle Reservation');
-                $('#reservation-vehicle').val(vehicleId).prop('disabled', false);
-                $('#reservation-start').val(String(hour).padStart(2, '0') + ':00');
-                $('#reservation-end').val(String(hour + 1).padStart(2, '0') + ':00');
-                $('#reservation-driver').val('{{ auth()->user()->name }}');
-                $('#reservation-destination').val('');
-                $('#reservation-notes').val('');
-                $('#btn-cancel-reservation').addClass('d-none');
-                $('#reservationModal').modal('show');
+                var self = this;
+                var data = {
+                    vehicle_id: vehicleId,
+                    reservation_date: this.selectedDate,
+                    start_time: String(hour).padStart(2, '0') + ':00',
+                    end_time: String(hour + 1).padStart(2, '0') + ':00'
+                };
+
+                $.ajax({ url: '/api/v1/reservations', method: 'POST', data: data })
+                    .done(function() {
+                        self.loadData();
+                    })
+                    .fail(function(xhr) {
+                        var msg = (xhr.responseJSON && xhr.responseJSON.message) ? xhr.responseJSON.message : 'Erreur lors de la reservation';
+                        Swal.fire('Erreur', msg, 'error');
+                    });
             },
 
             showDetails(el) {
-                const r = JSON.parse($(el).attr('data-reservation'));
-                const isMine = r.user_id === this.currentUserId;
+                var r = JSON.parse($(el).attr('data-reservation'));
+                var isMine = r.user_id === this.currentUserId;
+                var self = this;
 
-                if (isMine && r.can_edit) {
-                    $('#reservation-id').val(r.id);
-                    $('#reservation-modal-title').text('Modifier');
-                    $('#reservation-vehicle').val(r.vehicle_id).prop('disabled', true);
-                    $('#reservation-start').val(r.start_time.substring(0, 5));
-                    $('#reservation-end').val(r.end_time.substring(0, 5));
-                    $('#reservation-driver').val(r.user_name);
-                    $('#reservation-destination').val(r.destination || '');
-                    $('#reservation-notes').val(r.notes || '');
-                    r.can_cancel ? $('#btn-cancel-reservation').removeClass('d-none') : $('#btn-cancel-reservation').addClass('d-none');
-                    $('#reservationModal').modal('show');
-                } else {
+                if (isMine && r.can_cancel) {
+                    Swal.fire({
+                        title: 'Annuler cette reservation ?',
+                        text: r.vehicle_name + ' — ' + r.start_time.substring(0, 5) + ' à ' + r.end_time.substring(0, 5),
+                        icon: 'warning',
+                        showCancelButton: true,
+                        confirmButtonColor: '#e74c3c',
+                        confirmButtonText: 'Oui, annuler',
+                        cancelButtonText: 'Non'
+                    }).then(function(result) {
+                        if (result.isConfirmed) {
+                            $.ajax({ url: '/api/v1/reservations/' + r.id, method: 'DELETE' })
+                                .done(function() {
+                                    self.loadData();
+                                })
+                                .fail(function(xhr) {
+                                    var msg = (xhr.responseJSON && xhr.responseJSON.message) ? xhr.responseJSON.message : 'Erreur';
+                                    Swal.fire('Erreur', msg, 'error');
+                                });
+                        }
+                    });
+                } else if (!isMine) {
                     $('#detail-user').text(r.user_name);
                     $('#detail-vehicle').text(r.vehicle_name);
                     $('#detail-start').text(r.start_time.substring(0, 5));
@@ -1742,50 +1746,6 @@
                 }
             },
 
-            submitReservation() {
-                const id = $('#reservation-id').val();
-                const isEdit = !!id;
-                const data = {
-                    vehicle_id: $('#reservation-vehicle').val(),
-                    reservation_date: this.selectedDate,
-                    start_time: $('#reservation-start').val(),
-                    end_time: $('#reservation-end').val(),
-                    destination: $('#reservation-destination').val() || null,
-                    notes: $('#reservation-notes').val() || null
-                };
-
-                $.ajax({ url: isEdit ? `/api/v1/reservations/${id}` : '/api/v1/reservations', method: isEdit ? 'PUT' : 'POST', data })
-                    .done(() => {
-                        $('#reservationModal').modal('hide');
-                        Swal.fire({ icon: 'success', title: isEdit ? 'Modifie' : 'Reserve', timer: 1500, showConfirmButton: false });
-                        this.loadData();
-                    })
-                    .fail(xhr => $('#reservation-error').removeClass('d-none').text(xhr.responseJSON?.message || 'Erreur'));
-            },
-
-            cancelReservation() {
-                const id = $('#reservation-id').val();
-                Swal.fire({
-                    title: 'Confirmer?',
-                    text: 'Annuler cette reservation?',
-                    icon: 'warning',
-                    showCancelButton: true,
-                    confirmButtonColor: '#e74c3c',
-                    confirmButtonText: 'Oui',
-                    cancelButtonText: 'Non'
-                }).then(result => {
-                    if (result.isConfirmed) {
-                        $.ajax({ url: `/api/v1/reservations/${id}`, method: 'DELETE' })
-                            .done(() => {
-                                $('#reservationModal').modal('hide');
-                                Swal.fire({ icon: 'success', title: 'Annule', timer: 1500, showConfirmButton: false });
-                                this.loadData();
-                            })
-                            .fail(xhr => Swal.fire('Erreur', xhr.responseJSON?.message || 'Erreur', 'error'));
-                    }
-                });
-            },
-
             startPolling() {
                 this.pollingInterval = setInterval(() => this.loadData(), 15000);
             },
@@ -1800,7 +1760,7 @@
 
         // ==================== MOBILE PLANNING ====================
         const MobilePlanning = {
-            vehicles: @json($vehicles->filter(fn($v) => auth()->user()->canAccessVehicle($v))),
+            vehicles: @json($vehicles->filter(fn($v) => auth()->user()->canAccessVehicle($v))->values()),
             reservations: [],
             currentUserId: {{ auth()->id() }},
             selectedDate: '{{ now()->toDateString() }}',
@@ -1826,18 +1786,24 @@
             },
 
             bindEvents() {
-                // Date picker
-                $('#mobile-date-btn').on('click', () => {
-                    $('#mobile-date-input').trigger('click');
+                // Date navigation: previous day
+                $('#mobile-date-prev').on('click', () => {
+                    this.navigateDate(-1);
                 });
 
+                // Date navigation: next day
+                $('#mobile-date-next').on('click', () => {
+                    this.navigateDate(1);
+                });
+
+                // Date picker (native input overlaid on label)
                 $('#mobile-date-input').on('change', (e) => {
-                    this.selectedDate = e.target.value;
-                    this.updateDateDisplay();
-                    this.loadData();
-                    // Sync with desktop
-                    $('#planning-date').val(this.selectedDate);
-                    Planning.selectedDate = this.selectedDate;
+                    this.setDate(e.target.value);
+                });
+
+                // Today button
+                $('#mobile-date-today').on('click', () => {
+                    this.setDate(new Date().toISOString().split('T')[0]);
                 });
 
                 // Search
@@ -1851,24 +1817,64 @@
                 });
             },
 
+            navigateDate(offset) {
+                var d = new Date(this.selectedDate);
+                d.setDate(d.getDate() + offset);
+                var newDate = d.toISOString().split('T')[0];
+
+                // Don't go beyond max date
+                if (newDate > this.settings.maxReservationDate) return;
+
+                this.setDate(newDate);
+            },
+
+            setDate(dateStr) {
+                this.selectedDate = dateStr;
+                $('#mobile-date-input').val(dateStr);
+                this.updateDateDisplay();
+                this.loadData();
+
+                // Sync with desktop
+                $('#planning-date').val(dateStr);
+                Planning.selectedDate = dateStr;
+            },
+
             updateDateDisplay() {
-                const date = new Date(this.selectedDate);
-                const today = new Date();
+                var today = new Date();
                 today.setHours(0, 0, 0, 0);
-                const selected = new Date(this.selectedDate);
+                var selected = new Date(this.selectedDate);
                 selected.setHours(0, 0, 0, 0);
 
-                let displayText;
-                if (selected.getTime() === today.getTime()) {
+                var isToday = selected.getTime() === today.getTime();
+                var displayText;
+
+                if (isToday) {
                     displayText = "Aujourd'hui";
                 } else {
-                    displayText = date.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
+                    displayText = selected.toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' });
                 }
                 $('#mobile-date-display').text(displayText);
 
+                // Show/hide "Aujourd'hui" button
+                if (isToday) {
+                    $('#mobile-date-today').addClass('hidden');
+                } else {
+                    $('#mobile-date-today').removeClass('hidden');
+                }
+
+                // Disable prev button if today
+                var yesterday = new Date(today);
+                yesterday.setDate(yesterday.getDate() - 1);
+                $('#mobile-date-prev').prop('disabled', selected <= today);
+
+                // Disable next button if at max date
+                var maxDate = new Date(this.settings.maxReservationDate);
+                maxDate.setHours(0, 0, 0, 0);
+                $('#mobile-date-next').prop('disabled', selected >= maxDate);
+
                 // Update detail view date
                 $('#detail-date-display').text(
-                    date.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
+                    selected.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
                 );
             },
 
@@ -1887,6 +1893,14 @@
                         // Sync with desktop
                         Planning.reservations = data;
                         Planning.renderTable();
+                    })
+                    .fail((error) => {
+                        console.error('Erreur chargement mobile:', error);
+                        // Update all vehicle statuses to show error
+                        this.vehicles.forEach(function(v) {
+                            var $status = $('#mobile-vehicle-status-' + v.id);
+                            $status.html('<span style="color:#c0392b;">Erreur de chargement</span>');
+                        });
                     });
             },
 
@@ -1952,7 +1966,6 @@
                 // Show detail view
                 $('#mobile-vehicles-list').hide();
                 $('#mobile-vehicle-detail').show();
-                $('#mobile-fab').show();
                 $('.mobile-stats').hide();
                 $('.mobile-planning-search').hide();
             },
@@ -1962,7 +1975,6 @@
                 $('#mobile-title').text('Planning Véhicules');
                 $('#mobile-vehicles-list').show();
                 $('#mobile-vehicle-detail').hide();
-                $('#mobile-fab').hide();
                 $('.mobile-stats').show();
                 $('.mobile-planning-search').show();
             },
@@ -2000,16 +2012,9 @@
                                     <div class="time-slot-mobile-driver">${reservation.user_name}</div>
                                     ${reservation.destination ? `<div class="time-slot-mobile-destination"><i class="ki-duotone ki-geolocation"><i class="path1"></i><i class="path2"></i></i> ${reservation.destination}</div>` : ''}
                                 </div>
-                                ${isMine && reservation.can_edit ? `
+                                ${isMine && reservation.can_cancel ? `
                                     <div class="time-slot-mobile-actions">
-                                        <button class="btn btn-sm btn-light" onclick="event.stopPropagation(); MobilePlanning.editReservation(${reservation.id})" title="Modifier">
-                                            <i class="ki-duotone ki-pencil"><i class="path1"></i><i class="path2"></i></i>
-                                        </button>
-                                        ${reservation.can_cancel ? `
-                                            <button class="btn btn-sm btn-danger" onclick="event.stopPropagation(); MobilePlanning.cancelReservation(${reservation.id})" title="Annuler">
-                                                <i class="ki-duotone ki-cross"><i class="path1"></i><i class="path2"></i></i>
-                                            </button>
-                                        ` : ''}
+                                        <span class="text-danger small">Tap pour annuler</span>
                                     </div>
                                 ` : ''}
                             </div>
@@ -2046,13 +2051,31 @@
             },
 
             showSlotDetails(el) {
-                const r = JSON.parse($(el).attr('data-reservation'));
-                const isMine = r.user_id === this.currentUserId;
+                var r = JSON.parse($(el).attr('data-reservation'));
+                var isMine = r.user_id === this.currentUserId;
+                var self = this;
 
-                if (isMine && r.can_edit) {
-                    this.editReservation(r.id);
-                } else {
-                    // Show details modal
+                if (isMine && r.can_cancel) {
+                    Swal.fire({
+                        title: 'Annuler cette réservation ?',
+                        text: r.vehicle_name + ' — ' + r.start_time.substring(0, 5) + ' à ' + r.end_time.substring(0, 5),
+                        icon: 'warning',
+                        showCancelButton: true,
+                        confirmButtonColor: '#e74c3c',
+                        confirmButtonText: 'Oui, annuler',
+                        cancelButtonText: 'Non'
+                    }).then(function(result) {
+                        if (result.isConfirmed) {
+                            $.ajax({ url: '/api/v1/reservations/' + r.id, method: 'DELETE' })
+                                .done(function() { self.loadData(); })
+                                .fail(function(xhr) {
+                                    var msg = (xhr.responseJSON && xhr.responseJSON.message) ? xhr.responseJSON.message : 'Erreur lors de l\'annulation';
+                                    Swal.fire('Erreur', msg, 'error');
+                                });
+                        }
+                    });
+                } else if (!isMine) {
+                    // Show read-only details
                     $('#detail-user').text(r.user_name);
                     $('#detail-vehicle').text(r.vehicle_name);
                     $('#detail-start').text(r.start_time.substring(0, 5));
@@ -2077,60 +2100,19 @@
             },
 
             openReservation(vehicleId, hour) {
-                $('#reservation-id').val('');
-                $('#reservation-modal-title').text('Nouvelle Réservation');
-                $('#reservation-vehicle').val(vehicleId).prop('disabled', false);
-                $('#reservation-start').val(String(hour).padStart(2, '0') + ':00');
-                $('#reservation-end').val(String(hour + 1).padStart(2, '0') + ':00');
-                $('#reservation-driver').val('{{ auth()->user()->name }}');
-                $('#reservation-destination').val('');
-                $('#reservation-notes').val('');
-                $('#btn-cancel-reservation').addClass('d-none');
-                $('#reservationModal').modal('show');
-            },
-
-            openReservationModal() {
-                // Open modal for current vehicle with current hour
-                const now = new Date();
-                const hour = now.getHours();
-                this.openReservation(this.currentVehicleId, hour);
-            },
-
-            editReservation(reservationId) {
-                const r = this.reservations.find(res => res.id === reservationId);
-                if (!r) return;
-
-                $('#reservation-id').val(r.id);
-                $('#reservation-modal-title').text('Modifier la réservation');
-                $('#reservation-vehicle').val(r.vehicle_id).prop('disabled', true);
-                $('#reservation-start').val(r.start_time.substring(0, 5));
-                $('#reservation-end').val(r.end_time.substring(0, 5));
-                $('#reservation-driver').val(r.user_name);
-                $('#reservation-destination').val(r.destination || '');
-                $('#reservation-notes').val(r.notes || '');
-                r.can_cancel ? $('#btn-cancel-reservation').removeClass('d-none') : $('#btn-cancel-reservation').addClass('d-none');
-                $('#reservationModal').modal('show');
-            },
-
-            cancelReservation(reservationId) {
-                Swal.fire({
-                    title: 'Confirmer l\'annulation ?',
-                    text: 'Voulez-vous vraiment annuler cette réservation ?',
-                    icon: 'warning',
-                    showCancelButton: true,
-                    confirmButtonColor: '#e74c3c',
-                    confirmButtonText: 'Oui, annuler',
-                    cancelButtonText: 'Non'
-                }).then(result => {
-                    if (result.isConfirmed) {
-                        $.ajax({ url: `/api/v1/reservations/${reservationId}`, method: 'DELETE' })
-                            .done(() => {
-                                Swal.fire({ icon: 'success', title: 'Réservation annulée', timer: 1500, showConfirmButton: false });
-                                this.loadData();
-                            })
-                            .fail(xhr => Swal.fire('Erreur', xhr.responseJSON?.message || 'Erreur lors de l\'annulation', 'error'));
-                    }
-                });
+                var self = this;
+                var data = {
+                    vehicle_id: vehicleId,
+                    reservation_date: this.selectedDate,
+                    start_time: String(hour).padStart(2, '0') + ':00',
+                    end_time: String(hour + 1).padStart(2, '0') + ':00'
+                };
+                $.ajax({ url: '/api/v1/reservations', method: 'POST', data: data })
+                    .done(function() { self.loadData(); })
+                    .fail(function(xhr) {
+                        var msg = (xhr.responseJSON && xhr.responseJSON.message) ? xhr.responseJSON.message : 'Erreur lors de la réservation';
+                        Swal.fire('Erreur', msg, 'error');
+                    });
             },
 
             startPolling() {

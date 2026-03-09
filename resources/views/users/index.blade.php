@@ -126,20 +126,20 @@
             <form method="GET" class="d-flex align-items-center gap-3 flex-wrap">
                 <div class="position-relative">
                     <i class="ki-duotone ki-magnifier fs-3 position-absolute" style="left: 12px; top: 50%; transform: translateY(-50%); color: var(--text-muted);"><i class="path1"></i><i class="path2"></i></i>
-                    <input type="text" name="search" class="form-control form-control-sm ps-10" placeholder="Rechercher nom, email..." value="{{ request('search') }}" style="min-width: 200px;">
+                    <input type="text" name="search" class="form-control form-control-sm ps-10" placeholder="Rechercher nom, email..." value="{{ request('search') }}">
                 </div>
-                <select name="role" class="form-select form-select-sm" style="min-width: 150px;" onchange="this.form.submit()">
+                <select name="role" class="form-select form-select-sm" onchange="this.form.submit()">
                     <option value="">Tous les roles</option>
                     @foreach($roles as $value => $label)
                         <option value="{{ $value }}" {{ request('role') == $value ? 'selected' : '' }}>{{ $label }}</option>
                     @endforeach
                 </select>
-                <select name="status" class="form-select form-select-sm" style="min-width: 130px;" onchange="this.form.submit()">
+                <select name="status" class="form-select form-select-sm" onchange="this.form.submit()">
                     <option value="">Tous les statuts</option>
                     <option value="active" {{ request('status') == 'active' ? 'selected' : '' }}>Actif</option>
                     <option value="inactive" {{ request('status') == 'inactive' ? 'selected' : '' }}>Inactif</option>
                 </select>
-                <select name="community_id" class="form-select form-select-sm" style="min-width: 160px;" onchange="this.form.submit()">
+                <select name="community_id" class="form-select form-select-sm" onchange="this.form.submit()">
                     <option value="">Toutes les communautes</option>
                     @foreach($communities as $community)
                         <option value="{{ $community->id }}" {{ request('community_id') == $community->id ? 'selected' : '' }}>{{ $community->name }}</option>

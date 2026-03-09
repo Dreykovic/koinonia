@@ -113,15 +113,15 @@
             <form method="GET" class="d-flex align-items-center gap-3 flex-wrap">
                 <div class="position-relative">
                     <i class="ki-duotone ki-magnifier fs-3 position-absolute" style="left: 12px; top: 50%; transform: translateY(-50%); color: var(--text-muted);"><i class="path1"></i><i class="path2"></i></i>
-                    <input type="text" name="search" class="form-control form-control-sm ps-10" placeholder="Rechercher titre, numero..." value="{{ request('search') }}" style="min-width: 200px;">
+                    <input type="text" name="search" class="form-control form-control-sm ps-10" placeholder="Rechercher titre, numero..." value="{{ request('search') }}">
                 </div>
-                <select name="year" class="form-select form-select-sm" style="min-width: 120px;" onchange="this.form.submit()">
+                <select name="year" class="form-select form-select-sm" onchange="this.form.submit()">
                     <option value="">Toutes les annees</option>
                     @foreach($years as $year)
                         <option value="{{ $year }}" {{ request('year') == $year ? 'selected' : '' }}>{{ $year }}</option>
                     @endforeach
                 </select>
-                <select name="status" class="form-select form-select-sm" style="min-width: 130px;" onchange="this.form.submit()">
+                <select name="status" class="form-select form-select-sm" onchange="this.form.submit()">
                     <option value="">Tous les statuts</option>
                     <option value="published" {{ request('status') == 'published' ? 'selected' : '' }}>Publie</option>
                     <option value="draft" {{ request('status') == 'draft' ? 'selected' : '' }}>Brouillon</option>

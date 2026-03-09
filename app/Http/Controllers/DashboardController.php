@@ -9,7 +9,7 @@ use App\Models\User;
 use App\Models\Vehicle;
 use App\Models\VehicleReservation;
 use App\Models\WeekMenu;
-use Carbon\Carbon;
+use App\Services\BirthdayService;
 use Illuminate\Http\Request;
 
 class DashboardController extends Controller
@@ -90,7 +90,7 @@ class DashboardController extends Controller
         }
 
         // Get birthdays for this week
-        $birthdays = $this->getWeekBirthdays($bulletin);
+        $birthdays = app(BirthdayService::class)->getWeekBirthdays($bulletin);
 
 
         $todaysMenus = WeekMenu::available()
@@ -111,38 +111,6 @@ class DashboardController extends Controller
         ));
     }
 
-    /**
-     * Get birthdays for the bulletin's week.
-     */
-    protected function getWeekBirthdays(?BulletinEdition $bulletin): \Illuminate\Support\Collection
-    {
-        if (!$bulletin) {
-            // Get this week's birthdays if no bulletin
-            $weekStart = Carbon::now()->startOfWeek();
-            $weekEnd = Carbon::now()->endOfWeek();
-        } else {
-            $weekStart = $bulletin->week_start;
-            $weekEnd = $bulletin->week_end;
-        }
-
-        return User::active()
-            ->whereNotNull('birthday')
-            ->get()
-            ->filter(function ($user) use ($weekStart, $weekEnd) {
-                $birthday = Carbon::parse($user->birthday);
-                $birthdayThisYear = $birthday->copy()->year($weekStart->year);
-                return $birthdayThisYear->between($weekStart, $weekEnd);
-            })
-            ->map(function ($user) use ($weekStart) {
-                $birthday = Carbon::parse($user->birthday);
-                $birthdayThisYear = $birthday->copy()->year($weekStart->year);
-                $user->birthday_day = $birthdayThisYear->locale('fr')->isoFormat('dddd D');
-                return $user;
-            })
-            ->sortBy(function ($user) {
-                return Carbon::parse($user->birthday)->format('m-d');
-            });
-    }
 }
 
 

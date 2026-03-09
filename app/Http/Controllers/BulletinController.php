@@ -10,6 +10,7 @@ use App\Models\SpiritualReflection;
 use App\Models\User;
 use App\Models\WeeklyActivity;
 use App\Models\WeeklyService;
+use App\Services\BirthdayService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 
@@ -42,7 +43,7 @@ class BulletinController extends Controller
         }
 
         // Get birthdays for this week
-        $birthdays = $this->getWeekBirthdays($bulletin);
+        $birthdays = app(BirthdayService::class)->getWeekBirthdays($bulletin);
 
         // Get rector message (stored in settings or default)
         $rectorMessage = config('app.rector_message', 'LE RECTEUR SOUHAITE A NOUS TOUS UNE BONNE SEMAINE !');
@@ -158,7 +159,7 @@ class BulletinController extends Controller
             'creator',
         ]);
 
-        $birthdays = $this->getWeekBirthdays($bulletin);
+        $birthdays = app(BirthdayService::class)->getWeekBirthdays($bulletin);
         $rectorMessage = config('app.rector_message', 'LE RECTEUR SOUHAITE A NOUS TOUS UNE BONNE SEMAINE !');
 
         return view('bulletin.show', compact('bulletin', 'birthdays', 'rectorMessage'));
@@ -390,38 +391,6 @@ class BulletinController extends Controller
     // ========================================
     // Helpers
     // ========================================
-
-    /**
-     * Get birthdays for the bulletin's week.
-     */
-    protected function getWeekBirthdays(?BulletinEdition $bulletin): \Illuminate\Support\Collection
-    {
-        if (!$bulletin) {
-            return collect();
-        }
-
-        $weekStart = $bulletin->week_start;
-        $weekEnd = $bulletin->week_end;
-
-        return User::active()
-            ->whereNotNull('birthday')
-            ->get()
-            ->filter(function ($user) use ($weekStart, $weekEnd) {
-                $birthday = Carbon::parse($user->birthday);
-                // Check if birthday falls within the week (ignore year)
-                $birthdayThisYear = $birthday->copy()->year($weekStart->year);
-                return $birthdayThisYear->between($weekStart, $weekEnd);
-            })
-            ->map(function ($user) use ($weekStart) {
-                $birthday = Carbon::parse($user->birthday);
-                $birthdayThisYear = $birthday->copy()->year($weekStart->year);
-                $user->birthday_day = $birthdayThisYear->locale('fr')->isoFormat('dddd D');
-                return $user;
-            })
-            ->sortBy(function ($user) {
-                return Carbon::parse($user->birthday)->format('m-d');
-            });
-    }
 
     /**
      * Check if user is admin.

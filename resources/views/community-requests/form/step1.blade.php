@@ -3,34 +3,19 @@
 @section('title', 'Nouvelle demande')
 @section('page-title', 'Reparations et Achats en Communaute')
 @push('styles')
-    <style>
-.share-modal {
-    display: none;
-    position: fixed;
-    z-index: 9999;
-    left: 0;
-    top: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(0,0,0,0.5);
+<style>
+.share-qr-section {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    margin-top: 16px;
 }
-
-.share-modal-content {
-    background: #fff;
-    width: 350px;
-    margin: 10% auto;
-    padding: 20px;
+.share-qr-section canvas,
+.share-qr-section img {
     border-radius: 8px;
-    text-align: center;
-}
-
-.close {
-    float: right;
-    cursor: pointer;
-    font-size: 20px;
 }
 </style>
-
 @endpush
 @section('breadcrumb')
 <li class="breadcrumb-item text-muted">Nouvelle demande</li>
@@ -173,78 +158,49 @@
         </div>
     </div>
 </div>
-<!-- Share Modal -->
-<div id="shareModal" class="share-modal" role="dialog" aria-labelledby="shareModalTitle" aria-modal="true">
-    <div class="share-modal-content">
-        <span class="close" onclick="closeShareModal()" aria-label="Fermer">&times;</span>
-
-        <h4 id="shareModalTitle">Partager le formulaire</h4>
-<div class="d-flex flex-column align-items-center ">
-    <!-- QR Code -->
-        <div id="qrcode"></div>
-
-        <a id="downloadQR" class="btn btn-sm btn-itcj mt-2" download="formulaire-qrcode.png">
-             <i class="ki-duotone ki-arrow-down fs-3 me-1"><i class="path1"></i><i class="path2"></i><i class="path3"></i></i>
-            Telecharger (apercu)
-        </a>
-        <a href="{{ route('community-requests.form.qr-download') }}" class="btn btn-sm btn-itcj-outline mt-2">
-             <i class="ki-duotone ki-arrow-down fs-3 me-1"><i class="path1"></i><i class="path2"></i><i class="path3"></i></i>
-            Telecharger en haute qualite (SVG)
-        </a>
-</div>
-    
-
-        <!-- Link -->
-        <div class="mt-3 d-flex align-items-center ">
-            <input type="text" id="shareLink" readonly class="form-control" disabled>
-            <button class="btn btn-icon btn-light ms-2" onclick="copyLink()" aria-label="Copier le lien">
-                     <i class="ki-duotone ki-copy fs-3 me-1"><i class="path1"></i><i class="path2"></i><i class="path3"></i></i>
-            </button>
-        </div>
-    </div>
-</div>
+@include('components.share-modal', [
+    'shareUrl' => route('community-requests.form.step1'),
+    'shareTitle' => 'Formulaire de demande - Reparations et Achats en Communaute',
+])
 
 @endsection
 
 @push('scripts')
 <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js" integrity="sha384-3zSEDfvllQohrq0PHL1fOXJuC/jSOO34H46t6UQfobFOmxE5BpjjaIJY5F2/bMnU" crossorigin="anonymous"></script>
 <script>
-let qr;
-const formUrl = "{{ route('community-requests.form.step1') }}";
+// Extend share modal with QR code for this page
+var _baseOpenShareModal = openShareModal;
+openShareModal = function() {
+    _baseOpenShareModal();
 
-function openShareModal() {
-    document.getElementById('shareModal').style.display = 'block';
-    document.getElementById('shareLink').value = formUrl;
+    // Inject QR section if not already present
+    var panel = document.querySelector('.share-panel');
+    if (!document.getElementById('qrSection')) {
+        var qrHtml = '<div id="qrSection" class="share-qr-section">'
+            + '<div id="qrcode"></div>'
+            + '<div class="d-flex gap-2 flex-wrap justify-content-center">'
+            + '<a id="downloadQR" class="btn btn-sm btn-itcj" download="formulaire-qrcode.png">'
+            + '<i class="ki-duotone ki-arrow-down fs-4 me-1"><i class="path1"></i><i class="path2"></i><i class="path3"></i></i> PNG</a>'
+            + '<a href="{{ route("community-requests.form.qr-download") }}" class="btn btn-sm btn-itcj-outline">'
+            + '<i class="ki-duotone ki-arrow-down fs-4 me-1"><i class="path1"></i><i class="path2"></i><i class="path3"></i></i> SVG</a>'
+            + '</div></div>';
+        panel.insertAdjacentHTML('beforeend', qrHtml);
+    }
 
-    // Nettoyer ancien QR
     document.getElementById('qrcode').innerHTML = "";
-
-    qr = new QRCode(document.getElementById("qrcode"), {
-        text: formUrl,
-        width: 200,
-        height: 200,
+    var qr = new QRCode(document.getElementById("qrcode"), {
+        text: shareModalUrl,
+        width: 180,
+        height: 180,
     });
 
-    // Attendre que le canvas soit genere
-    setTimeout(() => {
-        const canvas = document.querySelector("#qrcode canvas");
+    setTimeout(function() {
+        var canvas = document.querySelector("#qrcode canvas");
         if (canvas) {
             document.getElementById('downloadQR').href = canvas.toDataURL("image/png");
         }
     }, 300);
-}
-
-function closeShareModal() {
-    document.getElementById('shareModal').style.display = 'none';
-}
-
-function copyLink() {
-    const input = document.getElementById('shareLink');
-    input.select();
-    input.setSelectionRange(0, 99999);
-    navigator.clipboard.writeText(input.value);
-    alert("Lien copie !");
-}
+};
 </script>
 
 <script>

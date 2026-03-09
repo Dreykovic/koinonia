@@ -368,6 +368,7 @@
 
     .bulletin-preview-meta {
         background: rgba(212, 168, 75, 0.15);
+        -webkit-backdrop-filter: blur(10px);
         backdrop-filter: blur(10px);
         border-radius: 8px;
         padding: 0.5rem 1rem;

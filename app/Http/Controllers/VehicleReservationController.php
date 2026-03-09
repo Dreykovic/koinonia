@@ -172,7 +172,11 @@ class VehicleReservationController extends Controller
                 ]);
 
                 // Broadcast to other users
-                broadcast(new ReservationCreated($reservation->load('vehicle', 'user')))->toOthers();
+                try {
+                    broadcast(new ReservationCreated($reservation->load('vehicle', 'user')))->toOthers();
+                } catch (\Throwable $e) {
+                    \Log::warning('Broadcast ReservationCreated failed: ' . $e->getMessage());
+                }
 
                 return response()->json([
                     'message' => 'Reservation creee avec succes.',
@@ -237,7 +241,11 @@ class VehicleReservationController extends Controller
                     $reservation->update($validated);
 
                     $freshReservation = $reservation->fresh()->load('vehicle', 'user');
-                    broadcast(new ReservationUpdated($freshReservation))->toOthers();
+                    try {
+                        broadcast(new ReservationUpdated($freshReservation))->toOthers();
+                    } catch (\Throwable $e) {
+                        \Log::warning('Broadcast ReservationUpdated failed: ' . $e->getMessage());
+                    }
 
                     return response()->json([
                         'message' => 'Reservation mise a jour avec succes.',
@@ -258,7 +266,11 @@ class VehicleReservationController extends Controller
         $reservation->update($validated);
 
         $freshReservation = $reservation->fresh()->load('vehicle', 'user');
-        broadcast(new ReservationUpdated($freshReservation))->toOthers();
+        try {
+            broadcast(new ReservationUpdated($freshReservation))->toOthers();
+        } catch (\Throwable $e) {
+            \Log::warning('Broadcast ReservationUpdated failed: ' . $e->getMessage());
+        }
 
         return response()->json([
             'message' => 'Reservation mise a jour avec succes.',
@@ -295,7 +307,11 @@ class VehicleReservationController extends Controller
         }
 
         // Broadcast before updating status (we need the original data)
-        broadcast(new ReservationCancelled($reservation))->toOthers();
+        try {
+            broadcast(new ReservationCancelled($reservation))->toOthers();
+        } catch (\Throwable $e) {
+            \Log::warning('Broadcast ReservationCancelled failed: ' . $e->getMessage());
+        }
 
         $reservation->update(['status' => 'cancelled']);
 

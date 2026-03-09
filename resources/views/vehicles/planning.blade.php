@@ -1442,6 +1442,7 @@
             currentUserId: {{ auth()->id() }},
             selectedDate: '{{ now()->toDateString() }}',
             pollingInterval: null,
+            isSubmitting: false,
             searchFilter: '',
             statusFilter: 'all',
             // Vehicle settings
@@ -1678,6 +1679,8 @@
             },
 
             openNewReservation(vehicleId, hour) {
+                if (this.isSubmitting) return;
+                this.isSubmitting = true;
                 var self = this;
                 var data = {
                     vehicle_id: vehicleId,
@@ -1693,7 +1696,8 @@
                     .fail(function(xhr) {
                         var msg = (xhr.responseJSON && xhr.responseJSON.message) ? xhr.responseJSON.message : 'Erreur lors de la reservation';
                         Swal.fire('Erreur', msg, 'error');
-                    });
+                    })
+                    .always(function() { self.isSubmitting = false; });
             },
 
             showDetails(el) {
@@ -1766,6 +1770,7 @@
             selectedDate: '{{ now()->toDateString() }}',
             currentVehicleId: null,
             pollingInterval: null,
+            isSubmitting: false,
             // Vehicle settings
             settings: {
                 openingHour: {{ $settings->opening_hour_int }},
@@ -2100,6 +2105,8 @@
             },
 
             openReservation(vehicleId, hour) {
+                if (this.isSubmitting) return;
+                this.isSubmitting = true;
                 var self = this;
                 var data = {
                     vehicle_id: vehicleId,
@@ -2112,7 +2119,8 @@
                     .fail(function(xhr) {
                         var msg = (xhr.responseJSON && xhr.responseJSON.message) ? xhr.responseJSON.message : 'Erreur lors de la réservation';
                         Swal.fire('Erreur', msg, 'error');
-                    });
+                    })
+                    .always(function() { self.isSubmitting = false; });
             },
 
             startPolling() {

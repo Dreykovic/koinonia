@@ -166,15 +166,15 @@
                     </li>
                 </ul>
 
-                @if(auth()->user()->isAdmin())
-                <!-- === SECTION: Administration === -->
+                @if(auth()->user()->isAdmin() || auth()->user()->isCommunicateur())
+                <!-- === SECTION: Communication === -->
                 <div class="menu-item pt-4 pb-1" role="presentation">
                     <div class="menu-content">
-                        <span class="menu-heading fw-bold text-uppercase fs-8 ls-1" id="admin-heading">Administration</span>
+                        <span class="menu-heading fw-bold text-uppercase fs-8 ls-1" id="communication-heading">Communication</span>
                     </div>
                 </div>
 
-                <ul class="list-unstyled mb-0" role="menu" aria-labelledby="admin-heading">
+                <ul class="list-unstyled mb-0" role="menu" aria-labelledby="communication-heading">
                     <li class="menu-item mb-1" role="none">
                         <a class="menu-link py-3 {{ request()->routeIs('bulletin.index', 'bulletin.create', 'bulletin.edit') ? 'active' : '' }}"
                            href="{{ route('bulletin.index') }}"
@@ -187,7 +187,18 @@
                             <span class="menu-title">Gestion Bulletin</span>
                         </a>
                     </li>
+                </ul>
+                @endif
 
+                @if(auth()->user()->isAdmin())
+                <!-- === SECTION: Administration === -->
+                <div class="menu-item pt-4 pb-1" role="presentation">
+                    <div class="menu-content">
+                        <span class="menu-heading fw-bold text-uppercase fs-8 ls-1" id="admin-heading">Administration</span>
+                    </div>
+                </div>
+
+                <ul class="list-unstyled mb-0" role="menu" aria-labelledby="admin-heading">
                     <li class="menu-item mb-1" role="none">
                         <a class="menu-link py-3 {{ request()->routeIs('vehicles.index', 'vehicles.create', 'vehicles.edit') ? 'active' : '' }}"
                            href="{{ route('vehicles.index') }}"

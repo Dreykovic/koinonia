@@ -108,8 +108,8 @@ Route::middleware('auth')->group(function () {
         // Public routes (accessible to all authenticated users)
         Route::get('/current', [BulletinController::class, 'current'])->name('current');
 
-        // Admin only routes (defined BEFORE the show route to avoid conflict)
-        Route::middleware('role:admin')->group(function () {
+        // Admin & Communication routes (defined BEFORE the show route to avoid conflict)
+        Route::middleware('role:admin,communication')->group(function () {
             Route::get('/', [BulletinController::class, 'index'])->name('index');
             Route::get('/create', [BulletinController::class, 'create'])->name('create');
             Route::post('/', [BulletinController::class, 'store'])->name('store');

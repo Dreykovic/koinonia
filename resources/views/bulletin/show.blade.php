@@ -697,16 +697,16 @@
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" class="me-2"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.39 3 3 3s3-1.39 3-3-1.39-3-3-3z"/></svg>
                 Partager
             </button>
-            @if(auth()->user()->isAdmin())
+            @if(auth()->user()->isAdmin() || auth()->user()->isCommunicateur())
                 <a href="{{ route('bulletin.edit', $bulletin) }}" class="btn btn-itcj">
                     <i class="ki-duotone ki-pencil me-2"><i class="path1"></i><i class="path2"></i></i>
                     Modifier
                 </a>
+                <a href="{{ route('bulletin.index') }}" class="btn btn-itcj-outline">
+                    <i class="ki-duotone ki-folder me-2"><i class="path1"></i><i class="path2"></i></i>
+                    Toutes les editions
+                </a>
             @endif
-            <a href="{{ route('bulletin.index') }}" class="btn btn-itcj-outline">
-                <i class="ki-duotone ki-folder me-2"><i class="path1"></i><i class="path2"></i></i>
-                Toutes les editions
-            </a>
         </div>
     </div>
 

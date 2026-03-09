@@ -644,12 +644,12 @@
             top: 0;
             z-index: 100;
             background: var(--bg-card);
-            padding: 16px;
+            padding: 12px 16px;
             display: flex;
             align-items: center;
-            justify-content: space-between;
+            flex-wrap: wrap;
             box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-            gap: 12px;
+            gap: 8px 12px;
         }
 
         .mobile-planning-header .btn-back {
@@ -678,22 +678,98 @@
             text-overflow: ellipsis;
         }
 
-        .mobile-date-picker {
+        /* Mobile Date Navigator */
+        .mobile-date-nav {
             display: flex;
             align-items: center;
             gap: 6px;
-            padding: 8px 14px;
+            margin-left: auto;
+        }
+
+        .mobile-date-nav-btn {
+            width: 36px;
+            height: 36px;
+            min-width: 36px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(139, 35, 50, 0.08);
+            border: none;
+            color: var(--primary);
+            font-size: 16px;
+            cursor: pointer;
+            transition: background 0.15s;
+        }
+
+        .mobile-date-nav-btn:active {
+            background: rgba(139, 35, 50, 0.2);
+            transform: scale(0.92);
+        }
+
+        .mobile-date-nav-btn:disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+        }
+
+        .mobile-date-label {
+            position: relative;
+            padding: 6px 12px;
             background: rgba(139, 35, 50, 0.1);
-            border-radius: 20px;
+            border-radius: 10px;
             font-weight: 600;
             font-size: 13px;
             color: var(--primary);
-            border: none;
             cursor: pointer;
+            min-width: 100px;
+            text-align: center;
+            overflow: hidden;
         }
 
-        .mobile-date-picker i {
+        .mobile-date-label span {
+            position: relative;
+            z-index: 1;
+            pointer-events: none;
+        }
+
+        /* Date input overlaid on the label — native picker opens on tap */
+        .mobile-date-label input[type="date"] {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            opacity: 0;
+            cursor: pointer;
+            min-height: unset;
+            padding: 0;
+            margin: 0;
+            border: none;
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            appearance: none;
             font-size: 16px;
+        }
+
+        .mobile-date-today {
+            padding: 6px 10px;
+            border-radius: 10px;
+            background: var(--primary);
+            color: #fff;
+            border: none;
+            font-size: 11px;
+            font-weight: 700;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: opacity 0.15s;
+        }
+
+        .mobile-date-today:active {
+            opacity: 0.8;
+        }
+
+        .mobile-date-today.hidden {
+            display: none;
         }
 
         /* Mobile Search */
@@ -1035,13 +1111,7 @@
             }
         }
 
-        /* Hidden date input for mobile picker */
-        .hidden-date-input {
-            position: absolute;
-            opacity: 0;
-            width: 0;
-            height: 0;
-        }
+        /* Hidden date input (legacy, kept for desktop sidebar sync) */
 
         /* Scrollbar styling */
         .table-wrapper::-webkit-scrollbar {
@@ -1091,11 +1161,19 @@
                     <i class="ki-duotone ki-arrow-left"><i class="path1"></i><i class="path2"></i></i>
                 </a>
                 <h1 class="mobile-planning-title" id="mobile-title">Planning Véhicules</h1>
-                <button type="button" class="mobile-date-picker" id="mobile-date-btn" aria-label="Changer la date">
-                    <i class="ki-duotone ki-calendar"><i class="path1"></i><i class="path2"></i></i>
-                    <span id="mobile-date-display">Aujourd'hui</span>
-                </button>
-                <input type="date" class="hidden-date-input" id="mobile-date-input" value="{{ now()->toDateString() }}">
+                <nav class="mobile-date-nav" aria-label="Navigation par date">
+                    <button type="button" class="mobile-date-nav-btn" id="mobile-date-prev" aria-label="Jour précédent">
+                        <i class="ki-duotone ki-arrow-left"><i class="path1"></i><i class="path2"></i></i>
+                    </button>
+                    <div class="mobile-date-label" id="mobile-date-label">
+                        <span id="mobile-date-display">Aujourd'hui</span>
+                        <input type="date" id="mobile-date-input" value="{{ now()->toDateString() }}" aria-label="Choisir une date">
+                    </div>
+                    <button type="button" class="mobile-date-nav-btn" id="mobile-date-next" aria-label="Jour suivant">
+                        <i class="ki-duotone ki-arrow-right"><i class="path1"></i><i class="path2"></i></i>
+                    </button>
+                    <button type="button" class="mobile-date-today hidden" id="mobile-date-today" aria-label="Revenir à aujourd'hui">Auj.</button>
+                </nav>
             </header>
 
             <!-- Mobile Search -->
@@ -1866,18 +1944,24 @@
             },
 
             bindEvents() {
-                // Date picker
-                $('#mobile-date-btn').on('click', () => {
-                    $('#mobile-date-input').trigger('click');
+                // Date navigation: previous day
+                $('#mobile-date-prev').on('click', () => {
+                    this.navigateDate(-1);
                 });
 
+                // Date navigation: next day
+                $('#mobile-date-next').on('click', () => {
+                    this.navigateDate(1);
+                });
+
+                // Date picker (native input overlaid on label)
                 $('#mobile-date-input').on('change', (e) => {
-                    this.selectedDate = e.target.value;
-                    this.updateDateDisplay();
-                    this.loadData();
-                    // Sync with desktop
-                    $('#planning-date').val(this.selectedDate);
-                    Planning.selectedDate = this.selectedDate;
+                    this.setDate(e.target.value);
+                });
+
+                // Today button
+                $('#mobile-date-today').on('click', () => {
+                    this.setDate(new Date().toISOString().split('T')[0]);
                 });
 
                 // Search
@@ -1891,24 +1975,64 @@
                 });
             },
 
+            navigateDate(offset) {
+                var d = new Date(this.selectedDate);
+                d.setDate(d.getDate() + offset);
+                var newDate = d.toISOString().split('T')[0];
+
+                // Don't go beyond max date
+                if (newDate > this.settings.maxReservationDate) return;
+
+                this.setDate(newDate);
+            },
+
+            setDate(dateStr) {
+                this.selectedDate = dateStr;
+                $('#mobile-date-input').val(dateStr);
+                this.updateDateDisplay();
+                this.loadData();
+
+                // Sync with desktop
+                $('#planning-date').val(dateStr);
+                Planning.selectedDate = dateStr;
+            },
+
             updateDateDisplay() {
-                const date = new Date(this.selectedDate);
-                const today = new Date();
+                var today = new Date();
                 today.setHours(0, 0, 0, 0);
-                const selected = new Date(this.selectedDate);
+                var selected = new Date(this.selectedDate);
                 selected.setHours(0, 0, 0, 0);
 
-                let displayText;
-                if (selected.getTime() === today.getTime()) {
+                var isToday = selected.getTime() === today.getTime();
+                var displayText;
+
+                if (isToday) {
                     displayText = "Aujourd'hui";
                 } else {
-                    displayText = date.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
+                    displayText = selected.toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' });
                 }
                 $('#mobile-date-display').text(displayText);
 
+                // Show/hide "Aujourd'hui" button
+                if (isToday) {
+                    $('#mobile-date-today').addClass('hidden');
+                } else {
+                    $('#mobile-date-today').removeClass('hidden');
+                }
+
+                // Disable prev button if today
+                var yesterday = new Date(today);
+                yesterday.setDate(yesterday.getDate() - 1);
+                $('#mobile-date-prev').prop('disabled', selected <= today);
+
+                // Disable next button if at max date
+                var maxDate = new Date(this.settings.maxReservationDate);
+                maxDate.setHours(0, 0, 0, 0);
+                $('#mobile-date-next').prop('disabled', selected >= maxDate);
+
                 // Update detail view date
                 $('#detail-date-display').text(
-                    date.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
+                    selected.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
                 );
             },
 

@@ -1756,9 +1756,10 @@
                 var r = JSON.parse($(el).attr('data-reservation'));
                 var isMine = r.user_id === this.currentUserId;
 
-                if (isMine && r.can_cancel) {
+                if (r.can_cancel) {
+                    var title = isMine ? 'Annuler cette reservation ?' : 'Annuler la reservation de ' + r.user_name + ' ?';
                     Swal.fire({
-                        title: 'Annuler cette reservation ?',
+                        title: title,
                         text: r.vehicle_name + ' — ' + r.start_time.substring(0, 5) + ' à ' + r.end_time.substring(0, 5),
                         icon: 'warning',
                         showCancelButton: true,
@@ -2017,7 +2018,7 @@
                                     <div class="time-slot-mobile-driver">${reservation.user_name}</div>
                                     ${reservation.destination ? `<div class="time-slot-mobile-destination"><i class="ki-duotone ki-geolocation"><i class="path1"></i><i class="path2"></i></i> ${reservation.destination}</div>` : ''}
                                 </div>
-                                ${isMine && reservation.can_cancel ? `
+                                ${reservation.can_cancel ? `
                                     <div class="time-slot-mobile-actions">
                                         <span class="text-danger small">Tap pour annuler</span>
                                     </div>
@@ -2060,9 +2061,10 @@
                 var isMine = r.user_id === this.currentUserId;
                 var self = this;
 
-                if (isMine && r.can_cancel) {
+                if (r.can_cancel) {
+                    var title = isMine ? 'Annuler cette réservation ?' : 'Annuler la réservation de ' + r.user_name + ' ?';
                     Swal.fire({
-                        title: 'Annuler cette réservation ?',
+                        title: title,
                         text: r.vehicle_name + ' — ' + r.start_time.substring(0, 5) + ' à ' + r.end_time.substring(0, 5),
                         icon: 'warning',
                         showCancelButton: true,

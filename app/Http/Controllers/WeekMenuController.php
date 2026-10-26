@@ -41,6 +41,16 @@ class WeekMenuController extends Controller
             }
         }
 
+        $todayCode = strtolower(now()->locale('fr_FR')->dayName);
+        $todayDay = $days->firstWhere('code', $todayCode);
+
+        // Plats du jour par periode (null si masque ou absent)
+        $todayMenus = $periods->mapWithKeys(function ($period) use ($menus, $todayDay) {
+            $menu = $todayDay ? $menus->get($todayDay->id . '-' . $period->id) : null;
+
+            return [$period->code => $menu && $menu->available ? $menu : null];
+        });
+
         return view('week-menus.index', [
             'activeWeek' => $activeWeek,
             'dateRange' => $dateRange,
@@ -48,7 +58,9 @@ class WeekMenuController extends Controller
             'periods' => $periods,
             'menus' => $menus,
             'visibleCount' => $visibleCount,
-            'todayCode' => strtolower(now()->locale('fr_FR')->dayName),
+            'todayCode' => $todayCode,
+            'todayLabel' => now()->locale('fr')->isoFormat('dddd D MMMM'),
+            'todayMenus' => $todayMenus,
             'currentPeriodCode' => (int) now()->format('H') < 15 ? 'midi' : 'soir',
         ]);
     }

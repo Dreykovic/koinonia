@@ -43,12 +43,9 @@
 <div class="menu-head">
     <div>
         <h2 class="menu-head-title">{{ $activeWeek?->name ?? 'Aucune semaine en ligne' }}</h2>
-        <div class="menu-head-sub">
-            @if($dateRange)
-                <span>{{ ucfirst($dateRange) }}</span>
-            @endif
-            <span class="menu-chip menu-chip--today">Aujourd'hui : {{ $todayCode }} {{ $currentPeriodCode }}</span>
-        </div>
+        @if($dateRange)
+            <div class="menu-head-sub">{{ ucfirst($dateRange) }}</div>
+        @endif
     </div>
 </div>
 
@@ -66,7 +63,40 @@
         </p>
     </div>
 @else
+    {{-- ===== Aujourd'hui : les plats du jour en premier ===== --}}
+    <section class="today-card" aria-labelledby="todayTitle">
+        <div class="today-head">
+            <span class="today-kicker">Aujourd'hui</span>
+            <h3 class="today-title" id="todayTitle">{{ ucfirst($todayLabel) }}</h3>
+        </div>
+        <div class="today-slots">
+            @foreach($periods as $period)
+                @php
+                    $menu = $todayMenus[$period->code] ?? null;
+                    $isNow = $period->code === $currentPeriodCode;
+                    $icon = $periodIcons[$period->code] ?? $periodIcons['midi'];
+                @endphp
+                <div class="today-slot today-slot--{{ $period->code }} {{ $isNow ? 'is-now' : '' }} {{ $menu ? '' : 'is-empty' }}">
+                    <div class="today-slot-head">
+                        <span class="today-slot-period">
+                            <i class="ki-duotone {{ $icon['icon'] }}">@for($i = 1; $i <= $icon['paths']; $i++)<i class="path{{ $i }}"></i>@endfor</i>
+                            {{ $period->code }}
+                        </span>
+                        @if($isNow)
+                            <span class="today-slot-now">En ce moment</span>
+                        @endif
+                    </div>
+                    <div class="today-slot-dish">{{ $menu ? $menu->dish_name : 'Pas de plat' }}</div>
+                    @if($menu && $menu->description)
+                        <div class="today-slot-desc">{{ $menu->description }}</div>
+                    @endif
+                </div>
+            @endforeach
+        </div>
+    </section>
+
     {{-- ===== Tableau : 7 jours fixes, une ligne par periode ===== --}}
+    <h3 class="menu-section-title">Toute la semaine</h3>
     <div class="menu-table-wrap">
         <table class="menu-table" aria-label="Menu de la semaine par jour et par periode">
             <thead>
@@ -74,7 +104,7 @@
                     <th class="period-col" scope="col"><span class="visually-hidden">Periode</span></th>
                     @foreach($days as $day)
                         @php $palette = $dayPalette[$day->code] ?? $dayPalette['lundi']; @endphp
-                        <th scope="col" class="{{ $day->code === $todayCode ? 'is-today' : '' }}">
+                        <th scope="col">
                             <span class="day-pill" style="background: {{ $palette['bg'] }}; color: {{ $palette['text'] }};">{{ $day->code }}</span>
                             @if($day->code === $todayCode)
                                 <span class="today-tag">Aujourd'hui</span>
@@ -95,11 +125,9 @@
                             @php
                                 $menu = $menus->get($day->id . '-' . $period->id);
                                 $shown = $menu && $menu->available;
-                                $isToday = $day->code === $todayCode;
-                                $isNow = $isToday && $period->code === $currentPeriodCode;
                             @endphp
                             <td>
-                                <div class="menu-cell {{ $shown ? '' : 'is-empty' }} {{ $isToday ? 'is-today' : '' }} {{ $isNow && $shown ? 'is-now' : '' }}">
+                                <div class="menu-cell {{ $shown ? '' : 'is-empty' }}">
                                     @if($shown)
                                         {{ $menu->dish_name }}
                                         @if($menu->description)
@@ -118,13 +146,14 @@
     </div>
 
     {{-- ===== Cartes par jour (tablette et mobile) ===== --}}
+    <h3 class="menu-section-title menu-section-title--cards">Toute la semaine</h3>
     <div class="menu-days">
         @foreach($days as $day)
             @php
                 $palette = $dayPalette[$day->code] ?? $dayPalette['lundi'];
                 $isToday = $day->code === $todayCode;
             @endphp
-            <article class="menu-day {{ $isToday ? 'is-today' : '' }}" @if($isToday) id="menu-today" @endif>
+            <article class="menu-day">
                 <div class="menu-day-head">
                     <span class="menu-day-badge" style="background: {{ $palette['bg'] }}; color: {{ $palette['text'] }};">
                         {{ strtoupper(substr($day->code, 0, 3)) }}
@@ -140,9 +169,8 @@
                     @php
                         $menu = $menus->get($day->id . '-' . $period->id);
                         $shown = $menu && $menu->available;
-                        $isNow = $isToday && $period->code === $currentPeriodCode;
                     @endphp
-                    <div class="menu-slot menu-slot--{{ $period->code }} {{ $shown ? '' : 'is-empty' }} {{ $isNow && $shown ? 'is-now' : '' }}">
+                    <div class="menu-slot menu-slot--{{ $period->code }} {{ $shown ? '' : 'is-empty' }}">
                         <span class="menu-slot-period">{{ $period->code }}</span>
                         <div>
                             <div class="menu-slot-dish">{{ $shown ? $menu->dish_name : $emptyLabel }}</div>
@@ -163,18 +191,3 @@
 </a>
 @endif
 @endsection
-
-@push('scripts')
-<script>
-document.addEventListener('DOMContentLoaded', function () {
-    // Sur petit ecran, on amene directement le jour en cours a l'ecran
-    var today = document.getElementById('menu-today');
-    var isFirstCard = today && today.previousElementSibling === null;
-    if (today && !isFirstCard && window.matchMedia('(max-width: 991px)').matches) {
-        setTimeout(function () {
-            today.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }, 150);
-    }
-});
-</script>
-@endpush

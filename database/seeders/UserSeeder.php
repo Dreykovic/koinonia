@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Enums\PlatformRole;
 use App\Models\Community;
 use App\Models\User;
 use Illuminate\Database\Seeder;
@@ -20,7 +21,7 @@ class UserSeeder extends Seeder
             [
                 'name' => 'Jean-Marie NDONGO',
                 'password' => Hash::make('password'),
-                'roles' => 'admin',
+                'roles' => [PlatformRole::ADMIN],
                 'community_id' => $communities['Matungulu'] ?? null,
                 'room_number' => 'R01',
                 'phone' => '+237 6 99 00 00 01',
@@ -32,11 +33,8 @@ class UserSeeder extends Seeder
 
 
         $this->command->info('');
-        $this->command->info('=== Utilisateurs crees ===');
-        $this->command->info('Admin: recteur@itcj.org / password');
-        $this->command->info('Communication: communication@itcj.org / password');
-        $this->command->info('Sante: sante@itcj.org / password');
-        $this->command->info('Membres: [prenom].[nom]@itcj.org / password');
+        $this->command->info('=== Utilisateur cree ===');
+        $this->command->info('Admin: recteur@itcj.org / password (a changer hors environnement local)');
         $this->command->info('');
     }
 }

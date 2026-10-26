@@ -6,6 +6,8 @@ use App\Http\Requests\UpdateWeekMenusRequest;
 use App\Models\MenuSetting;
 use App\Models\MenuWeek;
 use App\Models\WeekMenu;
+use App\Models\WeekMenuDay;
+use App\Models\WeekMenuPeriod;
 use App\Services\MenuRotation;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -14,16 +16,40 @@ class WeekMenuController extends Controller
 {
     /**
      * Display the full weekly menu (public view).
-     * Shows all available menus ordered by day and period.
+     *
+     * La grille est construite a partir des 7 jours et des 2 periodes de
+     * reference, jamais a partir des plats visibles : un plat masque laisse
+     * une case "pas de plat" au lieu de decaler les colonnes.
      */
     public function index()
     {
-        $grouped = $this->getMenusGrouped();
+        $activeWeek = MenuSetting::activeWeek();
+        $days = WeekMenuDay::orderBy('position')->get();
+        $periods = WeekMenuPeriod::orderBy('position')->get();
+
+        $menus = $activeWeek
+            ? WeekMenu::forWeek($activeWeek)->get()->keyBy(fn ($m) => $m->day_id . '-' . $m->period_id)
+            : collect();
+
+        $visibleCount = $menus->where('available', true)->count();
+
+        $dateRange = null;
+        if ($activeWeek && MenuRotation::isEnabled()) {
+            $current = MenuRotation::schedule()->firstWhere('is_current', true);
+            if ($current) {
+                $dateRange = MenuRotation::formatRange($current['start'], $current['end']);
+            }
+        }
 
         return view('week-menus.index', [
-            'menusPerDays' => $grouped['menusPerDays'],
-            'menusPerPeriods' => $grouped['menusPerPeriods'],
-            'activeWeek' => MenuSetting::activeWeek(),
+            'activeWeek' => $activeWeek,
+            'dateRange' => $dateRange,
+            'days' => $days,
+            'periods' => $periods,
+            'menus' => $menus,
+            'visibleCount' => $visibleCount,
+            'todayCode' => strtolower(now()->locale('fr_FR')->dayName),
+            'currentPeriodCode' => (int) now()->format('H') < 15 ? 'midi' : 'soir',
         ]);
     }
 
@@ -46,12 +72,6 @@ class WeekMenuController extends Controller
 
         $week = $weeks->firstWhere('id', $requested) ?? $activeWeek ?? $weeks->first();
 
-        $menusPerPeriods = WeekMenu::with(['day', 'period'])
-            ->forWeek($week)
-            ->orderedPeriod()
-            ->get()
-            ->groupBy(fn ($menu) => $menu->period->code);
-
         $menusPerDays = WeekMenu::with(['day', 'period'])
             ->forWeek($week)
             ->ordered()
@@ -65,7 +85,6 @@ class WeekMenuController extends Controller
             'activeWeek' => $activeWeek,
             'weeks' => $weeks,
             'menusPerDays' => $menusPerDays,
-            'menusPerPeriods' => $menusPerPeriods,
             'autoRotation' => $auto,
             'schedule' => $auto ? MenuRotation::schedule()->keyBy(fn ($s) => $s['week']->id) : collect(),
             'nextSwitch' => $auto ? MenuRotation::next() : null,
@@ -149,25 +168,4 @@ class WeekMenuController extends Controller
         return redirect()->to($target)->with('success', $message);
     }
 
-    /**
-     * Get menus grouped by day and by period.
-     */
-    private function getMenusGrouped(): array
-    {
-        $menusPerPeriods = WeekMenu::with(['day', 'period'])
-            ->available()
-            ->forActiveWeek()
-            ->orderedPeriod()
-            ->get()
-            ->groupBy(fn ($menu) => $menu->period->code);
-
-        $menusPerDays = WeekMenu::with(['day', 'period'])
-            ->available()
-            ->forActiveWeek()
-            ->ordered()
-            ->get()
-            ->groupBy(fn ($menu) => $menu->day->code);
-
-        return compact('menusPerDays', 'menusPerPeriods');
-    }
 }

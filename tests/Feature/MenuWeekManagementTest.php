@@ -241,6 +241,54 @@ class MenuWeekManagementTest extends TestCase
             ->assertDontSee('Plat cache');
     }
 
+    public function test_public_grid_keeps_every_day_column_when_a_dish_is_hidden(): void
+    {
+        $week = $this->week('Grille');
+        $week->menus()->update(['available' => true]);
+        $mardiMidi = $week->menus()->where('day_id', 2)->where('period_id', 1)->first();
+        $mardiMidi->update(['dish_name' => 'Plat masque du mardi', 'available' => false]);
+        $week->menus()->where('day_id', 2)->where('period_id', 2)->update(['dish_name' => 'Igname pilee']);
+        MenuSetting::setActiveWeek($week);
+
+        $response = $this->actingAs($this->member())->get(route('week-menus.index'));
+
+        $response->assertOk()
+            ->assertDontSee('Plat masque du mardi')
+            ->assertSee('Pas de plat')
+            ->assertSee('Igname pilee');
+
+        // Les 7 jours restent en colonne dans l'ordre, meme avec un plat masque.
+        $response->assertSeeInOrder(['lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi', 'dimanche']);
+        $this->assertSame(2, substr_count($response->getContent(), 'Pas de plat'),
+            'La case masquee apparait une fois dans le tableau et une fois dans les cartes');
+    }
+
+    public function test_public_page_shows_an_empty_state_when_nothing_is_visible(): void
+    {
+        $week = $this->week('Vide');
+        MenuSetting::setActiveWeek($week);
+
+        $this->actingAs($this->member())
+            ->get(route('week-menus.index'))
+            ->assertOk()
+            ->assertSee('pas encore publie')
+            ->assertDontSee('Modifier le menu');
+    }
+
+    public function test_dashboard_shows_today_dishes_or_an_empty_state(): void
+    {
+        $week = $this->week('Jour');
+        MenuSetting::setActiveWeek($week);
+        $member = $this->member();
+
+        $this->actingAs($member)->get(route('dashboard'))->assertOk()->assertSee('Aucun plat n', false);
+
+        $todayId = \App\Models\WeekMenuDay::where('code', strtolower(now()->locale('fr_FR')->dayName))->value('id');
+        $week->menus()->where('day_id', $todayId)->update(['dish_name' => 'Riz gras du jour', 'available' => true]);
+
+        $this->actingAs($member)->get(route('dashboard'))->assertOk()->assertSee('Riz gras du jour');
+    }
+
     public function test_editor_redirects_to_cycle_page_when_no_week_exists(): void
     {
         $this->actingAs($this->admin())

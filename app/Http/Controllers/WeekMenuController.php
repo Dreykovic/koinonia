@@ -3,9 +3,11 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\UpdateWeekMenuRequest;
+use App\Models\MenuSetting;
 use App\Models\WeekMenu;
 use App\Models\WeekMenuDay;
 use App\Models\WeekMenuPeriod;
+use Illuminate\Http\Request;
 
 class WeekMenuController extends Controller
 {
@@ -27,19 +29,30 @@ class WeekMenuController extends Controller
      * Display the admin form to edit the weekly menu.
      * Shows ALL menus (including unavailable) so admins can toggle them.
      */
-    public function edit()
+    public function edit(Request $request)
     {
+        $activeWeek = MenuSetting::activeWeek();
+        $week = (int) $request->query('week', $activeWeek);
+        if (!in_array($week, MenuSetting::WEEKS, true)) {
+            $week = $activeWeek;
+        }
+
         $menusPerPeriods = WeekMenu::with(['day', 'period'])
+            ->forWeek($week)
             ->orderedPeriod()
             ->get()
             ->groupBy(fn ($menu) => $menu->period->code);
 
         $menusPerDays = WeekMenu::with(['day', 'period'])
+            ->forWeek($week)
             ->ordered()
             ->get()
             ->groupBy(fn ($menu) => $menu->day->code);
 
         return view('week-menus.edit', [
+            'week' => $week,
+            'activeWeek' => $activeWeek,
+            'weeks' => MenuSetting::WEEKS,
             'menusPerDays' => $menusPerDays,
             'menusPerPeriods' => $menusPerPeriods,
         ]);
@@ -53,6 +66,22 @@ class WeekMenuController extends Controller
         $weekMenu->update($request->validated());
 
         return back()->with('success', "Le menu {$weekMenu->dish_name} a ete mis a jour.");
+    }
+
+    /**
+     * Choose which week of the 4-week cycle is displayed.
+     */
+    public function setActiveWeek(Request $request)
+    {
+        $validated = $request->validate([
+            'week' => ['required', 'integer', 'in:' . implode(',', MenuSetting::WEEKS)],
+        ]);
+
+        MenuSetting::setActiveWeek((int) $validated['week']);
+
+        return redirect()
+            ->route('week-menus.admin.edit', ['week' => $validated['week']])
+            ->with('success', "La semaine {$validated['week']} est maintenant affichee.");
     }
 
     /**
@@ -76,12 +105,14 @@ class WeekMenuController extends Controller
     {
         $menusPerPeriods = WeekMenu::with(['day', 'period'])
             ->available()
+            ->forActiveWeek()
             ->orderedPeriod()
             ->get()
             ->groupBy(fn ($menu) => $menu->period->code);
 
         $menusPerDays = WeekMenu::with(['day', 'period'])
             ->available()
+            ->forActiveWeek()
             ->ordered()
             ->get()
             ->groupBy(fn ($menu) => $menu->day->code);

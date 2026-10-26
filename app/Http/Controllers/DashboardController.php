@@ -94,6 +94,7 @@ class DashboardController extends Controller
 
 
         $todaysMenus = WeekMenu::available()
+            ->forActiveWeek()
             ->today()
             ->ordered()
             ->get();

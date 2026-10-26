@@ -253,7 +253,7 @@
                                     </button>
                                     @endif
                                 </form>
-                                <form action="{{ route('users.destroy', $user) }}" method="POST" class="js-delete-user" data-name="{{ $user->name }}">
+                                <form action="{{ route('users.destroy', $user) }}" method="POST" class="js-delete-user" data-no-loading data-name="{{ $user->name }}">
                                     @csrf
                                     @method('DELETE')
                                     <input type="hidden" name="confirm_name" value="">
@@ -367,7 +367,7 @@
                                     </button>
                                 @endif
                             </form>
-                            <form action="{{ route('users.destroy', $user) }}" method="POST" class="js-delete-user" data-name="{{ $user->name }}">
+                            <form action="{{ route('users.destroy', $user) }}" method="POST" class="js-delete-user" data-no-loading data-name="{{ $user->name }}">
                                 @csrf
                                 @method('DELETE')
                                 <input type="hidden" name="confirm_name" value="">
@@ -407,6 +407,7 @@ document.querySelectorAll('.js-delete-user').forEach(function (form) {
         );
         if (typed === null) { e.preventDefault(); return; }
         form.querySelector('input[name="confirm_name"]').value = typed;
+        form.querySelector('[type="submit"]').classList.add('btn-loading');
     });
 });
 </script>

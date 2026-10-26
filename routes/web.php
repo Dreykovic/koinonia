@@ -55,6 +55,9 @@ Route::middleware('auth')->group(function () {
     // Dashboard
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
+    // Nouveautes vues (encart affiche une fois apres une mise a jour)
+    Route::post('/nouveautes/vu', [\App\Http\Controllers\WhatsNewController::class, 'seen'])->name('whats-new.seen');
+
     // Guide
     Route::get('/guide', [GuideController::class, 'index'])->name('guide');
 

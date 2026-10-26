@@ -2374,6 +2374,11 @@
     <!-- Toast Container -->
     <div class="toast-container" id="toastContainer" role="region" aria-live="polite" aria-label="Notifications"></div>
 
+    <!-- Nouveautes : affichees une fois par utilisateur apres une mise a jour -->
+    @auth
+        @include('components.whats-new')
+    @endauth
+
     <!-- Confirm Modal -->
     <div class="confirm-modal-overlay" id="confirmModal" role="dialog" aria-modal="true" aria-labelledby="confirmModalTitle">
         <div class="confirm-modal">

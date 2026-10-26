@@ -224,11 +224,6 @@ Route::middleware('auth')->group(function () {
             Route::patch('/admin/active-week', [WeekMenuController::class, 'setActiveWeek'])
                 ->name('admin.active-week');
 
-            Route::put('/admin/{weekMenu}/update', [WeekMenuController::class, 'update'])
-                ->name('admin.update');
-
-            Route::patch('/admin/{weekMenu}/toggle', [WeekMenuController::class, 'toggle'])
-                ->name('admin.toggle');
         });
     });
 

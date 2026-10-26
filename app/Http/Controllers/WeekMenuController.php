@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Requests\UpdateWeekMenuRequest;
 use App\Http\Requests\UpdateWeekMenusRequest;
 use App\Models\MenuSetting;
 use App\Models\WeekMenu;
@@ -58,16 +57,6 @@ class WeekMenuController extends Controller
             'menusPerDays' => $menusPerDays,
             'menusPerPeriods' => $menusPerPeriods,
         ]);
-    }
-
-    /**
-     * Update a menu item.
-     */
-    public function update(UpdateWeekMenuRequest $request, WeekMenu $weekMenu)
-    {
-        $weekMenu->update($request->validated());
-
-        return back()->with('success', "Le menu {$weekMenu->dish_name} a ete mis a jour.");
     }
 
     /**
@@ -130,20 +119,6 @@ class WeekMenuController extends Controller
         return redirect()
             ->route('week-menus.admin.edit', ['week' => $validated['week']])
             ->with('success', "La semaine {$validated['week']} est maintenant affichee.");
-    }
-
-    /**
-     * Enable or disable a menu item.
-     */
-    public function toggle(WeekMenu $weekMenu)
-    {
-        $weekMenu->update([
-            'available' => !$weekMenu->available,
-        ]);
-
-        $state = $weekMenu->available ? 'visible' : 'masque';
-
-        return back()->with('success', "Le menu {$weekMenu->dish_name} est maintenant {$state}.");
     }
 
     /**

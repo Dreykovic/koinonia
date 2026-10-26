@@ -2730,6 +2730,7 @@
                     const type = this.getAttribute('data-confirm-type') || 'danger';
                     const title = this.getAttribute('data-confirm-title') || 'Confirmation';
                     const confirmText = this.getAttribute('data-confirm-ok') || 'Confirmer';
+                    const cancelText = this.getAttribute('data-confirm-cancel') || 'Annuler';
 
                     // Remove loading if added
                     const btn = this.querySelector('[type="submit"]');
@@ -2740,6 +2741,7 @@
                         message: message,
                         type: type,
                         confirmText: confirmText,
+                        cancelText: cancelText,
                         onConfirm: () => {
                             // Re-add loading and submit
                             if (btn) btn.classList.add('btn-loading');
@@ -2759,6 +2761,7 @@
                     const type = this.getAttribute('data-confirm-type') || 'danger';
                     const title = this.getAttribute('data-confirm-title') || 'Confirmation';
                     const confirmText = this.getAttribute('data-confirm-ok') || 'Confirmer';
+                    const cancelText = this.getAttribute('data-confirm-cancel') || 'Annuler';
                     const href = this.getAttribute('href');
                     const form = this.closest('form');
 
@@ -2767,6 +2770,7 @@
                         message: message,
                         type: type,
                         confirmText: confirmText,
+                        cancelText: cancelText,
                         onConfirm: () => {
                             if (form) {
                                 form.submit();

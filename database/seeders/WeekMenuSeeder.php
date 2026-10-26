@@ -3,7 +3,7 @@
 namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
-use App\Models\MenuSetting;
+use App\Models\MenuWeek;
 use App\Models\WeekMenu;
 
 class WeekMenuSeeder extends Seeder
@@ -57,13 +57,18 @@ class WeekMenuSeeder extends Seeder
             ['day_id'=>7,'period_id'=>2,'dish_name'=>'Chef special dinner','price'=>1500,'available'=>true],
         ];
 
-        // 4-week cycle: the same base menu is created for each week.
-        foreach (MenuSetting::WEEKS as $week) {
+        // Cycle de 4 semaines : le meme menu de base est cree pour chacune.
+        foreach ([1, 2, 3, 4] as $position) {
+            $week = MenuWeek::firstOrCreate(
+                ['name' => 'Semaine ' . $position],
+                ['position' => $position, 'in_cycle' => true]
+            );
+
             foreach ($menus as $menu) {
                 WeekMenu::firstOrCreate(
                     [
                         // One menu per week, day and period (never overwrites existing data)
-                        'week_number' => $week,
+                        'week_id' => $week->id,
                         'day_id' => $menu['day_id'],
                         'period_id' => $menu['period_id'],
                     ],

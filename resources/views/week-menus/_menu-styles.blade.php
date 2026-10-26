@@ -49,18 +49,30 @@
         font-weight: 700;
     }
 
-    /* Segmented control des 4 semaines */
+    .week-cycle-link {
+        font-size: 12.5px;
+        font-weight: 700;
+        color: var(--primary);
+        text-decoration: none;
+    }
+
+    .week-cycle-link:hover { color: var(--primary-dark); text-decoration: underline; }
+
+    /* Segmented control des semaines : defile horizontalement si besoin */
     .week-tabs {
-        display: grid;
-        grid-template-columns: repeat(4, 1fr);
+        display: flex;
         gap: 8px;
         padding: 7px;
         border-radius: 16px;
         box-shadow: var(--neu-shadow-inset);
         background: var(--bg-base);
+        overflow-x: auto;
+        scrollbar-width: thin;
     }
 
     .week-tab {
+        flex: 1 0 110px;
+        max-width: 220px;
         position: relative;
         display: flex;
         flex-direction: column;
@@ -100,12 +112,21 @@
 
     .week-tab.is-current .week-tab-label { color: var(--primary-light); }
 
-    .week-tab-num {
+    .week-tab-name {
         font-family: 'Playfair Display', Georgia, serif;
-        font-size: 22px;
+        font-size: 15px;
         font-weight: 700;
-        line-height: 1.1;
+        line-height: 1.2;
+        max-width: 100%;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+        overflow-wrap: anywhere;
     }
+
+    .week-tab.is-reserve { opacity: 0.75; }
+    .week-tab.is-reserve .week-tab-label { color: var(--text-muted); }
 
     .week-tab-state {
         display: inline-flex;
@@ -382,9 +403,9 @@
     @media (max-width: 575px) {
         .week-switcher { padding: 16px; border-radius: 16px; }
         .week-tabs { gap: 5px; padding: 5px; }
-        .week-tab { padding: 8px 2px; min-height: 62px; }
+        .week-tab { padding: 8px 6px; min-height: 62px; flex-basis: 96px; }
         .week-tab-label { font-size: 8.5px; letter-spacing: 0.3px; }
-        .week-tab-num { font-size: 19px; }
+        .week-tab-name { font-size: 13px; }
         .week-tab-state { font-size: 8.5px; letter-spacing: 0.2px; }
         .week-tab-state::before { width: 4px; height: 4px; }
         .day-board { grid-template-columns: 1fr; gap: 13px; }

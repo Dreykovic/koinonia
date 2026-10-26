@@ -4,9 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\UpdateWeekMenusRequest;
 use App\Models\MenuSetting;
+use App\Models\MenuWeek;
 use App\Models\WeekMenu;
-use App\Models\WeekMenuDay;
-use App\Models\WeekMenuPeriod;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -23,6 +22,7 @@ class WeekMenuController extends Controller
         return view('week-menus.index', [
             'menusPerDays' => $grouped['menusPerDays'],
             'menusPerPeriods' => $grouped['menusPerPeriods'],
+            'activeWeek' => MenuSetting::activeWeek(),
         ]);
     }
 
@@ -32,11 +32,18 @@ class WeekMenuController extends Controller
      */
     public function edit(Request $request)
     {
-        $activeWeek = MenuSetting::activeWeek();
-        $week = (int) $request->query('week', $activeWeek);
-        if (!in_array($week, MenuSetting::WEEKS, true)) {
-            $week = $activeWeek;
+        $weeks = MenuWeek::ordered()->get();
+
+        if ($weeks->isEmpty()) {
+            return redirect()
+                ->route('week-menus.admin.weeks.index')
+                ->with('error', 'Creez d\'abord une semaine pour pouvoir saisir des plats.');
         }
+
+        $activeWeek = MenuSetting::activeWeek();
+        $requested = (int) $request->query('week', 0);
+
+        $week = $weeks->firstWhere('id', $requested) ?? $activeWeek ?? $weeks->first();
 
         $menusPerPeriods = WeekMenu::with(['day', 'period'])
             ->forWeek($week)
@@ -53,7 +60,7 @@ class WeekMenuController extends Controller
         return view('week-menus.edit', [
             'week' => $week,
             'activeWeek' => $activeWeek,
-            'weeks' => MenuSetting::WEEKS,
+            'weeks' => $weeks,
             'menusPerDays' => $menusPerDays,
             'menusPerPeriods' => $menusPerPeriods,
         ]);
@@ -65,12 +72,8 @@ class WeekMenuController extends Controller
      * Une seule soumission pour les 14 plats : l'admin modifie ce qu'il veut
      * puis enregistre, au lieu d'un formulaire par plat.
      */
-    public function updateWeek(UpdateWeekMenusRequest $request, int $week)
+    public function updateWeek(UpdateWeekMenusRequest $request, MenuWeek $week)
     {
-        if (!in_array($week, MenuSetting::WEEKS, true)) {
-            abort(404);
-        }
-
         $payload = $request->validated()['menus'];
 
         // Seuls les plats de la semaine visee sont modifiables.
@@ -96,29 +99,33 @@ class WeekMenuController extends Controller
 
         $message = match (true) {
             $changed === 0 => 'Aucune modification a enregistrer.',
-            $changed === 1 => 'Le menu de la semaine ' . $week . ' a ete mis a jour (1 plat).',
-            default => 'Le menu de la semaine ' . $week . " a ete mis a jour ({$changed} plats).",
+            $changed === 1 => "« {$week->name} » a ete mise a jour (1 plat).",
+            default => "« {$week->name} » a ete mise a jour ({$changed} plats).",
         };
 
         return redirect()
-            ->route('week-menus.admin.edit', ['week' => $week])
+            ->route('week-menus.admin.edit', ['week' => $week->id])
             ->with('success', $message);
     }
 
     /**
-     * Choose which week of the 4-week cycle is displayed.
+     * Choose which week of the cycle is displayed.
      */
     public function setActiveWeek(Request $request)
     {
         $validated = $request->validate([
-            'week' => ['required', 'integer', 'in:' . implode(',', MenuSetting::WEEKS)],
+            'week' => ['required', 'integer', 'exists:menu_weeks,id'],
         ]);
 
-        MenuSetting::setActiveWeek((int) $validated['week']);
+        $week = MenuWeek::findOrFail($validated['week']);
+        MenuSetting::setActiveWeek($week);
 
-        return redirect()
-            ->route('week-menus.admin.edit', ['week' => $validated['week']])
-            ->with('success', "La semaine {$validated['week']} est maintenant affichee.");
+        $target = $request->input('return') === 'weeks'
+            ? route('week-menus.admin.weeks.index')
+            : route('week-menus.admin.edit', ['week' => $week->id]);
+
+        return redirect()->to($target)
+            ->with('success', "« {$week->name} » est maintenant affichee.");
     }
 
     /**
@@ -143,10 +150,3 @@ class WeekMenuController extends Controller
         return compact('menusPerDays', 'menusPerPeriods');
     }
 }
-
-
-
-
-
-
-

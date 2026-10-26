@@ -8,6 +8,10 @@
 @endsection
 
 @section('page-actions')
+<a href="{{ route('week-menus.admin.weeks.index') }}" class="btn btn-sm btn-itcj-outline desktop-add-btn">
+    <i class="ki-duotone ki-abstract-26 fs-2"><i class="path1"></i><i class="path2"></i></i>
+    Gerer le cycle
+</a>
 <a href="{{ route('week-menus.index') }}" class="btn btn-sm btn-itcj-outline desktop-add-btn">
     <i class="ki-duotone ki-eye fs-2"><i class="path1"></i><i class="path2"></i><i class="path3"></i></i>
     Voir le menu affiche
@@ -38,44 +42,58 @@
 @endphp
 
 {{-- ===== Selecteur de semaine ===== --}}
+@php
+    $cycleCount = $weeks->where('in_cycle', true)->count();
+    $cyclePositions = $weeks->where('in_cycle', true)->values()->mapWithKeys(fn ($w, $i) => [$w->id => $i + 1]);
+@endphp
 <div class="week-switcher">
     <div class="week-switcher-head">
         <div class="week-live">
             <span class="week-live-dot" aria-hidden="true"></span>
-            <span>En ligne actuellement : <strong>Semaine {{ $activeWeek }}</strong></span>
+            @if($activeWeek)
+                <span>En ligne actuellement : <strong>{{ $activeWeek->name }}</strong></span>
+            @else
+                <span>Aucune semaine en ligne</span>
+            @endif
         </div>
-        <span class="text-muted fs-8">Cycle de 4 semaines</span>
+        <a href="{{ route('week-menus.admin.weeks.index') }}" class="week-cycle-link">
+            Cycle de {{ $cycleCount }} semaine{{ $cycleCount > 1 ? 's' : '' }} · Gerer
+        </a>
     </div>
 
     <div class="week-tabs" role="tablist" aria-label="Semaines du cycle">
         @foreach($weeks as $w)
-            <a href="{{ route('week-menus.admin.edit', ['week' => $w]) }}"
-               class="week-tab {{ $w === $week ? 'is-current' : '' }}"
+            @php
+                $isCurrent = $w->id === $week->id;
+                $isOnline = $activeWeek && $w->id === $activeWeek->id;
+            @endphp
+            <a href="{{ route('week-menus.admin.edit', ['week' => $w->id]) }}"
+               class="week-tab {{ $isCurrent ? 'is-current' : '' }} {{ $w->in_cycle ? '' : 'is-reserve' }}"
                role="tab"
-               aria-selected="{{ $w === $week ? 'true' : 'false' }}"
-               aria-label="Semaine {{ $w }}{{ $w === $activeWeek ? ' (affichee sur le site)' : '' }}">
-                <span class="week-tab-label">Semaine</span>
-                <span class="week-tab-num">{{ $w }}</span>
-                @if($w === $activeWeek)
+               aria-selected="{{ $isCurrent ? 'true' : 'false' }}"
+               aria-label="{{ $w->name }}{{ $isOnline ? ' (affichee sur le site)' : '' }}{{ $w->in_cycle ? '' : ' (en reserve)' }}">
+                <span class="week-tab-label">{{ $w->in_cycle ? 'N° ' . $cyclePositions[$w->id] : 'Reserve' }}</span>
+                <span class="week-tab-name">{{ $w->name }}</span>
+                @if($isOnline)
                     <span class="week-tab-state">En ligne</span>
                 @endif
             </a>
         @endforeach
     </div>
 
-    @if($week !== $activeWeek)
+    @if(!$activeWeek || $week->id !== $activeWeek->id)
         <div class="week-publish">
             <div class="week-publish-text">
-                Vous modifiez la <strong>semaine {{ $week }}</strong>. Elle n'est pas encore visible par la communaute.
+                Vous modifiez <strong>{{ $week->name }}</strong>. Elle n'est pas encore visible par la communaute.
             </div>
             <form action="{{ route('week-menus.admin.active-week') }}" method="POST"
-                  data-confirm="La semaine {{ $week }} remplacera la semaine {{ $activeWeek }} sur le site et sur le tableau de bord."
-                  data-confirm-title="Afficher la semaine {{ $week }} ?"
+                  data-confirm="« {{ $week->name }} » remplacera « {{ $activeWeek?->name ?? 'la semaine actuelle' }} » sur le site et sur le tableau de bord."
+                  data-confirm-title="Afficher « {{ $week->name }} » ?"
                   data-confirm-type="info"
                   data-confirm-ok="Afficher">
                 @csrf
                 @method('PATCH')
-                <input type="hidden" name="week" value="{{ $week }}">
+                <input type="hidden" name="week" value="{{ $week->id }}">
                 <button type="submit" class="btn btn-sm btn-itcj-gold">
                     <i class="ki-duotone ki-rocket fs-4"><i class="path1"></i><i class="path2"></i></i>
                     Afficher cette semaine
@@ -86,7 +104,7 @@
 </div>
 
 {{-- ===== Plateau des jours : un seul formulaire ===== --}}
-<form action="{{ route('week-menus.admin.update-week', ['week' => $week]) }}" method="POST" id="weekMenuForm" class="week-form" data-no-loading>
+<form action="{{ route('week-menus.admin.update-week', ['week' => $week->id]) }}" method="POST" id="weekMenuForm" class="week-form" data-no-loading>
     @csrf
     @method('PUT')
 
@@ -94,7 +112,7 @@
         @foreach($menusPerDays as $day => $menuCollection)
             @php
                 $palette = $dayPalette[$day] ?? $dayPalette['lundi'];
-                $isToday = $day === $todayCode && $week === $activeWeek;
+                $isToday = $day === $todayCode && $activeWeek && $week->id === $activeWeek->id;
             @endphp
             <div class="day-card {{ $isToday ? 'is-today' : '' }}">
                 <div class="day-card-head">
@@ -165,6 +183,12 @@
 @push('scripts')
 <script>
 document.addEventListener('DOMContentLoaded', function () {
+    // L'onglet de la semaine consultee reste visible meme si la liste defile
+    var currentTab = document.querySelector('.week-tab.is-current');
+    if (currentTab && currentTab.scrollIntoView) {
+        currentTab.scrollIntoView({ inline: 'center', block: 'nearest' });
+    }
+
     var form = document.getElementById('weekMenuForm');
     if (!form) return;
 
@@ -238,7 +262,7 @@ document.addEventListener('DOMContentLoaded', function () {
     resetBtn.addEventListener('click', function () {
         ConfirmModal.show({
             title: 'Annuler les modifications ?',
-            message: 'Les plats retrouveront les valeurs enregistrees pour la semaine {{ $week }}.',
+            message: 'Les plats retrouveront les valeurs enregistrees pour « {{ $week->name }} ».',
             type: 'warning',
             confirmText: 'Annuler les modifications',
             cancelText: 'Continuer l\'edition',

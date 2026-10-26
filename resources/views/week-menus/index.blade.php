@@ -24,6 +24,9 @@
 <div class="card">
     <div class="card-header py-4">
         <h3 class="card-title fw-bold mb-0">Menu de la semaine</h3>
+        @if($activeWeek)
+            <span class="badge fs-8 fw-semibold" style="background: var(--itcj-gold-light); color: #9a7a30;">{{ $activeWeek->name }}</span>
+        @endif
     </div>
     <div class="card-body pt-0">
         <div class="table-responsive">

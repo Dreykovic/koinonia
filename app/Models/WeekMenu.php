@@ -11,7 +11,7 @@ class WeekMenu extends Model
     protected $table = 'week_menus';
 
     protected $fillable = [
-        'week_number',
+        'week_id',
         'day_id',
         'period_id',
         'dish_name',
@@ -21,7 +21,7 @@ class WeekMenu extends Model
     ];
 
     protected $casts = [
-        'week_number' => 'integer',
+        'week_id' => 'integer',
         'available' => 'boolean',
         'price' => 'integer',
     ];
@@ -29,6 +29,11 @@ class WeekMenu extends Model
     /* =======================
        RELATIONS
     ======================= */
+
+    public function week(): BelongsTo
+    {
+        return $this->belongsTo(MenuWeek::class, 'week_id');
+    }
 
     public function day(): BelongsTo
     {
@@ -53,19 +58,23 @@ class WeekMenu extends Model
     }
 
     /**
-     * Menus of a given week of the 4-week cycle
+     * Menus of a given week of the cycle
      */
-    public function scopeForWeek(Builder $query, int $week): Builder
+    public function scopeForWeek(Builder $query, MenuWeek|int $week): Builder
     {
-        return $query->where('week_menus.week_number', $week);
+        $id = $week instanceof MenuWeek ? $week->id : $week;
+
+        return $query->where('week_menus.week_id', $id);
     }
 
     /**
-     * Menus of the week currently displayed
+     * Menus of the week currently displayed (none if no week exists yet)
      */
     public function scopeForActiveWeek(Builder $query): Builder
     {
-        return $query->forWeek(MenuSetting::activeWeek());
+        $id = MenuSetting::activeWeekId();
+
+        return $id ? $query->forWeek($id) : $query->whereRaw('1 = 0');
     }
 
     /**

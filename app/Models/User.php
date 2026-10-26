@@ -27,6 +27,7 @@ class User extends Authenticatable
         'room_number',
         'birthday',
         'is_active',
+        'whats_new_seen_version',
         'title_prefix',
         'matricule',
     ];

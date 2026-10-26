@@ -155,13 +155,16 @@ class CommunityRequestFormController extends Controller
 
     /**
      * Notify all admins about a new community request.
+     *
+     * L'envoi a lieu apres la reponse HTTP : le formulaire n'attend jamais
+     * le serveur SMTP, et une panne mail ne bloque pas la demande.
      */
     private function notifyAdmins(CommunityRequest $communityRequest): void
     {
         $admins = User::active()->byRole(PlatformRole::ADMIN)->get();
 
         foreach ($admins as $admin) {
-            $this->sendMailSafely($admin, new NewCommunityRequestMail($communityRequest), $communityRequest);
+            $this->sendMailAfterResponse($admin, new NewCommunityRequestMail($communityRequest), $communityRequest);
         }
     }
 }

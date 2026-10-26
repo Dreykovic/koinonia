@@ -2,10 +2,12 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\ActivityLog;
 use App\Models\Community;
 use App\Models\User;
 use App\Models\UserProfile;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rules\Password;
 use Illuminate\Validation\Rule;
@@ -143,19 +145,40 @@ class UserController extends Controller
     }
 
     /**
-     * Remove the specified user.
+     * Permanently remove the specified user.
+     *
+     * Bulletins, activities and reflections created by the user are kept
+     * (created_by becomes NULL); the user's own registrations, reservations
+     * and notifications are deleted with the account.
      */
-    public function destroy(User $user)
+    public function destroy(Request $request, User $user)
     {
         // Prevent deleting yourself
         if ($user->id === auth()->id()) {
             return back()->with('error', 'Vous ne pouvez pas supprimer votre propre compte.');
         }
 
-        $user->delete();
+        // Never leave the platform without an administrator
+        if ($user->isAdmin() && User::whereJsonContains('roles', PlatformRole::ADMIN)->count() <= 1) {
+            return back()->with('error', 'Impossible de supprimer le dernier administrateur.');
+        }
+
+        $request->validate([
+            'confirm_name' => ['required', 'string', Rule::in([$user->name])],
+        ], [
+            'confirm_name.in' => 'Le nom saisi ne correspond pas au membre a supprimer.',
+            'confirm_name.required' => 'Saisissez le nom du membre pour confirmer la suppression.',
+        ]);
+
+        $name = $user->name;
+
+        DB::transaction(function () use ($user) {
+            ActivityLog::log('user.deleted', $user, $user->only(['id', 'name', 'email', 'roles']));
+            $user->delete();
+        });
 
         return redirect()->route('users.index')
-            ->with('success', 'Membre supprime avec succes.');
+            ->with('success', "Le membre {$name} a ete supprime definitivement.");
     }
 
     /**

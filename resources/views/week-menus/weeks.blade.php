@@ -148,6 +148,30 @@
 
     .cycle-rename input:focus { outline: none; box-shadow: var(--neu-shadow-inset), 0 0 0 2px var(--accent); }
 
+    /* Glisser-deposer */
+    .cycle-list--sortable .cycle-row[draggable="true"] { cursor: grab; }
+    .cycle-list--sortable .cycle-row[draggable="true"]:active { cursor: grabbing; }
+    .cycle-list--sortable .cycle-row .cycle-actions, .cycle-list--sortable .cycle-row .cycle-rename { cursor: default; }
+
+    .cycle-pos { position: relative; }
+    .cycle-grip {
+        position: absolute;
+        left: 50%;
+        bottom: 5px;
+        width: 14px;
+        height: 4px;
+        transform: translateX(-50%);
+        border-top: 2px dotted var(--text-muted);
+        border-bottom: 2px dotted var(--text-muted);
+        opacity: 0.55;
+    }
+
+    .cycle-row.is-dragging { opacity: 0.45; }
+    .cycle-row.is-drop-before { box-shadow: var(--neu-shadow-sm), 0 -3px 0 0 var(--accent); }
+    .cycle-row.is-drop-after { box-shadow: var(--neu-shadow-sm), 0 3px 0 0 var(--accent); }
+    .cycle-row.is-active.is-drop-before { box-shadow: var(--neu-shadow-sm), 0 0 0 2px var(--success), 0 -3px 0 0 var(--accent); }
+    .cycle-row.is-active.is-drop-after { box-shadow: var(--neu-shadow-sm), 0 0 0 2px var(--success), 0 3px 0 0 var(--accent); }
+
     /* Fleches d'ordre */
     .cycle-order { display: flex; flex-direction: column; gap: 4px; }
 
@@ -427,7 +451,7 @@
 <section class="cycle-section" aria-labelledby="cycleTitle">
     <div class="cycle-section-head">
         <h2 class="cycle-section-title" id="cycleTitle">Ordre du cycle</h2>
-        <span class="cycle-section-hint">Reordonner ne change pas la semaine en ligne, seulement ce qui vient ensuite.</span>
+        <span class="cycle-section-hint">Glissez une semaine ou utilisez les fleches. Reordonner ne change pas la semaine en ligne, seulement ce qui vient ensuite.</span>
     </div>
 
     @if($cycleWeeks->isEmpty())
@@ -439,7 +463,11 @@
             @endif
         </div>
     @else
-        <div class="cycle-list">
+        <form action="{{ route('week-menus.admin.weeks.reorder') }}" method="POST" id="reorderForm" data-no-loading hidden>
+            @csrf
+            @method('PATCH')
+        </form>
+        <div class="cycle-list cycle-list--sortable" id="cycleList" aria-describedby="cycleTitle">
             @foreach($cycleWeeks as $index => $w)
                 @include('week-menus._week-row', [
                     'w' => $w,
@@ -513,6 +541,80 @@ document.addEventListener('DOMContentLoaded', function () {
         rotationSwitch.addEventListener('change', function () {
             rotationSwitch.disabled = true;
             document.getElementById('rotationForm').submit();
+        });
+    }
+
+    // Glisser-deposer des semaines du cycle (les fleches restent disponibles,
+    // notamment au clavier et sur mobile).
+    var list = document.getElementById('cycleList');
+    var reorderForm = document.getElementById('reorderForm');
+    if (list && reorderForm && 'draggable' in document.createElement('div')) {
+        var dragged = null;
+        var initialOrder = [...list.querySelectorAll('.cycle-row')].map(function (r) { return r.dataset.weekId; }).join(',');
+
+        function clearMarks() {
+            list.querySelectorAll('.is-drop-before, .is-drop-after').forEach(function (r) {
+                r.classList.remove('is-drop-before', 'is-drop-after');
+            });
+        }
+
+        list.addEventListener('dragstart', function (e) {
+            var row = e.target.closest('.cycle-row[draggable="true"]');
+            if (!row || e.target.closest('.cycle-actions, .cycle-rename, .cycle-order')) { e.preventDefault(); return; }
+            dragged = row;
+            row.classList.add('is-dragging');
+            e.dataTransfer.effectAllowed = 'move';
+            try { e.dataTransfer.setData('text/plain', row.dataset.weekId); } catch (err) {}
+        });
+
+        list.addEventListener('dragover', function (e) {
+            if (!dragged) return;
+            var row = e.target.closest('.cycle-row[draggable="true"]');
+            if (!row || row === dragged) return;
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+            var rect = row.getBoundingClientRect();
+            var before = (e.clientY - rect.top) < rect.height / 2;
+            clearMarks();
+            row.classList.add(before ? 'is-drop-before' : 'is-drop-after');
+        });
+
+        list.addEventListener('dragleave', function (e) {
+            if (!list.contains(e.relatedTarget)) clearMarks();
+        });
+
+        list.addEventListener('drop', function (e) {
+            if (!dragged) return;
+            e.preventDefault();
+            var row = e.target.closest('.cycle-row[draggable="true"]');
+            if (row && row !== dragged) {
+                var rect = row.getBoundingClientRect();
+                var before = (e.clientY - rect.top) < rect.height / 2;
+                row.parentNode.insertBefore(dragged, before ? row : row.nextSibling);
+            }
+            clearMarks();
+        });
+
+        list.addEventListener('dragend', function () {
+            if (!dragged) return;
+            dragged.classList.remove('is-dragging');
+            clearMarks();
+            dragged = null;
+
+            var ids = [...list.querySelectorAll('.cycle-row')].map(function (r) { return r.dataset.weekId; });
+            if (ids.join(',') === initialOrder) return;
+
+            // Numeros mis a jour tout de suite, puis enregistrement
+            list.querySelectorAll('.cycle-pos-num').forEach(function (n, i) { n.textContent = i + 1; });
+            reorderForm.querySelectorAll('input[name="order[]"]').forEach(function (i) { i.remove(); });
+            ids.forEach(function (id) {
+                var input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = 'order[]';
+                input.value = id;
+                reorderForm.appendChild(input);
+            });
+            reorderForm.submit();
         });
     }
 

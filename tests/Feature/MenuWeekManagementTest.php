@@ -157,6 +157,31 @@ class MenuWeekManagementTest extends TestCase
             ->assertSessionHas('error');
     }
 
+    public function test_admin_can_reorder_the_whole_cycle_by_drag_and_drop(): void
+    {
+        $a = $this->week('A');
+        $b = $this->week('B');
+        $c = $this->week('C');
+        $reserve = $this->week('Reserve', false);
+        MenuSetting::setActiveWeek($b);
+
+        $this->actingAs($this->admin())
+            ->patch(route('week-menus.admin.weeks.reorder'), ['order' => [$c->id, $a->id, $b->id]])
+            ->assertRedirect(route('week-menus.admin.weeks.index'))
+            ->assertSessionHas('success');
+
+        $this->assertSame([$c->id, $a->id, $b->id, $reserve->id], MenuWeek::ordered()->pluck('id')->all());
+        $this->assertSame([1, 2, 3, 4], MenuWeek::ordered()->pluck('position')->all());
+        $this->assertSame($b->id, MenuSetting::activeWeekId());
+
+        // Un ordre incomplet ou perime est refuse sans rien changer
+        $this->actingAs($this->admin())
+            ->patch(route('week-menus.admin.weeks.reorder'), ['order' => [$a->id, $b->id]])
+            ->assertSessionHas('error');
+
+        $this->assertSame([$c->id, $a->id, $b->id, $reserve->id], MenuWeek::ordered()->pluck('id')->all());
+    }
+
     public function test_a_week_can_leave_and_rejoin_the_cycle(): void
     {
         $first = $this->week('Premiere');

@@ -141,6 +141,25 @@ class MenuWeekController extends Controller
                 : "« {$week->name} » est deja en " . ($validated['direction'] === 'up' ? 'tete' : 'fin') . ' du cycle.');
     }
 
+    /**
+     * Nouvel ordre complet du cycle, envoye par le glisser-deposer.
+     */
+    public function reorder(Request $request)
+    {
+        $validated = $request->validate([
+            'order' => ['required', 'array', 'min:1'],
+            'order.*' => ['integer', 'distinct', 'exists:menu_weeks,id'],
+        ]);
+
+        $applied = MenuWeek::applyOrder(array_map('intval', $validated['order']));
+
+        return redirect()
+            ->route('week-menus.admin.weeks.index')
+            ->with($applied ? 'success' : 'error', $applied
+                ? 'Nouvel ordre du cycle enregistre. La semaine en ligne ne change pas.'
+                : 'L\'ordre recu ne correspond plus au cycle actuel : rechargez la page et recommencez.');
+    }
+
     public function destroy(MenuWeek $week)
     {
         if (MenuWeek::count() <= 1) {

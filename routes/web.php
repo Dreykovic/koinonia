@@ -233,6 +233,8 @@ Route::middleware('auth')->group(function () {
                 ->name('admin.weeks.index');
             Route::post('/admin/weeks', [MenuWeekController::class, 'store'])
                 ->name('admin.weeks.store');
+            Route::patch('/admin/weeks/reorder', [MenuWeekController::class, 'reorder'])
+                ->name('admin.weeks.reorder');
             Route::patch('/admin/weeks/{week}', [MenuWeekController::class, 'update'])
                 ->whereNumber('week')
                 ->name('admin.weeks.update');

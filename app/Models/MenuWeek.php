@@ -163,6 +163,34 @@ class MenuWeek extends Model
     }
 
     /**
+     * Applique un ordre complet du cycle (glisser-deposer). Les semaines
+     * en reserve conservent leur place relative apres celles du cycle.
+     *
+     * @param  int[]  $ids  identifiants des semaines du cycle, dans le nouvel ordre
+     */
+    public static function applyOrder(array $ids): bool
+    {
+        $cycleIds = static::inCycle()->ordered()->pluck('id')->all();
+
+        if (count($ids) !== count($cycleIds) || array_diff($ids, $cycleIds) !== []) {
+            return false;
+        }
+
+        DB::transaction(function () use ($ids) {
+            foreach (array_values($ids) as $index => $id) {
+                static::whereKey($id)->update(['position' => $index + 1]);
+            }
+
+            $next = count($ids) + 1;
+            foreach (static::where('in_cycle', false)->ordered()->get() as $week) {
+                $week->update(['position' => $next++]);
+            }
+        });
+
+        return true;
+    }
+
+    /**
      * Renumerote 1..n dans l'ordre courant pour eviter trous et doublons.
      */
     public static function normalizePositions(): void

@@ -3,12 +3,13 @@
     $isActive = $w->id === $activeId;
     $allHidden = (int) $w->visible_count === 0;
 @endphp
-<div class="cycle-row {{ $isActive ? 'is-active' : '' }} {{ $inCycle ? '' : 'is-reserve' }}" id="week-{{ $w->id }}">
-    <div class="cycle-pos" aria-hidden="true">
+<div class="cycle-row {{ $isActive ? 'is-active' : '' }} {{ $inCycle ? '' : 'is-reserve' }}" id="week-{{ $w->id }}" data-week-id="{{ $w->id }}" @if($inCycle) draggable="true" @endif>
+    <div class="cycle-pos" @if($inCycle) title="Glissez pour reordonner" @endif>
         @if($inCycle)
-            {{ $position }}
+            <span class="cycle-pos-num" aria-hidden="true">{{ $position }}</span>
+            <span class="cycle-grip" aria-hidden="true"></span>
         @else
-            <i class="ki-duotone ki-archive fs-3"><i class="path1"></i><i class="path2"></i><i class="path3"></i></i>
+            <i class="ki-duotone ki-archive fs-3" aria-hidden="true"><i class="path1"></i><i class="path2"></i><i class="path3"></i></i>
         @endif
     </div>
 

@@ -19,6 +19,7 @@ use App\Http\Controllers\UserController;
 use App\Http\Controllers\UserProfileVehicleTypeController;
 use App\Http\Controllers\VehicleController;
 use App\Http\Controllers\WeekMenuController;
+use App\Http\Controllers\MenuWeekController;
 use App\Http\Controllers\VehicleReservationController;
 use Illuminate\Support\Facades\Route;
 
@@ -217,14 +218,36 @@ Route::middleware('auth')->group(function () {
             Route::get('/admin/edit', [WeekMenuController::class, 'edit'])
                 ->name('admin.edit');
 
+            Route::put('/admin/week/{week}', [WeekMenuController::class, 'updateWeek'])
+                ->whereNumber('week')
+                ->name('admin.update-week');
+
             Route::patch('/admin/active-week', [WeekMenuController::class, 'setActiveWeek'])
                 ->name('admin.active-week');
 
-            Route::put('/admin/{weekMenu}/update', [WeekMenuController::class, 'update'])
-                ->name('admin.update');
+            Route::patch('/admin/rotation', [MenuWeekController::class, 'rotation'])
+                ->name('admin.rotation');
 
-            Route::patch('/admin/{weekMenu}/toggle', [WeekMenuController::class, 'toggle'])
-                ->name('admin.toggle');
+            // Cycle des menus : gestion des semaines
+            Route::get('/admin/weeks', [MenuWeekController::class, 'index'])
+                ->name('admin.weeks.index');
+            Route::post('/admin/weeks', [MenuWeekController::class, 'store'])
+                ->name('admin.weeks.store');
+            Route::patch('/admin/weeks/reorder', [MenuWeekController::class, 'reorder'])
+                ->name('admin.weeks.reorder');
+            Route::patch('/admin/weeks/{week}', [MenuWeekController::class, 'update'])
+                ->whereNumber('week')
+                ->name('admin.weeks.update');
+            Route::patch('/admin/weeks/{week}/move', [MenuWeekController::class, 'move'])
+                ->whereNumber('week')
+                ->name('admin.weeks.move');
+            Route::post('/admin/weeks/{week}/duplicate', [MenuWeekController::class, 'duplicate'])
+                ->whereNumber('week')
+                ->name('admin.weeks.duplicate');
+            Route::delete('/admin/weeks/{week}', [MenuWeekController::class, 'destroy'])
+                ->whereNumber('week')
+                ->name('admin.weeks.destroy');
+
         });
     });
 

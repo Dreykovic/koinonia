@@ -930,80 +930,65 @@
         <p class="text-muted fs-7 mb-0">Il n'y a pas de repas du dimanche prévu pour le moment.</p>
     </section>
 @endif
-@if ($todaysMenus)
+@if ($todaysMenus->isNotEmpty())
      <div class="col-lg-6">
-        <section class="card" aria-labelledby="reservations-heading">
+        <section class="card" aria-labelledby="today-menu-heading">
             <div class="card-header py-2 d-flex justify-content-between align-items-center">
-                <h3 id="reservations-heading" class="card-title fw-bold mb-0">
-                    <i class="ki-duotone ki-car-2 text-itcj-blue me-2" aria-hidden="true"><i class="path1"></i><i class="path2"></i><i class="path3"></i><i class="path4"></i><i class="path5"></i></i>
+                <h3 id="today-menu-heading" class="card-title fw-bold mb-0">
+                    <i class="ki-duotone ki-coffee text-itcj-blue me-2" aria-hidden="true"><i class="path1"></i><i class="path2"></i></i>
                     Menu du jour
                 </h3>
                 <a href="{{ route('week-menus.index') }}" class="btn btn-sm btn-light"
-                   aria-label="Voir tous le menu de la semaine">
-                    Voir pour la semaine
+                   aria-label="Voir le menu de toute la semaine">
+                    Voir la semaine
                 </a>
             </div>
-            <div class="card-body py-3 " >
-                {{-- TODO: change icons --}}
-                
-                    
+            <div class="card-body py-3">
+                @php $nowPeriod = (int) now()->format('H') < 15 ? 'midi' : 'soir'; @endphp
                 @foreach($todaysMenus as $menu)
-                    <article class="d-flex  align-items-center p-1 mb-2 rounded" style="background: #f8f9fc;">
-                        <span class="badge {{ $menu->period->code === 'midi' ? 'badge-itcj' : 'badge-itcj-gold' }} fs-9"
-                              role="status">
+                    @php $isNow = $menu->period->code === $nowPeriod; @endphp
+                    <article class="d-flex align-items-center gap-3 p-2 mb-2 rounded"
+                             style="background: {{ $isNow ? 'var(--warning-light)' : 'var(--bg-base)' }};">
+                        <span class="badge {{ $menu->period->code === 'midi' ? 'badge-itcj-gold' : 'badge-itcj' }} fs-9" style="min-width: 44px;">
                             {{ $menu->period->code === 'midi' ? 'Midi' : 'Soir' }}
                         </span>
-                        <div class="symbol symbol-40px me-3" aria-hidden="true">
-                            <span class="symbol-label bg-itcj-blue-light">
-                                <i class="ki-duotone ki-coffee fs-4 text-itcj-blue"><i class="path1"></i><i class="path2"></i><i class="path3"></i><i class="path4"></i><i class="path5"></i></i>
-                            </span>
-                        </div>
-                        <div class="flex-grow-1 ">
-                            @if ($menu->available)
-                                <div class="fw-bold text-dark fs-7">{{ $menu->dish_name }}</div>
-                                <p class="text-muted fs-8" >
-                                    {{ $menu->description }}
-                                </p>
-                            @else
-                                <div class="fw-bold text-dark fs-7">Neant</div>
-                            
+                        <div class="flex-grow-1">
+                            <div class="fw-bold text-dark fs-7">{{ $menu->dish_name }}</div>
+                            @if($menu->description)
+                                <p class="text-muted fs-8 mb-0">{{ $menu->description }}</p>
                             @endif
-                         
                         </div>
-                     
+                        @if($isNow)
+                            <span class="text-muted fs-9 fw-semibold text-uppercase">En ce moment</span>
+                        @endif
                     </article>
-                    
-             
                 @endforeach
-                
             </div>
 
-             @if(auth()->user()->isAdmin())
-                 {{-- TODO: center the bouton --}}
-                    <div class="card-footer py-3 d-flex align-items-center justify-content-center">
-                        <a href="{{ route('week-menus.admin.edit') }}" class="btn btn-itcj">
-                            <i class="ki-duotone ki-pencil me-2"><i class="path1"></i><i class="path2"></i></i>
-                            Modifier le menu
-                        </a>
-                
-                    </div>
-                @endif
+            @if(auth()->user()->isAdmin())
+                <div class="card-footer py-3 d-flex align-items-center justify-content-center">
+                    <a href="{{ route('week-menus.admin.edit') }}" class="btn btn-itcj">
+                        <i class="ki-duotone ki-pencil me-2"><i class="path1"></i><i class="path2"></i></i>
+                        Modifier le menu
+                    </a>
+                </div>
+            @endif
         </section>
     </div>
 @else
-    <div class="col-lg-8">
-        <section class="no-bulletin" aria-labelledby="no-bulletin-heading">
+    <div class="col-lg-6">
+        <section class="no-bulletin" aria-labelledby="no-menu-heading">
             <div class="no-bulletin-icon" aria-hidden="true">
-                <i class="ki-duotone ki-document"><i class="path1"></i><i class="path2"></i></i>
+                <i class="ki-duotone ki-coffee"><i class="path1"></i><i class="path2"></i></i>
             </div>
-            <h4 id="no-bulletin-heading" class="text-muted mb-2">Menu Du jour</h4>
-            <p class="text-muted mb-4">Aucun menu n'a encore été publié aujourd'hui.</p>
+            <h4 id="no-menu-heading" class="text-muted mb-2">Menu du jour</h4>
+            <p class="text-muted mb-4">Aucun plat n'est prévu aujourd'hui.</p>
+            <a href="{{ route('week-menus.index') }}" class="btn btn-light me-2">Voir la semaine</a>
             @if(auth()->user()->isAdmin())
-            {{-- TODO: change the route --}}
-                <a href="{{ route('bulletin.create') }}" class="btn btn-itcj"
-                   aria-label="Publier le menu du jour">
-                    <i class="ki-duotone ki-plus me-2" aria-hidden="true"><i class="path1"></i><i class="path2"></i><i class="path3"></i></i>
-                    Publier le menu du jour
+                <a href="{{ route('week-menus.admin.edit') }}" class="btn btn-itcj"
+                   aria-label="Modifier le menu de la semaine">
+                    <i class="ki-duotone ki-pencil me-2" aria-hidden="true"><i class="path1"></i><i class="path2"></i></i>
+                    Modifier le menu
                 </a>
             @endif
         </section>

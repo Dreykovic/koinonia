@@ -216,7 +216,7 @@
                            href="{{ route('week-menus.admin.edit') }}"
                            role="menuitem"
                            aria-current="{{ request()->routeIs('week-menus.admin*') ? 'page' : 'false' }}"
-                           data-tooltip="Consulter le menu">
+                           data-tooltip="Gérer les plats et le cycle des menus">
                             <span class="menu-icon" aria-hidden="true">
                                 <i class="ki-duotone ki-coffee fs-2"><i class="path1"></i><i class="path2"></i></i>
                             </span>

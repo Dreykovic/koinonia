@@ -19,8 +19,27 @@
 
 @section('content')
 <div class="card">
-    <div class="card-header py-4">
-        <h3 class="card-title fw-bold mb-0">Menu de la semaine</h3>
+    <div class="card-header py-4 flex-wrap gap-3">
+        <h3 class="card-title fw-bold mb-0">Menu de la semaine {{ $week }}</h3>
+        <div class="card-toolbar d-flex flex-wrap align-items-center gap-3">
+            <ul class="nav nav-pills">
+                @foreach($weeks as $w)
+                    <li class="nav-item">
+                        <a class="nav-link {{ $w === $week ? 'active' : '' }}" href="{{ route('week-menus.admin.edit', ['week' => $w]) }}">
+                            Semaine {{ $w }}@if($w === $activeWeek) <span class="badge badge-light-success ms-1">affichee</span>@endif
+                        </a>
+                    </li>
+                @endforeach
+            </ul>
+            @if($week !== $activeWeek)
+                <form action="{{ route('week-menus.admin.active-week') }}" method="POST" onsubmit="return confirm('Afficher la semaine {{ $week }} sur le site ?')">
+                    @csrf
+                    @method('PATCH')
+                    <input type="hidden" name="week" value="{{ $week }}">
+                    <button type="submit" class="btn btn-sm btn-itcj">Afficher cette semaine</button>
+                </form>
+            @endif
+        </div>
     </div>
     <div class="card-body pt-0">
         <div class="table-responsive">

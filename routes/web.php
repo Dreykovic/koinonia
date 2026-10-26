@@ -217,6 +217,9 @@ Route::middleware('auth')->group(function () {
             Route::get('/admin/edit', [WeekMenuController::class, 'edit'])
                 ->name('admin.edit');
 
+            Route::patch('/admin/active-week', [WeekMenuController::class, 'setActiveWeek'])
+                ->name('admin.active-week');
+
             Route::put('/admin/{weekMenu}/update', [WeekMenuController::class, 'update'])
                 ->name('admin.update');
 

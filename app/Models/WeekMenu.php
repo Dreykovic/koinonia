@@ -11,6 +11,7 @@ class WeekMenu extends Model
     protected $table = 'week_menus';
 
     protected $fillable = [
+        'week_number',
         'day_id',
         'period_id',
         'dish_name',
@@ -20,6 +21,7 @@ class WeekMenu extends Model
     ];
 
     protected $casts = [
+        'week_number' => 'integer',
         'available' => 'boolean',
         'price' => 'integer',
     ];
@@ -48,6 +50,22 @@ class WeekMenu extends Model
     public function scopeAvailable(Builder $query): Builder
     {
         return $query->where('available', true);
+    }
+
+    /**
+     * Menus of a given week of the 4-week cycle
+     */
+    public function scopeForWeek(Builder $query, int $week): Builder
+    {
+        return $query->where('week_menus.week_number', $week);
+    }
+
+    /**
+     * Menus of the week currently displayed
+     */
+    public function scopeForActiveWeek(Builder $query): Builder
+    {
+        return $query->forWeek(MenuSetting::activeWeek());
     }
 
     /**

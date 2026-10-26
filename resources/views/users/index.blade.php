@@ -398,16 +398,29 @@
 <script>
 document.querySelectorAll('.js-delete-user').forEach(function (form) {
     form.addEventListener('submit', function (e) {
+        e.preventDefault();
+
         var name = form.dataset.name;
-        var typed = window.prompt(
-            'Suppression DEFINITIVE de ' + name + '.\n' +
-            'Ses inscriptions, reservations et notifications seront effacees.\n' +
-            'Les bulletins et activites qu\'il a crees sont conserves.\n\n' +
-            'Tapez son nom exact pour confirmer :'
-        );
-        if (typed === null) { e.preventDefault(); return; }
-        form.querySelector('input[name="confirm_name"]').value = typed;
-        form.querySelector('[type="submit"]').classList.add('btn-loading');
+
+        ConfirmModal.show({
+            title: 'Supprimer définitivement ?',
+            message: name + ' sera supprimé définitivement. Ses inscriptions aux repas, '
+                + 'ses réservations et ses notifications seront effacées. Les bulletins et '
+                + 'activités qu\'il a créés sont conservés.',
+            type: 'danger',
+            confirmText: 'Supprimer',
+            input: {
+                label: 'Saisissez « ' + name + ' » pour confirmer',
+                placeholder: name,
+                requiredValue: name,
+                errorText: 'Le nom saisi ne correspond pas au membre à supprimer.'
+            },
+            onConfirm: function (typed) {
+                form.querySelector('input[name="confirm_name"]').value = typed;
+                form.querySelector('[type="submit"]').classList.add('btn-loading');
+                form.submit();
+            }
+        });
     });
 });
 </script>

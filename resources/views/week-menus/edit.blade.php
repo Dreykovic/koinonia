@@ -32,7 +32,7 @@
                 @endforeach
             </ul>
             @if($week !== $activeWeek)
-                <form action="{{ route('week-menus.admin.active-week') }}" method="POST" onsubmit="return confirm('Afficher la semaine {{ $week }} sur le site ?')">
+                <form action="{{ route('week-menus.admin.active-week') }}" method="POST" data-confirm="La semaine {{ $week }} sera affichée sur le site et sur le tableau de bord." data-confirm-title="Afficher la semaine {{ $week }} ?" data-confirm-type="info" data-confirm-ok="Afficher">
                     @csrf
                     @method('PATCH')
                     <input type="hidden" name="week" value="{{ $week }}">
@@ -113,7 +113,7 @@
 
                                         </div>
                                     </form>
-                                    <form class="d-flex  justify-content-center align-items-center" action="{{ route('week-menus.admin.toggle', $menu) }}" method="POST" onsubmit="return confirm('Modifier la visibilite de ce menu ?')">
+                                    <form class="d-flex  justify-content-center align-items-center" action="{{ route('week-menus.admin.toggle', $menu) }}" method="POST" data-confirm="Ce plat sera affiché ou masqué sur la page Menu." data-confirm-title="Modifier la visibilité ?" data-confirm-type="warning" data-confirm-ok="Modifier">
                                         @csrf
 
                                         @method('PATCH')
@@ -192,7 +192,7 @@
 
                                             </div>
                                         </form>
-                                        <form class="d-flex  justify-content-center align-items-center" action="{{ route('week-menus.admin.toggle', $menu) }}" method="POST" onsubmit="return confirm('Modifier la visibilite de ce menu ?')">
+                                        <form class="d-flex  justify-content-center align-items-center" action="{{ route('week-menus.admin.toggle', $menu) }}" method="POST" data-confirm="Ce plat sera affiché ou masqué sur la page Menu." data-confirm-title="Modifier la visibilité ?" data-confirm-type="warning" data-confirm-ok="Modifier">
                                             @csrf
 
                                             @method('PATCH')

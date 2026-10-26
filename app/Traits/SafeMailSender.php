@@ -15,18 +15,25 @@ trait SafeMailSender
      * @param mixed $to Destinataire (email string ou objet avec email)
      * @param \Illuminate\Mail\Mailable $mailable Instance du Mailable
      * @param Model|null $relatedModel Modèle lié pour traçabilité
+     * @param bool $immediate Envoyer tout de suite (sendNow) au lieu de passer par la file
      * @return bool True si l'envoi a réussi, False sinon
      */
-    protected function sendMailSafely($to, $mailable, ?Model $relatedModel = null): bool
+    protected function sendMailSafely($to, $mailable, ?Model $relatedModel = null, bool $immediate = false): bool
     {
         try {
             $recipientEmail = is_string($to) ? $to : $to->email;
             $recipientName = is_object($to) ? ($to->name ?? null) : null;
 
-            Mail::to($to)->send($mailable);
+            // Mailable::send() court-circuite le test ShouldQueue fait par le
+            // Mailer : l'email part tout de suite, sans worker de file d'attente.
+            if ($immediate) {
+                $mailable->to($to)->send(Mail::getFacadeRoot());
+            } else {
+                Mail::to($to)->send($mailable);
+            }
 
             return true;
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             $recipientEmail = is_string($to) ? $to : ($to->email ?? 'unknown');
             $recipientName = is_object($to) ? ($to->name ?? null) : null;
 
@@ -72,6 +79,24 @@ trait SafeMailSender
      * @param Model|null $relatedModel Modèle lié pour traçabilité
      * @return array ['sent' => int, 'failed' => int]
      */
+    /**
+     * Envoyer un email APRES que la réponse HTTP soit renvoyée au visiteur.
+     *
+     * Le formulaire n'attend jamais le serveur SMTP : la page de confirmation
+     * s'affiche immédiatement, puis l'email part. Les échecs restent tracés
+     * dans la table failed_emails, comme pour un envoi classique.
+     *
+     * @param mixed $to Destinataire (email string ou objet avec email)
+     * @param \Illuminate\Mail\Mailable $mailable Instance du Mailable
+     * @param Model|null $relatedModel Modèle lié pour traçabilité
+     */
+    protected function sendMailAfterResponse($to, $mailable, ?Model $relatedModel = null): void
+    {
+        app()->terminating(function () use ($to, $mailable, $relatedModel) {
+            $this->sendMailSafely($to, $mailable, $relatedModel, true);
+        });
+    }
+
     protected function sendMailSafelyToMany(iterable $recipients, callable $mailableFactory, ?Model $relatedModel = null): array
     {
         $sent = 0;

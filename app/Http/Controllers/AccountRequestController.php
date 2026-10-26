@@ -47,7 +47,7 @@ class AccountRequestController extends Controller
         // Send email to all admins (non-bloquant)
         $admins = User::active()->byRole(PlatformRole::ADMIN)->get();
         foreach ($admins as $admin) {
-            $this->sendMailSafely($admin, new NewAccountRequestMail($accountRequest), $accountRequest);
+            $this->sendMailAfterResponse($admin, new NewAccountRequestMail($accountRequest), $accountRequest);
         }
 
         return redirect()->route('account-request.success');

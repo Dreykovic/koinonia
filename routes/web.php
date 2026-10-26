@@ -225,6 +225,9 @@ Route::middleware('auth')->group(function () {
             Route::patch('/admin/active-week', [WeekMenuController::class, 'setActiveWeek'])
                 ->name('admin.active-week');
 
+            Route::patch('/admin/rotation', [MenuWeekController::class, 'rotation'])
+                ->name('admin.rotation');
+
             // Cycle des menus : gestion des semaines
             Route::get('/admin/weeks', [MenuWeekController::class, 'index'])
                 ->name('admin.weeks.index');

@@ -176,6 +176,68 @@
     }
     .cycle-actions .btn-ghost:hover { color: var(--primary); }
 
+    /* Rotation automatique */
+    .rotation-range {
+        display: inline-block;
+        margin-left: 6px;
+        padding: 2px 8px;
+        border-radius: 999px;
+        background: var(--bg-base);
+        box-shadow: var(--neu-shadow-inset);
+        font-size: 11.5px;
+        font-weight: 700;
+        color: var(--text-secondary);
+    }
+
+    .rotation-row {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 10px 18px;
+        margin-top: 16px;
+        padding: 13px 16px;
+        border-radius: 14px;
+        background: var(--bg-base);
+        box-shadow: var(--neu-shadow-inset);
+    }
+
+    .rotation-card.is-auto .rotation-row { background: #E8F0E8; box-shadow: none; }
+
+    .rotation-toggle { margin: 0; }
+    .rotation-switch { gap: 10px; }
+    .rotation-switch .slot-switch { width: 44px; height: 24px; }
+    .rotation-switch .slot-switch::after { width: 18px; height: 18px; }
+    .rotation-switch input:checked + .slot-switch::after { transform: translateX(20px); }
+
+    .rotation-switch-text {
+        font-size: 13.5px;
+        font-weight: 700;
+        color: var(--text-primary);
+        white-space: nowrap;
+    }
+
+    .rotation-hint {
+        flex: 1;
+        min-width: 220px;
+        font-size: 12.5px;
+        color: var(--text-secondary);
+        line-height: 1.45;
+    }
+
+    .rotation-hint strong { color: var(--text-primary); }
+
+    .cycle-when {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        margin-top: 4px;
+        font-size: 11.5px;
+        font-weight: 700;
+        color: var(--accent-dark);
+    }
+
+    .cycle-row.is-active .cycle-when { color: var(--success); }
+
     /* Panneau de creation */
     .create-panel {
         display: none;
@@ -268,13 +330,21 @@
     $trashIcon = '<i class="ki-duotone ki-trash fs-4"><i class="path1"></i><i class="path2"></i><i class="path3"></i><i class="path4"></i><i class="path5"></i></i>';
 @endphp
 
-{{-- ===== Etat du cycle ===== --}}
-<div class="week-switcher">
+{{-- ===== Etat du cycle et rotation ===== --}}
+@php
+    $current = $activeWeek ? ($schedule[$activeWeek->id] ?? null) : null;
+@endphp
+<div class="week-switcher rotation-card {{ $autoRotation ? 'is-auto' : '' }}">
     <div class="week-switcher-head" style="margin-bottom: 0;">
         <div class="week-live">
             <span class="week-live-dot" aria-hidden="true"></span>
             @if($activeWeek)
-                <span>En ligne actuellement : <strong>{{ $activeWeek->name }}</strong></span>
+                <span>
+                    En ligne actuellement : <strong>{{ $activeWeek->name }}</strong>
+                    @if($current)
+                        <span class="rotation-range">{{ \App\Services\MenuRotation::formatRange($current['start'], $current['end']) }}</span>
+                    @endif
+                </span>
             @else
                 <span>Aucune semaine en ligne</span>
             @endif
@@ -285,6 +355,34 @@
                 · {{ $reserveWeeks->count() }} en reserve
             @endif
         </span>
+    </div>
+
+    <div class="rotation-row">
+        <form action="{{ route('week-menus.admin.rotation') }}" method="POST" class="rotation-toggle" data-no-loading id="rotationForm">
+            @csrf
+            @method('PATCH')
+            <input type="hidden" name="enabled" value="{{ $autoRotation ? 0 : 1 }}">
+            <label class="slot-visibility rotation-switch">
+                <input type="checkbox" id="rotationSwitch" {{ $autoRotation ? 'checked' : '' }} aria-describedby="rotationHint">
+                <span class="slot-switch" aria-hidden="true"></span>
+                <span class="rotation-switch-text">Rotation automatique</span>
+            </label>
+        </form>
+        <div class="rotation-hint" id="rotationHint">
+            @if($autoRotation)
+                @if($nextSwitch)
+                    Chaque lundi, la semaine suivante du cycle prend le relais.
+                    Prochaine bascule le {{ \App\Services\MenuRotation::formatDate($nextSwitch['at']) }} : <strong>« {{ $nextSwitch['week']->name }} »</strong> prend le relais.
+                @elseif($cycleWeeks->count() === 1)
+                    Une seule semaine dans le cycle : elle reste en ligne. Ajoutez-en une autre pour que la rotation tourne.
+                @else
+                    Ajoutez une semaine au cycle pour que la rotation tourne.
+                @endif
+            @else
+                Desactivee : la semaine en ligne ne change pas tant que vous n'en choisissez pas une autre.
+                Activez-la pour que le cycle avance seul chaque lundi.
+            @endif
+        </div>
     </div>
 </div>
 
@@ -408,6 +506,15 @@ document.addEventListener('DOMContentLoaded', function () {
     });
     if (fab) fab.addEventListener('click', openCreate);
     if (cancel) cancel.addEventListener('click', closeCreate);
+
+    // Interrupteur Auto / Manuel : la case soumet le formulaire
+    var rotationSwitch = document.getElementById('rotationSwitch');
+    if (rotationSwitch) {
+        rotationSwitch.addEventListener('change', function () {
+            rotationSwitch.disabled = true;
+            document.getElementById('rotationForm').submit();
+        });
+    }
 
     // Renommage en place : un formulaire par ligne, affiche a la demande
     document.querySelectorAll('[data-rename]').forEach(function (btn) {

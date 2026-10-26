@@ -28,6 +28,17 @@
                 · en reserve
             @endif
         </div>
+        @if($inCycle && isset($schedule[$w->id]))
+            @php $when = $schedule[$w->id]; @endphp
+            <div class="cycle-when">
+                <i class="ki-duotone ki-calendar fs-6"><i class="path1"></i><i class="path2"></i></i>
+                @if($when['is_current'])
+                    Cette semaine, {{ \App\Services\MenuRotation::formatRange($when['start'], $when['end']) }}
+                @else
+                    A partir du {{ \App\Services\MenuRotation::formatDate($when['start']) }}
+                @endif
+            </div>
+        @endif
 
         <form action="{{ route('week-menus.admin.weeks.update', $w) }}" method="POST" class="cycle-rename" data-no-loading>
             @csrf
@@ -77,9 +88,9 @@
 
         @if(!$isActive)
             <form action="{{ route('week-menus.admin.active-week') }}" method="POST"
-                  data-confirm="« {{ $w->name }} » remplacera « {{ $activeWeek?->name ?? 'la semaine actuelle' }} » sur le site et sur le tableau de bord."
-                  data-confirm-title="Afficher « {{ $w->name }} » ?"
-                  data-confirm-type="info"
+                  data-confirm="« {{ $w->name }} » remplacera « {{ $activeWeek?->name ?? 'la semaine actuelle' }} » sur le site et sur le tableau de bord.{{ $autoRotation && $inCycle ? ' La rotation continuera a partir d\'elle lundi prochain.' : '' }}{{ $autoRotation && !$inCycle ? ' La rotation automatique sera desactivee.' : '' }}"
+                  data-confirm-title="Afficher « {{ $w->name }} » {{ $autoRotation && $inCycle ? 'des maintenant' : '' }}?"
+                  data-confirm-type="{{ $autoRotation && !$inCycle ? 'warning' : 'info' }}"
                   data-confirm-ok="Afficher">
                 @csrf
                 @method('PATCH')

@@ -57,7 +57,11 @@
             @endif
         </div>
         <a href="{{ route('week-menus.admin.weeks.index') }}" class="week-cycle-link">
-            Cycle de {{ $cycleCount }} semaine{{ $cycleCount > 1 ? 's' : '' }} · Gerer
+            @if($autoRotation)
+                Rotation automatique{{ $nextSwitch ? ' · « ' . $nextSwitch['week']->name . ' » le ' . \App\Services\MenuRotation::formatDate($nextSwitch['at']) : '' }} · Gerer
+            @else
+                Cycle de {{ $cycleCount }} semaine{{ $cycleCount > 1 ? 's' : '' }} · Rotation manuelle · Gerer
+            @endif
         </a>
     </div>
 
@@ -72,7 +76,15 @@
                role="tab"
                aria-selected="{{ $isCurrent ? 'true' : 'false' }}"
                aria-label="{{ $w->name }}{{ $isOnline ? ' (affichee sur le site)' : '' }}{{ $w->in_cycle ? '' : ' (en reserve)' }}">
-                <span class="week-tab-label">{{ $w->in_cycle ? 'N° ' . $cyclePositions[$w->id] : 'Reserve' }}</span>
+                <span class="week-tab-label">
+                    @if(!$w->in_cycle)
+                        Reserve
+                    @elseif(isset($schedule[$w->id]) && !$schedule[$w->id]['is_current'])
+                        N° {{ $cyclePositions[$w->id] }} · {{ \App\Services\MenuRotation::formatDate($schedule[$w->id]['start']) }}
+                    @else
+                        N° {{ $cyclePositions[$w->id] }}
+                    @endif
+                </span>
                 <span class="week-tab-name">{{ $w->name }}</span>
                 @if($isOnline)
                     <span class="week-tab-state">En ligne</span>
@@ -83,20 +95,31 @@
 
     @if(!$activeWeek || $week->id !== $activeWeek->id)
         <div class="week-publish">
+            @php
+                $planned = $schedule[$week->id] ?? null;
+                $autoReserve = $autoRotation && !$week->in_cycle;
+            @endphp
             <div class="week-publish-text">
-                Vous modifiez <strong>{{ $week->name }}</strong>. Elle n'est pas encore visible par la communaute.
+                Vous modifiez <strong>{{ $week->name }}</strong>.
+                @if($planned)
+                    A partir du {{ \App\Services\MenuRotation::formatDate($planned['start']) }}, elle passera automatiquement en ligne.
+                @elseif($autoReserve)
+                    Elle est en reserve : l'afficher desactivera la rotation automatique.
+                @else
+                    Elle n'est pas encore visible par la communaute.
+                @endif
             </div>
             <form action="{{ route('week-menus.admin.active-week') }}" method="POST"
-                  data-confirm="« {{ $week->name }} » remplacera « {{ $activeWeek?->name ?? 'la semaine actuelle' }} » sur le site et sur le tableau de bord."
-                  data-confirm-title="Afficher « {{ $week->name }} » ?"
-                  data-confirm-type="info"
+                  data-confirm="« {{ $week->name }} » remplacera « {{ $activeWeek?->name ?? 'la semaine actuelle' }} » sur le site et sur le tableau de bord.{{ $planned ? ' La rotation continuera a partir d\'elle lundi prochain.' : '' }}{{ $autoReserve ? ' La rotation automatique sera desactivee.' : '' }}"
+                  data-confirm-title="Afficher « {{ $week->name }} » {{ $planned ? 'des maintenant ' : '' }}?"
+                  data-confirm-type="{{ $autoReserve ? 'warning' : 'info' }}"
                   data-confirm-ok="Afficher">
                 @csrf
                 @method('PATCH')
                 <input type="hidden" name="week" value="{{ $week->id }}">
                 <button type="submit" class="btn btn-sm btn-itcj-gold">
                     <i class="ki-duotone ki-rocket fs-4"><i class="path1"></i><i class="path2"></i></i>
-                    Afficher cette semaine
+                    {{ $planned ? 'Afficher des maintenant' : 'Afficher cette semaine' }}
                 </button>
             </form>
         </div>

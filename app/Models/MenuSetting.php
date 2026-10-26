@@ -2,21 +2,45 @@
 
 namespace App\Models;
 
+use App\Services\MenuRotation;
 use Illuminate\Database\Eloquent\Model;
 
 class MenuSetting extends Model
 {
-    protected $fillable = ['active_week_id'];
+    protected $fillable = ['active_week_id', 'auto_rotation', 'anchor_week_id', 'anchor_week_start'];
 
-    protected $casts = ['active_week_id' => 'integer'];
+    protected $casts = [
+        'active_week_id' => 'integer',
+        'auto_rotation' => 'boolean',
+        'anchor_week_id' => 'integer',
+        'anchor_week_start' => 'date',
+    ];
 
     /**
-     * Semaine actuellement affichee. Si aucune n'est designee (ou si elle a
-     * ete supprimee), la premiere semaine du cycle prend le relais.
+     * Semaine actuellement affichee.
+     *
+     * En rotation automatique, elle est deduite du point d'ancrage et de la
+     * date du jour. En manuel, c'est celle choisie par l'admin. Si aucune
+     * n'est designee (ou si elle a ete supprimee), la premiere semaine du
+     * cycle prend le relais.
      */
     public static function activeWeek(): ?MenuWeek
     {
         $setting = self::query()->first();
+
+        if ($setting?->auto_rotation) {
+            $week = MenuRotation::currentWeek();
+
+            if ($week) {
+                if ($setting->active_week_id !== $week->id) {
+                    // Garde la valeur en base alignee : utile si on repasse en manuel.
+                    $setting->forceFill(['active_week_id' => $week->id])->save();
+                }
+
+                return $week;
+            }
+        }
+
         $week = $setting?->active_week_id ? MenuWeek::find($setting->active_week_id) : null;
 
         if ($week) {

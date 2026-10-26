@@ -6,6 +6,7 @@ use App\Http\Requests\UpdateWeekMenusRequest;
 use App\Models\MenuSetting;
 use App\Models\MenuWeek;
 use App\Models\WeekMenu;
+use App\Services\MenuRotation;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -57,12 +58,17 @@ class WeekMenuController extends Controller
             ->get()
             ->groupBy(fn ($menu) => $menu->day->code);
 
+        $auto = MenuRotation::isEnabled();
+
         return view('week-menus.edit', [
             'week' => $week,
             'activeWeek' => $activeWeek,
             'weeks' => $weeks,
             'menusPerDays' => $menusPerDays,
             'menusPerPeriods' => $menusPerPeriods,
+            'autoRotation' => $auto,
+            'schedule' => $auto ? MenuRotation::schedule()->keyBy(fn ($s) => $s['week']->id) : collect(),
+            'nextSwitch' => $auto ? MenuRotation::next() : null,
         ]);
     }
 
@@ -118,14 +124,29 @@ class WeekMenuController extends Controller
         ]);
 
         $week = MenuWeek::findOrFail($validated['week']);
-        MenuSetting::setActiveWeek($week);
+
+        if (MenuRotation::isEnabled() && $week->in_cycle) {
+            // En auto : la semaine passe en ligne tout de suite et la rotation
+            // continue a partir d'elle lundi prochain.
+            MenuRotation::anchorTo($week);
+            $next = MenuRotation::next();
+            $message = "« {$week->name} » est maintenant affichee. La rotation continue a partir d'elle"
+                . ($next ? ', puis le ' . MenuRotation::formatDate($next['at']) . " « {$next['week']->name} » prend le relais." : '.');
+        } elseif (MenuRotation::isEnabled()) {
+            // Une semaine en reserve ne peut pas tourner : on repasse en manuel.
+            MenuRotation::disable();
+            MenuSetting::setActiveWeek($week);
+            $message = "« {$week->name} » est maintenant affichee. La rotation automatique est desactivee : elle restera en ligne jusqu'a ce que vous la reactiviez.";
+        } else {
+            MenuSetting::setActiveWeek($week);
+            $message = "« {$week->name} » est maintenant affichee.";
+        }
 
         $target = $request->input('return') === 'weeks'
             ? route('week-menus.admin.weeks.index')
             : route('week-menus.admin.edit', ['week' => $week->id]);
 
-        return redirect()->to($target)
-            ->with('success', "« {$week->name} » est maintenant affichee.");
+        return redirect()->to($target)->with('success', $message);
     }
 
     /**

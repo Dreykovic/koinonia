@@ -6,6 +6,7 @@ use App\Http\Requests\StoreMenuWeekRequest;
 use App\Http\Requests\UpdateMenuWeekRequest;
 use App\Models\MenuSetting;
 use App\Models\MenuWeek;
+use App\Services\MenuRotation;
 use Illuminate\Http\Request;
 
 /**
@@ -24,12 +25,45 @@ class MenuWeekController extends Controller
             ])
             ->get();
 
+        $auto = MenuRotation::isEnabled();
+
         return view('week-menus.weeks', [
             'cycleWeeks' => $weeks->where('in_cycle', true)->values(),
             'reserveWeeks' => $weeks->where('in_cycle', false)->values(),
             'allWeeks' => $weeks,
             'activeWeek' => MenuSetting::activeWeek(),
+            'autoRotation' => $auto,
+            'schedule' => $auto ? MenuRotation::schedule()->keyBy(fn ($s) => $s['week']->id) : collect(),
+            'nextSwitch' => $auto ? MenuRotation::next() : null,
         ]);
+    }
+
+    /**
+     * Interrupteur Auto / Manuel de la rotation du cycle.
+     */
+    public function rotation(Request $request)
+    {
+        $validated = $request->validate([
+            'enabled' => ['required', 'boolean'],
+        ]);
+
+        if ($validated['enabled']) {
+            $anchor = MenuRotation::enable();
+            $next = MenuRotation::next();
+
+            $message = $anchor
+                ? "Rotation automatique activee : « {$anchor->name} » reste en ligne cette semaine"
+                    . ($next ? ', puis le ' . MenuRotation::formatDate($next['at']) . " « {$next['week']->name} » prend le relais." : '.')
+                : 'Rotation automatique activee. Ajoutez une semaine au cycle pour qu\'elle tourne.';
+        } else {
+            MenuRotation::disable();
+            $current = MenuSetting::activeWeek();
+
+            $message = 'Rotation automatique desactivee.'
+                . ($current ? " « {$current->name} » reste affichee jusqu'a ce que vous en choisissiez une autre." : '');
+        }
+
+        return redirect()->route('week-menus.admin.weeks.index')->with('success', $message);
     }
 
     public function store(StoreMenuWeekRequest $request)

@@ -2000,6 +2000,39 @@
             line-height: 1.5;
         }
 
+        .confirm-modal-input-wrap {
+            display: none;
+            margin-bottom: 24px;
+        }
+
+        .confirm-modal-input-wrap.show {
+            display: block;
+        }
+
+        .confirm-modal-input-label {
+            display: block;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 8px;
+        }
+
+        .confirm-modal-input-wrap .form-control {
+            border-radius: 12px;
+            min-height: 48px;
+        }
+
+        .confirm-modal-input-error {
+            display: none;
+            font-size: 12px;
+            color: var(--itcj-red);
+            margin-top: 8px;
+        }
+
+        .confirm-modal-input-error.show {
+            display: block;
+        }
+
         .confirm-modal-actions {
             display: flex;
             gap: 12px;
@@ -2349,6 +2382,11 @@
             </div>
             <div class="confirm-modal-title" id="confirmModalTitle">Confirmation</div>
             <div class="confirm-modal-message" id="confirmModalMessage">Êtes-vous sûr de vouloir effectuer cette action ?</div>
+            <div class="confirm-modal-input-wrap" id="confirmModalInputWrap">
+                <label class="confirm-modal-input-label" for="confirmModalInput" id="confirmModalInputLabel"></label>
+                <input type="text" class="form-control form-control-solid" id="confirmModalInput" autocomplete="off" spellcheck="false">
+                <div class="confirm-modal-input-error" id="confirmModalInputError"></div>
+            </div>
             <div class="confirm-modal-actions">
                 <button type="button" class="btn btn-confirm-cancel" id="confirmModalCancel">Annuler</button>
                 <button type="button" class="btn btn-confirm-ok" id="confirmModalOk">Confirmer</button>
@@ -2538,7 +2576,12 @@
             iconEl: null,
             okBtn: null,
             cancelBtn: null,
+            inputWrap: null,
+            inputEl: null,
+            inputLabel: null,
+            inputError: null,
             currentCallback: null,
+            currentInput: null,
 
             init() {
                 this.overlay = document.getElementById('confirmModal');
@@ -2547,9 +2590,24 @@
                 this.iconEl = document.getElementById('confirmModalIcon');
                 this.okBtn = document.getElementById('confirmModalOk');
                 this.cancelBtn = document.getElementById('confirmModalCancel');
+                this.inputWrap = document.getElementById('confirmModalInputWrap');
+                this.inputEl = document.getElementById('confirmModalInput');
+                this.inputLabel = document.getElementById('confirmModalInputLabel');
+                this.inputError = document.getElementById('confirmModalInputError');
 
                 this.cancelBtn.addEventListener('click', () => this.hide(false));
                 this.okBtn.addEventListener('click', () => this.hide(true));
+
+                // Saisie de confirmation : valider avec Entrée, effacer l'erreur en tapant
+                this.inputEl.addEventListener('input', () => {
+                    this.inputError.classList.remove('show');
+                });
+                this.inputEl.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        this.hide(true);
+                    }
+                });
                 this.overlay.addEventListener('click', (e) => {
                     if (e.target === this.overlay) this.hide(false);
                 });
@@ -2581,7 +2639,8 @@
                     type = 'danger',
                     confirmText = 'Confirmer',
                     cancelText = 'Annuler',
-                    onConfirm = null
+                    onConfirm = null,
+                    input = null
                 } = options;
 
                 this.titleEl.textContent = title;
@@ -2592,20 +2651,52 @@
                 this.okBtn.className = `btn btn-confirm-ok ${type}`;
                 this.cancelBtn.textContent = cancelText;
                 this.currentCallback = onConfirm;
+                this.currentInput = input;
+
+                // Champ de confirmation optionnel : {label, placeholder, requiredValue, errorText}
+                this.inputEl.value = '';
+                this.inputError.classList.remove('show');
+                this.inputWrap.classList.toggle('show', !!input);
+
+                if (input) {
+                    this.inputLabel.textContent = input.label || 'Confirmez en saisissant la valeur demandée';
+                    this.inputEl.placeholder = input.placeholder || '';
+                    this.inputError.textContent = input.errorText || 'La valeur saisie ne correspond pas.';
+                }
 
                 this.overlay.classList.add('show');
                 document.body.style.overflow = 'hidden';
-                this.okBtn.focus();
+
+                if (input) {
+                    this.inputEl.focus();
+                } else {
+                    this.okBtn.focus();
+                }
             },
 
             hide(confirmed) {
+                // Valeur attendue non saisie : la fenêtre reste ouverte
+                if (confirmed && this.currentInput) {
+                    const typed = this.inputEl.value.trim();
+
+                    if (typed !== this.currentInput.requiredValue) {
+                        this.inputError.classList.add('show');
+                        this.inputEl.focus();
+                        return;
+                    }
+                }
+
+                const callback = this.currentCallback;
+                const typedValue = this.currentInput ? this.inputEl.value.trim() : null;
+
                 this.overlay.classList.remove('show');
                 document.body.style.overflow = '';
-
-                if (confirmed && typeof this.currentCallback === 'function') {
-                    this.currentCallback();
-                }
                 this.currentCallback = null;
+                this.currentInput = null;
+
+                if (confirmed && typeof callback === 'function') {
+                    callback(typedValue);
+                }
             }
         };
 
@@ -2639,6 +2730,7 @@
                     const type = this.getAttribute('data-confirm-type') || 'danger';
                     const title = this.getAttribute('data-confirm-title') || 'Confirmation';
                     const confirmText = this.getAttribute('data-confirm-ok') || 'Confirmer';
+                    const cancelText = this.getAttribute('data-confirm-cancel') || 'Annuler';
 
                     // Remove loading if added
                     const btn = this.querySelector('[type="submit"]');
@@ -2649,6 +2741,7 @@
                         message: message,
                         type: type,
                         confirmText: confirmText,
+                        cancelText: cancelText,
                         onConfirm: () => {
                             // Re-add loading and submit
                             if (btn) btn.classList.add('btn-loading');
@@ -2668,6 +2761,7 @@
                     const type = this.getAttribute('data-confirm-type') || 'danger';
                     const title = this.getAttribute('data-confirm-title') || 'Confirmation';
                     const confirmText = this.getAttribute('data-confirm-ok') || 'Confirmer';
+                    const cancelText = this.getAttribute('data-confirm-cancel') || 'Annuler';
                     const href = this.getAttribute('href');
                     const form = this.closest('form');
 
@@ -2676,6 +2770,7 @@
                         message: message,
                         type: type,
                         confirmText: confirmText,
+                        cancelText: cancelText,
                         onConfirm: () => {
                             if (form) {
                                 form.submit();

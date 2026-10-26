@@ -224,7 +224,10 @@
                                 </a>
                                 @if($reservation->canBeCancelled() && ($reservation->user_id === auth()->id() || auth()->user()->isAdmin()))
                                 <form action="{{ route('reservations.destroy', $reservation) }}" method="POST" class="d-inline"
-                                      onsubmit="return confirm('Voulez-vous annuler cette réservation ?')">
+                                      data-confirm="{{ $reservation->vehicle->name }} le {{ $reservation->reservation_date->format('d/m/Y') }} de {{ \Carbon\Carbon::parse($reservation->start_time)->format('H:i') }} à {{ \Carbon\Carbon::parse($reservation->end_time)->format('H:i') }}. Le créneau redeviendra disponible."
+                                      data-confirm-title="Annuler cette réservation ?"
+                                      data-confirm-ok="Annuler la réservation"
+                                      data-confirm-cancel="Revenir">
                                     @csrf
                                     @method('DELETE')
                                     <button type="submit" class="btn btn-icon btn-sm btn-itcj-red" title="Annuler la réservation">
@@ -321,7 +324,10 @@
                         </a>
                         @if($reservation->canBeCancelled() && ($reservation->user_id === auth()->id() || auth()->user()->isAdmin()))
                         <form action="{{ route('reservations.destroy', $reservation) }}" method="POST" class="flex-grow-1"
-                              onsubmit="return confirm('Voulez-vous annuler cette réservation ?')">
+                              data-confirm="{{ $reservation->vehicle->name }} le {{ $reservation->reservation_date->format('d/m/Y') }} de {{ \Carbon\Carbon::parse($reservation->start_time)->format('H:i') }} à {{ \Carbon\Carbon::parse($reservation->end_time)->format('H:i') }}. Le créneau redeviendra disponible."
+                                      data-confirm-title="Annuler cette réservation ?"
+                                      data-confirm-ok="Annuler la réservation"
+                                      data-confirm-cancel="Revenir">
                             @csrf
                             @method('DELETE')
                             <button type="submit" class="btn btn-sm btn-light-danger w-100">

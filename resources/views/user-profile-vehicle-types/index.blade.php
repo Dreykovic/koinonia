@@ -341,7 +341,9 @@
                                                 <form action="{{ route('user-profile-vehicle-types.destroy', [$profile, $type]) }}" 
                                                       method="POST" 
                                                       class="d-inline"
-                                                      onsubmit="return confirm('Êtes-vous sûr de vouloir dissocier ce type de véhicule ?')">
+                                                      data-confirm="Le type « {{ $type->name }} » ne sera plus associé au profil « {{ $profile->name }} »."
+                                                      data-confirm-title="Dissocier ce type de véhicule ?"
+                                                      data-confirm-ok="Dissocier">
                                                     @csrf
                                                     @method('DELETE')
                                                     <button type="submit" class="btn btn-sm btn-light-danger btn-active-danger">

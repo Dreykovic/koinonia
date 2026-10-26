@@ -3,11 +3,13 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\UpdateWeekMenuRequest;
+use App\Http\Requests\UpdateWeekMenusRequest;
 use App\Models\MenuSetting;
 use App\Models\WeekMenu;
 use App\Models\WeekMenuDay;
 use App\Models\WeekMenuPeriod;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class WeekMenuController extends Controller
 {
@@ -66,6 +68,52 @@ class WeekMenuController extends Controller
         $weekMenu->update($request->validated());
 
         return back()->with('success', "Le menu {$weekMenu->dish_name} a ete mis a jour.");
+    }
+
+    /**
+     * Save every dish of a week at once.
+     *
+     * Une seule soumission pour les 14 plats : l'admin modifie ce qu'il veut
+     * puis enregistre, au lieu d'un formulaire par plat.
+     */
+    public function updateWeek(UpdateWeekMenusRequest $request, int $week)
+    {
+        if (!in_array($week, MenuSetting::WEEKS, true)) {
+            abort(404);
+        }
+
+        $payload = $request->validated()['menus'];
+
+        // Seuls les plats de la semaine visee sont modifiables.
+        $menus = WeekMenu::forWeek($week)
+            ->whereIn('id', array_keys($payload))
+            ->get();
+
+        $changed = 0;
+
+        DB::transaction(function () use ($menus, $payload, &$changed) {
+            foreach ($menus as $menu) {
+                $menu->fill([
+                    'dish_name' => $payload[$menu->id]['dish_name'],
+                    'available' => (bool) ($payload[$menu->id]['available'] ?? false),
+                ]);
+
+                if ($menu->isDirty()) {
+                    $menu->save();
+                    $changed++;
+                }
+            }
+        });
+
+        $message = match (true) {
+            $changed === 0 => 'Aucune modification a enregistrer.',
+            $changed === 1 => 'Le menu de la semaine ' . $week . ' a ete mis a jour (1 plat).',
+            default => 'Le menu de la semaine ' . $week . " a ete mis a jour ({$changed} plats).",
+        };
+
+        return redirect()
+            ->route('week-menus.admin.edit', ['week' => $week])
+            ->with('success', $message);
     }
 
     /**

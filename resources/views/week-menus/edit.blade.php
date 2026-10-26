@@ -8,238 +8,274 @@
 @endsection
 
 @section('page-actions')
-<a href="{{ route('week-menus.index') }}" class="btn btn-sm btn-itcj desktop-add-btn">
-    <i class="ki-duotone ki-coffee fs-2"></i> Retourner a l'affichage
+<a href="{{ route('week-menus.index') }}" class="btn btn-sm btn-itcj-outline desktop-add-btn">
+    <i class="ki-duotone ki-eye fs-2"><i class="path1"></i><i class="path2"></i><i class="path3"></i></i>
+    Voir le menu affiche
 </a>
 @endsection
 
 @push('styles')
-@include('week-menus._shared-styles')
+@include('week-menus._menu-styles')
 @endpush
 
 @section('content')
-<div class="card">
-    <div class="card-header py-4 flex-wrap gap-3">
-        <h3 class="card-title fw-bold mb-0">Menu de la semaine {{ $week }}</h3>
-        <div class="card-toolbar d-flex flex-wrap align-items-center gap-3">
-            <ul class="nav nav-pills">
-                @foreach($weeks as $w)
-                    <li class="nav-item">
-                        <a class="nav-link {{ $w === $week ? 'active' : '' }}" href="{{ route('week-menus.admin.edit', ['week' => $w]) }}">
-                            Semaine {{ $w }}@if($w === $activeWeek) <span class="badge badge-light-success ms-1">affichee</span>@endif
-                        </a>
-                    </li>
-                @endforeach
-            </ul>
-            @if($week !== $activeWeek)
-                <form action="{{ route('week-menus.admin.active-week') }}" method="POST" data-confirm="La semaine {{ $week }} sera affichée sur le site et sur le tableau de bord." data-confirm-title="Afficher la semaine {{ $week }} ?" data-confirm-type="info" data-confirm-ok="Afficher">
-                    @csrf
-                    @method('PATCH')
-                    <input type="hidden" name="week" value="{{ $week }}">
-                    <button type="submit" class="btn btn-sm btn-itcj">Afficher cette semaine</button>
-                </form>
-            @endif
+@php
+    $dayPalette = [
+        'lundi'    => ['bg' => 'var(--danger-light)',  'text' => 'var(--primary)'],
+        'mardi'    => ['bg' => 'var(--warning-light)', 'text' => 'var(--accent-dark)'],
+        'mercredi' => ['bg' => '#E8F0E8',              'text' => 'var(--success)'],
+        'jeudi'    => ['bg' => '#EAF0F2',              'text' => '#4A6B78'],
+        'vendredi' => ['bg' => '#F3EAE2',              'text' => 'var(--secondary-dark)'],
+        'samedi'   => ['bg' => '#EEEAF2',              'text' => '#6B5B8A'],
+        'dimanche' => ['bg' => 'var(--danger-light)',  'text' => 'var(--primary-dark)'],
+    ];
+    $todayCode = strtolower(now()->locale('fr_FR')->dayName);
+    // Chaque icone duotone exige un nombre precis de <i class="pathN">
+    $periodIcons = [
+        'midi' => ['icon' => 'ki-sun', 'paths' => 9],
+        'soir' => ['icon' => 'ki-moon', 'paths' => 2],
+    ];
+@endphp
+
+{{-- ===== Selecteur de semaine ===== --}}
+<div class="week-switcher">
+    <div class="week-switcher-head">
+        <div class="week-live">
+            <span class="week-live-dot" aria-hidden="true"></span>
+            <span>En ligne actuellement : <strong>Semaine {{ $activeWeek }}</strong></span>
         </div>
+        <span class="text-muted fs-8">Cycle de 4 semaines</span>
     </div>
-    <div class="card-body pt-0">
-        <div class="table-responsive">
-            <table class="table table-row-dashed align-middle gs-0 gy-4">
-                <thead>
-                    <tr>
-                        <th  class="bg-light text-uppercase">
-                             Jours
-                        </th>
 
-                        <th  class="bg-light text-uppercase">
-                                    MIDI
-                        </th>
-                        <th  class="bg-light text-uppercase">
-                                    SOIR
-                        </th>
-
-                    </tr>
-                </thead>
-                <tbody>
-
-                    @foreach($menusPerDays as $day => $menuCollection)
-                         @php
-                                $roleColors = [
-
-                                    'lundi' => ['bg' => 'var(--itcj-red-light)', 'text' => 'var(--itcj-red)'],
-                                    'mardi' => ['bg' => 'var(--itcj-gold-light)', 'text' => '#9a7a30'],
-                                    'mercredi' => ['bg' => '#e8f5e9', 'text' => '#2e7d32'],
-                                    'jeudi' => ['bg' => '#e8f5e9', 'text' => '#2e7d82'],
-                                    'vendredi' => ['bg' => 'var(--itcj-blue-light)', 'text' => 'var(--itcj-blue)'],
-                                    'samedi' => ['bg' => '#f5f5f5', 'text' => '#616161'],
-                                    'dimanche' => ['bg' => '#f5f5f5', 'text' => '#5151a1'],
-                                ];
-                                $role = $roleColors[$day] ?? $roleColors['lundi'];
-                          @endphp
-
-                    <tr>
-
-
-                        <td class="bg-light text-uppercase align-middle d-flex justify-content-center">
-                            <div class="symbol symbol-40px">
-                                <span class="symbol-label  fw-bold"  style="background: {{ $role['bg'] }}; color: {{ $role['text'] }};">
-                                    {{ strtoupper(substr($day, 0, 3)) }}
-                                </span>
-                            </div>
-
-                        </td>
-
-                        @foreach ($menuCollection as  $menu)
-
-                            <td class="align-middle">
-
-                                <div class=" d-flex flex-col justify-content-between align-items-center gap-2">
-
-                                    <form class="flex-grow-1 menu-form" action="{{ route('week-menus.admin.update',$menu) }}" method="POST">
-                                        @csrf
-                                        @method('PUT')
-                                            <div class="d-flex flex-col justify-content-between    align-items-center gap-2 " >
-                                                <div class="flex-grow-1 ">
-                                                    <input type="text" id="dish_name{{ $menu->id }}" name="dish_name"
-                                                        value="{{ $menu->dish_name }}" class="form-control form-control-lg w-100 form-control-solid @error('dish_name') is-invalid @enderror" {{ !$menu->available ? 'disabled' : '' }} style="{{ !$menu->available ? 'opacity: 0.5;' : '' }}" required>
-                                                    @error('dish_name')
-                                                        <div class="invalid-feedback">{{ $message }}</div>
-                                                    @enderror
-                                                </div>
-
-                                                    <button type="submit" class="btn btn-icon btn-sm btn-itcj-gold" aria-label="Enregistrer"
-                                                        {{ !$menu->available ? 'disabled' : '' }}>
-                                                        <i class="ki-duotone ki-check fs-4"><i class="path1"></i><i class="path2"></i></i>
-                                                    </button>
-
-                                        </div>
-                                    </form>
-                                    <form class="d-flex  justify-content-center align-items-center" action="{{ route('week-menus.admin.toggle', $menu) }}" method="POST" data-confirm="Ce plat sera affiché ou masqué sur la page Menu." data-confirm-title="Modifier la visibilité ?" data-confirm-type="warning" data-confirm-ok="Modifier">
-                                        @csrf
-
-                                        @method('PATCH')
-
-                                        @if($menu->available)
-                                            <button type="submit" class="btn btn-icon btn-sm btn-light-success" title="Masquer ce menu" aria-label="Masquer le menu">
-                                                <i class="ki-duotone ki-eye fs-4"><i class="path1"></i><i class="path2"></i><i class="path3"></i></i>
-                                            </button>
-                                        @else
-                                            <button type="submit" class="btn btn-icon btn-sm btn-light-danger" title="Rendre visible ce menu" aria-label="Rendre visible le menu">
-                                                <i class="ki-duotone ki-eye-slash fs-4"><i class="path1"></i><i class="path2"></i></i>
-                                            </button>
-                                        @endif
-                                    </form>
-                                </div>
-                            </td>
-                        @endforeach
-
-                    </tr>
-                    @endforeach
-                </tbody>
-            </table>
-        </div>
-        <!-- Mobile Cards -->
-        <div class="members-mobile-list">
-            @foreach($menusPerDays as $day => $menuCollection)
-                 @php
-                                $roleColors = [
-
-                                    'lundi' => ['bg' => 'var(--itcj-red-light)', 'text' => 'var(--itcj-red)'],
-                                    'mardi' => ['bg' => 'var(--itcj-gold-light)', 'text' => '#9a7a30'],
-                                    'mercredi' => ['bg' => '#e8f5e9', 'text' => '#2e7d32'],
-                                    'jeudi' => ['bg' => '#e8f5e9', 'text' => '#2e7d82'],
-                                    'vendredi' => ['bg' => 'var(--itcj-blue-light)', 'text' => 'var(--itcj-blue)'],
-                                    'samedi' => ['bg' => '#f5f5f5', 'text' => '#616161'],
-                                    'dimanche' => ['bg' => '#f5f5f5', 'text' => '#5151a1'],
-                                ];
-                                $role = $roleColors[$day] ?? $roleColors['lundi'];
-                            @endphp
-                <div class="member-mobile-card">
-                    <div class="member-mobile-header">
-                        <div class="symbol symbol-40px">
-                            <span class="symbol-label  fw-bold"  style="background: {{ $role['bg'] }}; color: {{ $role['text'] }};">
-                                {{ strtoupper(substr($day, 0, 3)) }}
-                            </span>
-                        </div>
-                        <div class="member-mobile-info">
-                            <div class="member-mobile-name"  style="background: {{ $role['bg'] }}; color: {{ $role['text'] }};">{{ $day }}</div>
-                        </div>
-
-
-                    </div>
-
-                        @foreach ($menuCollection as $menu)
-
-                                <div class=" gap-2">
-                                    <div class="d-flex   justify-content-between    align-items-center "   style="background: {{ $role['bg'] }}; color: {{ $role['text'] }};">{{ $menu->period->code }}</div>
-                                    <div class=" d-flex flex-col justify-content-between align-items-center gap-2">
-
-                                        <form class="flex-grow-1 menu-form" action="{{ route('week-menus.admin.update',$menu) }}" method="POST">
-                                            @csrf
-                                            @method('PUT')
-                                                <div class="d-flex flex-col justify-content-between    align-items-center gap-2 " >
-                                                    <div class="flex-grow-1 ">
-
-                                                        <textarea id="dish_name{{ $menu->id }}" name="dish_name"
-                                                            class="form-control form-control-solid @error('dish_name') is-invalid @enderror" {{ !$menu->available ? 'disabled' : '' }} style="{{ !$menu->available ? 'opacity: 0.5;' : '' }}" required>{{ $menu->dish_name }}</textarea>
-                                                        @error('dish_name')
-                                                            <div class="invalid-feedback">{{ $message }}</div>
-                                                        @enderror
-                                                    </div>
-
-                                                    <button type="submit" class="btn btn-icon btn-sm btn-itcj-gold" aria-label="Enregistrer" {{ !$menu->available ? 'disabled' : '' }}>
-                                                            <i class="ki-duotone ki-check fs-5"><i class="path1"></i><i class="path2"></i></i>
-                                                     </button>
-
-                                            </div>
-                                        </form>
-                                        <form class="d-flex  justify-content-center align-items-center" action="{{ route('week-menus.admin.toggle', $menu) }}" method="POST" data-confirm="Ce plat sera affiché ou masqué sur la page Menu." data-confirm-title="Modifier la visibilité ?" data-confirm-type="warning" data-confirm-ok="Modifier">
-                                            @csrf
-
-                                            @method('PATCH')
-
-                                            @if($menu->available)
-                                                <button type="submit" class="btn btn-icon btn-sm btn-light-success" title="Masquer ce menu" aria-label="Masquer le menu">
-                                                    <i class="ki-duotone ki-eye fs-4"><i class="path1"></i><i class="path2"></i><i class="path3"></i></i>
-                                                </button>
-                                            @else
-                                                <button type="submit" class="btn btn-icon btn-sm btn-light-danger" title="Rendre visible ce menu" aria-label="Rendre visible le menu">
-                                                    <i class="ki-duotone ki-eye-slash fs-4"><i class="path1"></i><i class="path2"></i></i>
-                                                </button>
-                                            @endif
-                                        </form>
-                                    </div>
-                                </div>
-                        @endforeach
-
-
-
-                </div>
-            @endforeach
-        </div>
-
-
-
+    <div class="week-tabs" role="tablist" aria-label="Semaines du cycle">
+        @foreach($weeks as $w)
+            <a href="{{ route('week-menus.admin.edit', ['week' => $w]) }}"
+               class="week-tab {{ $w === $week ? 'is-current' : '' }}"
+               role="tab"
+               aria-selected="{{ $w === $week ? 'true' : 'false' }}"
+               aria-label="Semaine {{ $w }}{{ $w === $activeWeek ? ' (affichee sur le site)' : '' }}">
+                <span class="week-tab-label">Semaine</span>
+                <span class="week-tab-num">{{ $w }}</span>
+                @if($w === $activeWeek)
+                    <span class="week-tab-state">En ligne</span>
+                @endif
+            </a>
+        @endforeach
     </div>
+
+    @if($week !== $activeWeek)
+        <div class="week-publish">
+            <div class="week-publish-text">
+                Vous modifiez la <strong>semaine {{ $week }}</strong>. Elle n'est pas encore visible par la communaute.
+            </div>
+            <form action="{{ route('week-menus.admin.active-week') }}" method="POST"
+                  data-confirm="La semaine {{ $week }} remplacera la semaine {{ $activeWeek }} sur le site et sur le tableau de bord."
+                  data-confirm-title="Afficher la semaine {{ $week }} ?"
+                  data-confirm-type="info"
+                  data-confirm-ok="Afficher">
+                @csrf
+                @method('PATCH')
+                <input type="hidden" name="week" value="{{ $week }}">
+                <button type="submit" class="btn btn-sm btn-itcj-gold">
+                    <i class="ki-duotone ki-rocket fs-4"><i class="path1"></i><i class="path2"></i></i>
+                    Afficher cette semaine
+                </button>
+            </form>
+        </div>
+    @endif
 </div>
 
-<!-- FAB for mobile -->
-<a href="{{ route('week-menus.index') }}" class="fab" aria-label="Retourner a l'affichage">
-    <i class="ki-duotone ki-coffee"><i class="path1"></i><i class="path2"></i><i class="path3"></i></i>
-</a>
+{{-- ===== Plateau des jours : un seul formulaire ===== --}}
+<form action="{{ route('week-menus.admin.update-week', ['week' => $week]) }}" method="POST" id="weekMenuForm" class="week-form" data-no-loading>
+    @csrf
+    @method('PUT')
+
+    <div class="day-board">
+        @foreach($menusPerDays as $day => $menuCollection)
+            @php
+                $palette = $dayPalette[$day] ?? $dayPalette['lundi'];
+                $isToday = $day === $todayCode && $week === $activeWeek;
+            @endphp
+            <div class="day-card {{ $isToday ? 'is-today' : '' }}">
+                <div class="day-card-head">
+                    <span class="day-badge" style="background: {{ $palette['bg'] }}; color: {{ $palette['text'] }};">
+                        {{ strtoupper(substr($day, 0, 3)) }}
+                    </span>
+                    <div>
+                        <div class="day-name">{{ $day }}</div>
+                        @if($isToday)
+                            <span class="day-today-tag">Au menu aujourd'hui</span>
+                        @endif
+                    </div>
+                </div>
+
+                @foreach($menuCollection as $menu)
+                    @php $period = $menu->period->code; @endphp
+                    <div class="slot slot--{{ $period }} {{ $menu->available ? '' : 'is-hidden' }}">
+                        <div class="slot-head">
+                            @php $icon = $periodIcons[$period] ?? $periodIcons['midi']; @endphp
+                            <span class="slot-label">
+                                <i class="ki-duotone {{ $icon['icon'] }}">@for($i = 1; $i <= $icon['paths']; $i++)<i class="path{{ $i }}"></i>@endfor</i>
+                                {{ $period }}
+                            </span>
+                            <label class="slot-visibility">
+                                <input type="hidden" name="menus[{{ $menu->id }}][available]" value="0">
+                                <input type="checkbox"
+                                       name="menus[{{ $menu->id }}][available]"
+                                       value="1"
+                                       {{ $menu->available ? 'checked' : '' }}
+                                       aria-label="Afficher le plat du {{ $period }} ({{ $day }}) sur le site">
+                                <span class="slot-switch" aria-hidden="true"></span>
+                                <span class="slot-visibility-text">{{ $menu->available ? 'Visible' : 'Masque' }}</span>
+                            </label>
+                        </div>
+
+                        <textarea name="menus[{{ $menu->id }}][dish_name]"
+                                  class="slot-input"
+                                  rows="1"
+                                  maxlength="150"
+                                  required
+                                  placeholder="Nom du plat"
+                                  aria-label="Plat du {{ $period }}, {{ $day }}">{{ old("menus.{$menu->id}.dish_name", $menu->dish_name) }}</textarea>
+                        <div class="slot-error">Indiquez le nom du plat.</div>
+                    </div>
+                @endforeach
+            </div>
+        @endforeach
+    </div>
+
+    {{-- ===== Barre d'enregistrement ===== --}}
+    <div class="save-bar">
+        <div class="save-bar-status" id="saveStatus">
+            <span class="save-dot" aria-hidden="true"></span>
+            <span id="saveStatusText">Aucune modification</span>
+        </div>
+        <div class="d-flex gap-2">
+            <button type="button" class="btn btn-sm btn-itcj-outline" id="resetWeek" disabled>Annuler</button>
+            <button type="submit" class="btn btn-sm btn-itcj" id="saveWeek" disabled>
+                <i class="ki-duotone ki-check fs-4"><i class="path1"></i><i class="path2"></i></i>
+                <span class="save-label-full">Enregistrer la semaine</span>
+                <span class="save-label-short">Enregistrer</span>
+            </button>
+        </div>
+    </div>
+</form>
 @endsection
 
 @push('scripts')
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    document.querySelectorAll('.menu-form').forEach(function(form) {
-        form.addEventListener('submit', function() {
-            var btn = form.querySelector('button[type="submit"]');
-            btn.disabled = true;
-            btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
+document.addEventListener('DOMContentLoaded', function () {
+    var form = document.getElementById('weekMenuForm');
+    if (!form) return;
+
+    var saveBtn = document.getElementById('saveWeek');
+    var resetBtn = document.getElementById('resetWeek');
+    var status = document.getElementById('saveStatus');
+    var statusText = document.getElementById('saveStatusText');
+    var submitting = false;
+
+    // Hauteur du champ ajustee au contenu
+    function autoGrow(el) {
+        el.style.height = 'auto';
+        el.style.height = el.scrollHeight + 'px';
+    }
+
+    // Etat initial, pour detecter ce qui a change
+    var initial = new Map();
+    form.querySelectorAll('.slot-input').forEach(function (el) {
+        initial.set(el.name, el.value);
+        autoGrow(el);
+    });
+    form.querySelectorAll('.slot-visibility input[type="checkbox"]').forEach(function (el) {
+        initial.set(el.name, el.checked ? '1' : '0');
+    });
+
+    function countChanges() {
+        var changed = 0;
+        initial.forEach(function (value, name) {
+            var el = form.querySelector('[name="' + CSS.escape(name) + '"]:not([type="hidden"])');
+            if (!el) return;
+            var current = el.type === 'checkbox' ? (el.checked ? '1' : '0') : el.value;
+            if (current !== value) changed++;
+        });
+        return changed;
+    }
+
+    function refresh() {
+        var n = countChanges();
+        var empty = [...form.querySelectorAll('.slot-input')].some(function (el) {
+            return el.value.trim() === '';
+        });
+
+        status.classList.toggle('is-dirty', n > 0);
+        statusText.textContent = n === 0
+            ? 'Aucune modification'
+            : (n === 1 ? '1 modification non enregistree' : n + ' modifications non enregistrees');
+
+        saveBtn.disabled = n === 0 || empty;
+        resetBtn.disabled = n === 0;
+    }
+
+    form.addEventListener('input', function (e) {
+        if (e.target.classList.contains('slot-input')) {
+            autoGrow(e.target);
+            var invalid = e.target.value.trim() === '';
+            e.target.classList.toggle('is-invalid', invalid);
+            e.target.closest('.slot').querySelector('.slot-error').classList.toggle('show', invalid);
+        }
+        refresh();
+    });
+
+    form.addEventListener('change', function (e) {
+        if (e.target.type === 'checkbox') {
+            var slot = e.target.closest('.slot');
+            slot.classList.toggle('is-hidden', !e.target.checked);
+            slot.querySelector('.slot-visibility-text').textContent = e.target.checked ? 'Visible' : 'Masque';
+        }
+        refresh();
+    });
+
+    resetBtn.addEventListener('click', function () {
+        ConfirmModal.show({
+            title: 'Annuler les modifications ?',
+            message: 'Les plats retrouveront les valeurs enregistrees pour la semaine {{ $week }}.',
+            type: 'warning',
+            confirmText: 'Annuler les modifications',
+            cancelText: 'Continuer l\'edition',
+            onConfirm: function () {
+                initial.forEach(function (value, name) {
+                    var el = form.querySelector('[name="' + CSS.escape(name) + '"]:not([type="hidden"])');
+                    if (!el) return;
+                    if (el.type === 'checkbox') {
+                        el.checked = value === '1';
+                        el.dispatchEvent(new Event('change', { bubbles: true }));
+                    } else {
+                        el.value = value;
+                        el.classList.remove('is-invalid');
+                        el.closest('.slot').querySelector('.slot-error').classList.remove('show');
+                        autoGrow(el);
+                    }
+                });
+                refresh();
+            }
         });
     });
+
+    form.addEventListener('submit', function () {
+        submitting = true;
+        saveBtn.classList.add('btn-loading');
+        saveBtn.disabled = true;
+    });
+
+    // Garde-fou : ne pas perdre une saisie en quittant la page
+    window.addEventListener('beforeunload', function (e) {
+        if (!submitting && countChanges() > 0) {
+            e.preventDefault();
+            e.returnValue = '';
+        }
+    });
+
+    refresh();
 });
 </script>
 @endpush
-
-

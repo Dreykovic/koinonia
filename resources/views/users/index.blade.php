@@ -253,6 +253,14 @@
                                     </button>
                                     @endif
                                 </form>
+                                <form action="{{ route('users.destroy', $user) }}" method="POST" class="js-delete-user" data-no-loading data-name="{{ $user->name }}">
+                                    @csrf
+                                    @method('DELETE')
+                                    <input type="hidden" name="confirm_name" value="">
+                                    <button type="submit" class="btn btn-icon btn-sm btn-light-danger" title="Supprimer définitivement">
+                                        <i class="ki-duotone ki-trash fs-4"><i class="path1"></i><i class="path2"></i><i class="path3"></i><i class="path4"></i><i class="path5"></i></i>
+                                    </button>
+                                </form>
                                 @endif
                             </div>
                         </td>
@@ -359,6 +367,15 @@
                                     </button>
                                 @endif
                             </form>
+                            <form action="{{ route('users.destroy', $user) }}" method="POST" class="js-delete-user" data-no-loading data-name="{{ $user->name }}">
+                                @csrf
+                                @method('DELETE')
+                                <input type="hidden" name="confirm_name" value="">
+                                <button type="submit" class="btn btn-sm btn-light-danger">
+                                    <i class="ki-duotone ki-trash fs-5"><i class="path1"></i><i class="path2"></i><i class="path3"></i><i class="path4"></i><i class="path5"></i></i>
+                                    Supprimer
+                                </button>
+                            </form>
                         @endif
                     </div>
                 </div>
@@ -377,15 +394,21 @@
 </a>
 @endsection
 
-
-
-
-
-
-
-
-
-
-
-
-
+@push('scripts')
+<script>
+document.querySelectorAll('.js-delete-user').forEach(function (form) {
+    form.addEventListener('submit', function (e) {
+        var name = form.dataset.name;
+        var typed = window.prompt(
+            'Suppression DEFINITIVE de ' + name + '.\n' +
+            'Ses inscriptions, reservations et notifications seront effacees.\n' +
+            'Les bulletins et activites qu\'il a crees sont conserves.\n\n' +
+            'Tapez son nom exact pour confirmer :'
+        );
+        if (typed === null) { e.preventDefault(); return; }
+        form.querySelector('input[name="confirm_name"]').value = typed;
+        form.querySelector('[type="submit"]').classList.add('btn-loading');
+    });
+});
+</script>
+@endpush

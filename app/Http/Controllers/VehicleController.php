@@ -61,14 +61,8 @@ class VehicleController extends Controller
      */
     public function show(Vehicle $vehicle)
     {
-        $vehicle->load(['type','reservations' => function ($query) {
-            $query->with('user')
-                  ->where('reservation_date', '>=', now()->toDateString())
-                  ->orderBy('reservation_date')
-                  ->orderBy('start_time');
-        }]);
-
-        return view('vehicles.show', compact('vehicle'));
+        // Pas de fiche de consultation dediee : la fiche d'edition en tient lieu.
+        return redirect()->route('vehicles.edit', $vehicle);
     }
 
     /**

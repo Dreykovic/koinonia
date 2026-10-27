@@ -268,6 +268,9 @@ class MenuWeekManagementTest extends TestCase
 
     public function test_public_grid_keeps_every_day_column_when_a_dish_is_hidden(): void
     {
+        // Un jeudi : le bloc "plats du jour" ne doit pas reprendre la case masquee du mardi.
+        $this->travelTo(now()->next('Thursday')->setTime(10, 0));
+
         $week = $this->week('Grille');
         $week->menus()->update(['available' => true]);
         $mardiMidi = $week->menus()->where('day_id', 2)->where('period_id', 1)->first();

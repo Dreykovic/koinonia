@@ -97,8 +97,8 @@ class UserController extends Controller
      */
     public function show(User $user)
     {
-        $user->load(['community','profile']);
-        return view('users.show', compact('user'));
+        // Pas de fiche de consultation dediee : la fiche d'edition en tient lieu.
+        return redirect()->route('users.edit', $user);
     }
 
     /**

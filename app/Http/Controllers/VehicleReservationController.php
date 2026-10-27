@@ -442,11 +442,8 @@ class VehicleReservationController extends Controller
             abort(403);
         }
 
-        $vehicles = Vehicle::available()->with('type')->get()->filter(function ($vehicle) use ($user) {
-            return $user->canAccessVehicle($vehicle);
-        })->values();
-
-        return view('reservations.edit', compact('reservation', 'vehicles'));
+        // La modification se fait depuis la fiche de la reservation (pas de page d'edition dediee).
+        return redirect()->route('reservations.show', $reservation);
     }
 
     /**

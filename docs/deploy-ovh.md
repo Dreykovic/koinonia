@@ -2,6 +2,8 @@
 
 Guide pour mettre Koinonia (Laravel 10, PHP ≥ 8.1, MySQL) en production sur un hébergement mutualisé OVHcloud, avec reprise des données existantes. Pour la bascule de domaine et le plan de retour, voir aussi [domain-migration.md](domain-migration.md).
 
+Testé sur une offre **Agency** (PHP 8.2 en ligne de commande, `git` et `composer` disponibles). Les offres Starter n'ont ni SSH ni cron et ne conviennent pas.
+
 ## Particularités de l'application
 
 - **Pas de worker permanent** : la file d'attente est traitée par le scheduler (`queue:work --stop-when-empty` chaque minute, voir `app/Console/Kernel.php`). Un **seul cron** `schedule:run` suffit, pas besoin de Supervisor.
@@ -9,56 +11,65 @@ Guide pour mettre Koinonia (Laravel 10, PHP ≥ 8.1, MySQL) en production sur un
 - **Assets Vite** : `public/build` est versionné dans git. Pas besoin de Node sur le serveur.
 - **Tâches planifiées** : fermeture des repas (samedi 18h), génération des repas (dimanche 0h), nettoyage des notifications (3h).
 
+## Pièges propres à l'hébergement mutualisé OVH
+
+Lire cette section avant de commencer : chacun de ces points a causé une panne lors du premier déploiement.
+
+1. **Deux utilisateurs, deux chemins.** Le serveur web tourne sous l'utilisateur principal (`/home/PRINCIPAL/koinonia`), alors que votre connexion SSH peut être un utilisateur secondaire (`/home/PRINCIPAL-SECONDAIRE/koinonia`). Ce sont les mêmes fichiers vus par deux chemins différents.
+2. **Ne jamais lancer `php artisan config:cache` en SSH.** Le cache enregistre le chemin vu par SSH ; le serveur web ne peut pas l'utiliser, Laravel n'arrive plus à écrire ses logs et **chaque requête renvoie une erreur 500 au corps vide**. Laisser la configuration non mise en cache (le coût est négligeable à cette échelle). `route:cache` et `view:cache` ne contiennent pas de chemins absolus.
+3. **Permissions.** Les fichiers créés par l'utilisateur SSH ne sont pas inscriptibles par le serveur web. Après installation, et après toute commande `artisan` qui écrit des fichiers :
+   ```bash
+   chmod -R a+rwX storage bootstrap/cache
+   ```
+4. **Le DNS réellement utilisé n'est pas forcément celui d'OVH.** Si le domaine est servi par d'autres serveurs de noms, les enregistrements ajoutés dans la zone DNS d'OVH n'ont **aucun effet**. Voir la section « DNS et SSL ».
+5. **Ne pas changer la version PHP globale** de l'hébergement s'il porte d'autres sites : régler la version par site (Multisite).
+
 ## 0. Prérequis
 
 - [ ] Offre Web Cloud avec accès SSH, base MySQL et plusieurs sites (multisite).
-- [ ] Domaine rattaché à l'hébergement (zone DNS OVH ou externe) et SSL Let's Encrypt activé.
+- [ ] Domaine ou sous-domaine : savoir **qui gère la zone DNS réellement servie** (voir « DNS et SSL »).
 - [ ] Identifiants Pusher de production.
-- [ ] Identifiants SMTP (le serveur mail OVH `ssl0.ovh.net:465` ou un fournisseur tiers) et, si le domaine d'envoi change, SPF/DKIM.
+- [ ] Un expéditeur d'e-mails (voir `MAIL_*` ci-dessous) : l'option « Adresses e-mail » de l'hébergement peut être désactivée.
 
 ## 1. Configuration de l'hébergement (Manager OVH)
 
-1. **PHP** : Hébergements → *Configuration générale* → version **8.3** (min. 8.1), environnement d'exécution **Production**.
-2. **Multisite** : ajouter le domaine avec le **dossier racine `koinonia/public`**. Le point d'entrée est ainsi `public/`, et `.env`, `app/`, `vendor/` ne sont pas exposés sur le web.
-   - Si OVH impose `www/` comme racine : garder le `.htaccess` à la racine du projet (il redirige vers `public/`), mais la méthode ci-dessus reste préférable.
-3. **SSL** : activer Let's Encrypt (ou le certificat OVH) sur le domaine et `www`, puis forcer le HTTPS.
-4. **Base MySQL** : créer la base (*Bases de données* → *Créer*). Noter hôte (`xxxx.mysql.db`), nom, utilisateur, mot de passe.
-5. **SSH** : vérifier que l'accès SSH est activé (`ssh USER@sshcluster0xx.hosting.ovh.net`).
+1. **Multisite** : ajouter le domaine avec le **dossier racine `koinonia/public`**. `.env`, `app/` et `vendor/` ne sont ainsi pas exposés sur le web. Choisir la version **PHP 8.2 ou supérieure** pour ce site (pas pour tout l'hébergement), environnement **Production**.
+2. **SSL** : activer le certificat Let's Encrypt pour le site. Il ne peut être émis que lorsque le nom se résout publiquement (voir « DNS et SSL »). Si besoin, utiliser **Régénérer le certificat SSL** ensuite.
+3. **Base MySQL** : créer une base **neuve et vide** (*Bases de données* → *Créer*). Noter l'hôte (`NOM-BASE.mysql.db`, généralement le nom de la base suivi de `.mysql.db`), le nom et l'utilisateur. Ne jamais coller le mot de passe dans un chat ou un ticket : il apparaît aussi dans les traces d'erreur.
+4. **SSH** : vérifier que l'accès SSH est activé pour l'utilisateur (onglet *FTP - SSH*) :
+   ```bash
+   ssh UTILISATEUR@ssh.clusterNNN.hosting.ovh.net
+   ```
 
 ## 2. Envoyer le code
 
-Par SSH sur l'hébergement (OVH fournit `git` et `composer`) :
+Par SSH sur l'hébergement. Ne jamais cloner dans un dossier existant (par exemple l'ancienne version du site) : prendre un dossier neuf.
 
 ```bash
 cd ~
-git clone https://github.com/Dreykovic/koinonia.git koinonia   # adapter l'URL du dépôt
+ls                      # vérifier que "koinonia" n'existe pas déjà
+git clone https://github.com/Dreykovic/koinonia.git koinonia
 cd koinonia
-php8.3 -v     # sur OVH, la CLI par défaut peut être plus ancienne : utiliser php8.3
-php8.3 ~/composer.phar install --no-dev --optimize-autoloader   # ou: composer install ...
-```
-
-Si `composer` n'est pas disponible :
-
-```bash
-curl -sS https://getcomposer.org/installer | php8.3
+php -v                  # la CLI doit être en PHP >= 8.1
+composer install --no-dev --optimize-autoloader
 ```
 
 ## 3. Fichier `.env` de production
 
-Créer `~/koinonia/.env` (jamais commité) :
+```bash
+cp .env.example .env
+nano .env               # jamais commité
+```
 
 ```dotenv
 APP_NAME=Koinonia
 APP_ENV=production
-APP_KEY=                      # généré à l'étape suivante
 APP_DEBUG=false
-APP_URL=https://NOUVEAU
-
-LOG_CHANNEL=stack
+APP_URL=https://NOUVEAU          # avec https://, sinon les liens générés sont faux
 LOG_LEVEL=warning
 
 DB_CONNECTION=mysql
-DB_HOST=xxxx.mysql.db
+DB_HOST=NOM-BASE.mysql.db
 DB_PORT=3306
 DB_DATABASE=...
 DB_USERNAME=...
@@ -70,15 +81,15 @@ FILESYSTEM_DISK=local
 QUEUE_CONNECTION=database
 SESSION_DRIVER=file
 SESSION_LIFETIME=120
-SESSION_SECURE_COOKIE=true
-TRUSTED_PROXIES=              # vide sur mutualisé (pas de proxy devant PHP)
+SESSION_SECURE_COOKIE=true       # nécessite HTTPS fonctionnel pour pouvoir se connecter
+TRUSTED_PROXIES=*                # OVH place un proxy/CDN devant PHP
 
 MAIL_MAILER=smtp
-MAIL_HOST=ssl0.ovh.net
-MAIL_PORT=465
-MAIL_USERNAME=contact@NOUVEAU
+MAIL_HOST=...
+MAIL_PORT=...
+MAIL_USERNAME=...
 MAIL_PASSWORD=...
-MAIL_ENCRYPTION=ssl
+MAIL_ENCRYPTION=...
 MAIL_TIMEOUT=10
 MAIL_FROM_ADDRESS="contact@NOUVEAU"
 MAIL_FROM_NAME="${APP_NAME}"
@@ -95,14 +106,19 @@ VITE_APP_NAME="${APP_NAME}"
 VITE_PUSHER_APP_KEY="${PUSHER_APP_KEY}"
 ```
 
+Notes sur les e-mails :
+- Le serveur SMTP d'OVH (`ssl0.ovh.net`, port 465, SSL) n'est utilisable que si des boîtes e-mail existent (MX Plan, Email Pro).
+- Avec Gmail, il faut un **mot de passe d'application** (validation en deux étapes requise), et les messages envoyés « depuis » une adresse Gmail par un autre serveur finissent souvent en spam. Un expéditeur sur votre propre domaine est préférable.
+
 > `VITE_PUSHER_*` est intégré au bundle au moment du build. Si la clé Pusher de production diffère de celle utilisée à la compilation, relancer `npm run build` en local avec la bonne valeur, committer `public/build` et redéployer.
 
 Puis :
 
 ```bash
 chmod 600 .env
-php8.3 artisan key:generate
-chmod -R u+rwX storage bootstrap/cache
+php artisan key:generate
+chmod -R a+rwX storage bootstrap/cache
+php artisan migrate:status      # doit lister les migrations, sans erreur de connexion
 ```
 
 ## 4. Reprise des données
@@ -114,57 +130,100 @@ mysqldump --single-transaction --no-tablespaces -u USER -p BASE > backup-$(date 
 tar czf storage-$(date +%F).tgz storage/app
 ```
 
-**Sur l'hébergement OVH** (transférer les fichiers avec `scp`) :
+Depuis phpMyAdmin, l'onglet *Exporter* (format SQL, méthode rapide) donne le même résultat.
+
+**Sur l'hébergement OVH**, dans la base **neuve et vide** uniquement :
+
+- Par phpMyAdmin : *Manager* → *Bases de données* → `...` → *Accéder à phpMyAdmin*, cliquer la base, onglet *Importer*, choisir le fichier `.sql` ou `.sql.gz`. Si le fichier dépasse la limite affichée, utiliser SSH.
+- Par SSH (après `scp` du fichier) :
+  ```bash
+  mysql -h NOM-BASE.mysql.db -u USER -p BASE < ~/backup-AAAA-MM-JJ.sql
+  ```
+
+Puis :
 
 ```bash
-mysql -h xxxx.mysql.db -u USER -p BASE < backup-AAAA-MM-JJ.sql
 tar xzf storage-AAAA-MM-JJ.tgz            # depuis ~/koinonia
-php8.3 artisan migrate --force            # applique les migrations manquantes
-php8.3 artisan storage:link               # si des fichiers sont servis via public/storage
+php artisan migrate --force               # applique les migrations manquantes
+php artisan storage:link
+chmod -R a+rwX storage bootstrap/cache
 ```
 
-Pour une base vide (première installation) : `php8.3 artisan migrate --force --seed`.
+Erreur `Unknown collation: utf8mb4_uca1400_ai_ci` : la source est un MariaDB plus récent que MySQL chez OVH ; remplacer la collation dans le fichier `.sql` par `utf8mb4_unicode_ci` avant l'import.
 
-## 5. Optimisation et vérification de la config
+Pour une base vide (première installation) : `php artisan migrate --force --seed`.
+
+## 5. Vérification de la configuration
+
+**Ne pas lancer `config:cache`** (voir les pièges ci-dessus).
 
 ```bash
-php8.3 artisan config:cache
-php8.3 artisan route:cache
-php8.3 artisan view:cache
-php8.3 artisan domain:check
+php artisan domain:check        # ne doit afficher aucun ✘
+php artisan route:cache         # facultatif
+php artisan view:cache          # facultatif
 ```
 
 ## 6. Tâche planifiée (cron)
 
-Manager OVH → *Hébergement* → *Tâches planifiées (CRON)* → créer :
+Manager OVH → *Hébergement* → *Tâches automatisées (CRON)* → créer :
 
 | Champ | Valeur |
 |---|---|
 | Commande | `koinonia/artisan schedule:run` |
-| Version PHP | 8.3 |
+| Version PHP | 8.2 (ou la version du site) |
 | Fréquence | **toutes les minutes** |
 
-Si la fréquence minimale de l'offre est supérieure à 1 minute, les e-mails en file seront envoyés avec ce retard : le choix de l'offre doit en tenir compte. Sinon, passer `QUEUE_CONNECTION=sync` (envoi immédiat, plus lent pour l'utilisateur).
+Si la fréquence minimale de l'offre est supérieure à 1 minute, les e-mails en file seront envoyés avec ce retard. Sinon, passer `QUEUE_CONNECTION=sync` (envoi immédiat, plus lent pour l'utilisateur).
 
-Vérification par SSH : `php8.3 artisan schedule:list`.
+Vérification par SSH : `php artisan schedule:list`.
 
-## 7. Bascule DNS
+## 7. DNS et SSL
 
-1. Tester avant la bascule via le domaine temporaire OVH ou le fichier `hosts` local.
-2. Baisser le TTL du domaine 24-48 h avant.
-3. Faire pointer `A`/`AAAA` (et `www`) vers l'IP de l'hébergement (ou utiliser la zone DNS OVH).
-4. Rediriger l'ancien domaine en 301 vers le nouveau (voir [domain-migration.md](domain-migration.md), section 2).
+Le point qui a coûté le plus de temps : **vérifier quels serveurs répondent réellement pour le domaine**.
+
+```bash
+dig +short NS DOMAINE
+dig +short A SOUS-DOMAINE @UN_DES_SERVEURS_DE_NOMS
+```
+
+- Si les serveurs de noms sont ceux d'OVH (`dnsNN.ovh.net`), ajouter les enregistrements dans la zone DNS du Manager.
+- Sinon (par exemple un autre fournisseur), la zone d'OVH n'est qu'une copie inutilisée : l'enregistrement `A` doit être ajouté **chez le fournisseur qui gère réellement la zone** :
+
+  | Type | Nom | Valeur |
+  |---|---|---|
+  | `A` | sous-domaine | IP de l'hébergement (onglet *Informations générales*) |
+  | `AAAA` | sous-domaine (facultatif) | IPv6 de l'hébergement |
+
+  Ne pas migrer les serveurs de noms vers OVH sans avoir comparé les deux zones enregistrement par enregistrement : le site principal, les e-mails et les autres sous-domaines seraient déplacés.
+- Utiliser l'IP de l'hébergement pour un site de test (CDN désactivé). Avec l'option CDN, l'enregistrement pointe vers l'IP du CDN.
+- Une fois le nom résolu publiquement, régénérer le certificat SSL dans *Multisite*.
+
+**Tester avant que le DNS soit prêt** : ajouter une ligne dans `/etc/hosts` de votre ordinateur (et la retirer ensuite) :
+
+```bash
+echo "IP_HEBERGEMENT SOUS-DOMAINE" | sudo tee -a /etc/hosts
+```
+
+ou interroger directement le serveur :
+
+```bash
+curl -ik --resolve SOUS-DOMAINE:443:IP_HEBERGEMENT https://SOUS-DOMAINE/login
+```
+
+Le serveur d'hébergement lui-même ne résout pas toujours le nom : y utiliser `--resolve` pour tester.
 
 ## 8. Vérifications après mise en ligne
 
 - [ ] `https://NOUVEAU/login` s'affiche, certificat valide, pas de contenu mixte.
 - [ ] Connexion admin et membre ; déconnexion.
 - [ ] Planning véhicules : réservation en temps réel (Pusher).
-- [ ] Repas du dimanche, menu de la semaine, bulletin PDF.
-- [ ] QR code du formulaire de demande pointe vers `NOUVEAU`.
+- [ ] Repas du dimanche, menu de la semaine, images et fichiers téléversés.
+- [ ] Export CSV des demandes (`/demandes`, administrateur) : le fichier se télécharge et s'ouvre.
+- [ ] QR code du formulaire de demande (`/demande`) : le PNG se télécharge et pointe vers `NOUVEAU`.
 - [ ] E-mail réel (approbation de compte) reçu, lien correct.
 - [ ] `failed_jobs` et `failed_emails` sans nouvelle entrée après quelques minutes.
 - [ ] `storage/logs` sans erreur 500 ni 419.
+- [ ] `APP_DEBUG=false` : une page inexistante n'affiche ni trace ni chemins.
 - [ ] `https://NOUVEAU/.env` et `https://NOUVEAU/composer.json` renvoient **404/403**.
 
 ## 9. Mises à jour ultérieures
@@ -172,12 +231,27 @@ Vérification par SSH : `php8.3 artisan schedule:list`.
 ```bash
 cd ~/koinonia
 git pull --ff-only
-php8.3 ~/composer.phar install --no-dev --optimize-autoloader
-php8.3 artisan migrate --force
-php8.3 artisan config:cache && php8.3 artisan route:cache && php8.3 artisan view:cache
-php8.3 artisan queue:restart
+composer install --no-dev --optimize-autoloader
+php artisan migrate --force
+chmod -R a+rwX storage bootstrap/cache
+php artisan queue:restart
 ```
 
-## 10. Plan de retour
+Ne pas lancer `config:cache`.
 
-Avant chaque mise à jour : `mysqldump` de la base. En cas de problème : `git checkout <commit précédent>`, restaurer le dump si une migration a modifié le schéma, relancer les `config:cache`, `route:cache` et `queue:restart`.
+## 10. Dépannage
+
+| Symptôme | Cause probable | Que faire |
+|---|---|---|
+| « Server Not Found » dans le navigateur | Le nom n'existe pas dans le DNS réellement servi | Section « DNS et SSL » |
+| Avertissement de certificat | Certificat non émis pour ce nom | DNS d'abord, puis régénérer le SSL |
+| 500 avec page blanche, `laravel.log` vide | Cache de configuration contenant le chemin SSH, ou `storage` non inscriptible | `php artisan config:clear`, `rm -f bootstrap/cache/config.php`, `chmod -R a+rwX storage bootstrap/cache` |
+| `getaddrinfo ... Name or service not known` dans le log | Hôte MySQL erroné dans `.env` | Copier l'hôte exact affiché dans l'onglet *Bases de données* |
+| `There is no existing directory ... storage/logs` | Chemin SSH mis en cache | Voir la ligne précédente |
+| Liens en `http://localhost/...` | `APP_URL` sans `https://` | Corriger `APP_URL` |
+
+Pour afficher l'erreur réelle : mettre `APP_DEBUG=true` **quelques instants seulement**, recharger la page, puis remettre `false`.
+
+## 11. Plan de retour
+
+Avant chaque mise à jour : `mysqldump` de la base. En cas de problème : `git checkout <commit précédent>`, restaurer le dump si une migration a modifié le schéma, puis `php artisan queue:restart`.

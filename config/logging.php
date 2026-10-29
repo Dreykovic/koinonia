@@ -65,7 +65,7 @@ return [
     'channels' => [
         'stack' => [
             'driver' => 'stack',
-            // LOG_STACK : liste de canaux séparés par des virgules (ex. "daily,slack").
+            // LOG_STACK : liste de canaux séparés par des virgules (ex. "daily,stderr").
             'channels' => explode(',', env('LOG_STACK', 'single')),
             'ignore_exceptions' => false,
         ],
@@ -98,8 +98,7 @@ return [
             'url' => env('LOG_SLACK_WEBHOOK_URL'),
             'username' => 'Laravel Log',
             'emoji' => ':boom:',
-            // Niveau propre à Slack : LOG_LEVEL (debug en local) noierait le canal d'alertes.
-            'level' => env('LOG_SLACK_LEVEL', 'critical'),
+            'level' => env('LOG_LEVEL', 'critical'),
             'replace_placeholders' => true,
         ],
 

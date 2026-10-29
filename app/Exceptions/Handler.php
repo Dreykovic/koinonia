@@ -4,8 +4,6 @@ namespace App\Exceptions;
 
 use App\Http\Middleware\AddRequestContext;
 use Illuminate\Foundation\Exceptions\Handler as ExceptionHandler;
-use Sentry\Laravel\Integration;
-use Sentry\State\Scope;
 use Throwable;
 
 class Handler extends ExceptionHandler
@@ -22,29 +20,28 @@ class Handler extends ExceptionHandler
     ];
 
     /**
+     * Contexte ajouté à chaque exception loguée : request_id, route et utilisateur,
+     * y compris pour les erreurs levées avant le middleware (404, maintenance…).
+     *
+     * @return array<string, mixed>
+     */
+    protected function context(): array
+    {
+        $request = request();
+
+        return array_merge(
+            parent::context(),
+            $request ? AddRequestContext::context($request) : [],
+        );
+    }
+
+    /**
      * Register the exception handling callbacks for the application.
      */
     public function register(): void
     {
-        // Sans DSN (local, tests) le SDK Sentry est inactif : l'appel reste sans effet.
         $this->reportable(function (Throwable $e) {
-            if (! app()->bound('sentry')) {
-                return;
-            }
-
-            $context = request() ? AddRequestContext::context(request()) : [];
-
-            \Sentry\configureScope(function (Scope $scope) use ($context) {
-                if (isset($context['user_id'])) {
-                    $scope->setUser(['id' => $context['user_id']]);
-                }
-                $scope->setTags(array_filter([
-                    'request_id' => $context['request_id'] ?? null,
-                    'route' => $context['route'] ?? null,
-                ]));
-            });
-
-            Integration::captureUnhandledException($e);
+            //
         });
     }
 }

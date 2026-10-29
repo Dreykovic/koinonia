@@ -63,4 +63,22 @@ class RequestContextTest extends TestCase
         $this->assertSame('GET', $record->context['method']);
         $this->assertNotEmpty($record->context['request_id']);
     }
+
+    public function test_unhandled_exception_is_logged_with_request_context(): void
+    {
+        $handler = new TestHandler();
+        $this->app['log']->channel('single')->getLogger()->pushHandler($handler);
+
+        Route::middleware('web')->get('/_boom', fn () => throw new \RuntimeException('boom'))->name('boom');
+
+        $user = $this->user();
+        $this->actingAs($user)->get('/_boom')->assertStatus(500);
+
+        $record = collect($handler->getRecords())->first(fn ($r) => str_contains($r->message, 'boom'));
+
+        $this->assertSame($user->id, $record->context['user_id']);
+        $this->assertSame('boom', $record->context['route']);
+        $this->assertNotEmpty($record->context['request_id']);
+        $this->assertInstanceOf(\RuntimeException::class, $record->context['exception']);
+    }
 }

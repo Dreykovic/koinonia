@@ -4,10 +4,14 @@ namespace App\Http\Controllers;
 
 use App\Models\Vehicle;
 use App\Models\VehicleType;
+use App\Traits\LogsErrors;
 use Illuminate\Http\Request;
+use Throwable;
 
 class VehicleController extends Controller
 {
+    use LogsErrors;
+
     /**
      * Display a listing of vehicles.
      */
@@ -15,7 +19,7 @@ class VehicleController extends Controller
     {
         $vehicles = Vehicle::withCount(['reservations' => function ($query) {
             $query->where('reservation_date', '>=', now()->toDateString())
-                  ->whereIn('status', ['pending', 'approved']);
+                ->whereIn('status', ['pending', 'approved']);
         }])->get();
 
         return view('vehicles.index', compact('vehicles'));
@@ -26,9 +30,8 @@ class VehicleController extends Controller
      */
     public function create()
     {
-
         $vehicleTypes = VehicleType::active()->orderBy('name')->get();
-    
+
         return view('vehicles.create', compact('vehicleTypes'));
     }
 
@@ -50,7 +53,15 @@ class VehicleController extends Controller
         $validated['is_available'] = $request->boolean('is_available', true);
         $validated['capacity'] = $validated['capacity'] ?? 5; // Default 5 places
 
-        Vehicle::create($validated);
+        try {
+            $vehicle = Vehicle::create($validated);
+        } catch (Throwable $e) {
+            $this->logError('vehicle.store.failed', $e, ['vehicle_type_id' => $validated['vehicle_type_id']]);
+
+            return back()->withInput()->with('error', 'Le vehicule n\'a pas pu etre cree. Reessayez.');
+        }
+
+        $this->logInfo('vehicle.created', $this->vehicleContext($vehicle), 'audit');
 
         return redirect()->route('vehicles.index')
             ->with('success', 'Vehicule cree avec succes.');
@@ -71,7 +82,7 @@ class VehicleController extends Controller
     public function edit(Vehicle $vehicle)
     {
         $vehicleTypes = VehicleType::active()->orderBy('name')->get();
-        
+
         return view('vehicles.edit', compact('vehicle', 'vehicleTypes'));
     }
 
@@ -82,7 +93,7 @@ class VehicleController extends Controller
     {
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
-            'license_plate' => ['nullable', 'string', 'max:20', 'unique:vehicles,license_plate,' . $vehicle->id],
+            'license_plate' => ['nullable', 'string', 'max:20', 'unique:vehicles,license_plate,'.$vehicle->id],
             'capacity' => ['nullable', 'integer', 'min:1', 'max:50'],
             'description' => ['nullable', 'string'],
             'is_available' => ['boolean'],
@@ -93,7 +104,17 @@ class VehicleController extends Controller
         $validated['is_available'] = $request->boolean('is_available', true);
         $validated['capacity'] = $validated['capacity'] ?? $vehicle->capacity ?? 5;
 
-        $vehicle->update($validated);
+        try {
+            $vehicle->update($validated);
+        } catch (Throwable $e) {
+            $this->logError('vehicle.update.failed', $e, $this->vehicleContext($vehicle));
+
+            return back()->withInput()->with('error', 'Le vehicule n\'a pas pu etre mis a jour. Reessayez.');
+        }
+
+        $this->logInfo('vehicle.updated', $this->vehicleContext($vehicle) + [
+            'fields' => array_keys($vehicle->getChanges()),
+        ], 'audit');
 
         return redirect()->route('vehicles.index')
             ->with('success', 'Vehicule mis a jour avec succes.');
@@ -105,16 +126,31 @@ class VehicleController extends Controller
     public function destroy(Vehicle $vehicle)
     {
         // Check if vehicle has future reservations
-        $hasReservations = $vehicle->reservations()
+        $futureReservations = $vehicle->reservations()
             ->where('reservation_date', '>=', now()->toDateString())
             ->whereIn('status', ['pending', 'approved'])
-            ->exists();
+            ->count();
 
-        if ($hasReservations) {
+        if ($futureReservations > 0) {
+            $this->logWarning('vehicle.delete.refused', $this->vehicleContext($vehicle) + [
+                'reason' => 'future_reservations',
+                'future_reservations' => $futureReservations,
+            ]);
+
             return back()->with('error', 'Impossible de supprimer un vehicule avec des reservations a venir.');
         }
 
-        $vehicle->delete();
+        $context = $this->vehicleContext($vehicle);
+
+        try {
+            $vehicle->delete();
+        } catch (Throwable $e) {
+            $this->logError('vehicle.delete.failed', $e, $context);
+
+            return back()->with('error', 'Le vehicule n\'a pas pu etre supprime. Reessayez.');
+        }
+
+        $this->logInfo('vehicle.deleted', $context, 'audit');
 
         return redirect()->route('vehicles.index')
             ->with('success', 'Vehicule supprime avec succes.');
@@ -125,23 +161,36 @@ class VehicleController extends Controller
      */
     public function toggleAvailability(Vehicle $vehicle)
     {
-        if (!auth()->user()->isAdmin()) {
+        if (! auth()->user()->isAdmin()) {
+            $this->logWarning('vehicle.access.denied', $this->vehicleContext($vehicle) + ['action' => 'toggle_availability'], 'security');
             abort(403);
         }
 
-        $vehicle->update(['is_available' => !$vehicle->is_available]);
+        try {
+            $vehicle->update(['is_available' => ! $vehicle->is_available]);
+        } catch (Throwable $e) {
+            $this->logError('vehicle.availability.failed', $e, $this->vehicleContext($vehicle));
+
+            return back()->with('error', 'La disponibilite du vehicule n\'a pas pu etre modifiee. Reessayez.');
+        }
+
+        $this->logInfo('vehicle.availability.toggled', $this->vehicleContext($vehicle), 'audit');
 
         $status = $vehicle->is_available ? 'disponible' : 'indisponible';
 
         return back()->with('success', "Vehicule {$vehicle->name} est maintenant {$status}.");
     }
+
+    /**
+     * Contexte metier d'un vehicule pour les logs.
+     */
+    private function vehicleContext(Vehicle $vehicle): array
+    {
+        return [
+            'vehicle_id' => $vehicle->id,
+            'vehicle_name' => $vehicle->name,
+            'vehicle_type_id' => $vehicle->vehicle_type_id,
+            'is_available' => $vehicle->is_available,
+        ];
+    }
 }
-
-
-
-
-
-
-
-
-

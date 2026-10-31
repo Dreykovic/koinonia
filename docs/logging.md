@@ -166,3 +166,23 @@ Seuils de lenteur : `MONITORING_SLOW_QUERY_MS` (500 ms), `MONITORING_SLOW_REQUES
 | `App\Support\LogMask` | `email()` : masque une adresse avant de la journaliser. |
 
 <!-- Runbook d'erreurs (diagnostic par symptôme) : à compléter (issue #32). -->
+
+## 9. File d'attente, commandes et scheduler (#29)
+
+Tout est écrit dans le canal `queue`.
+
+| Événement | Niveau | Source |
+|-----------|--------|--------|
+| `queue.job.failed` | error | Job définitivement en échec (= ligne dans `failed_jobs`), via `Queue::failing` dans `App\Providers\QueueMonitoringServiceProvider`. Contexte : `job`, `job_id`, `uuid`, `connection`, `queue`, `attempts`, `max_tries`, exception. Jamais le payload. Alerte `job_failed` (désactivable par `ALERT_QUEUE_FAILURE=false`). |
+| `queue.job.exception` | warning | Tentative en échec qui sera retentée. |
+| `queue.job.timed_out` | warning | Job interrompu par `--timeout`. |
+| `queue.worker.stopped` | warning | Worker arrêté avec un statut non nul (mémoire, timeout). |
+| `queue.failed_jobs.pending` | warning | `monitoring:failed-jobs` (tous les jours à 07:00) : jobs restant dans `failed_jobs` (`total`, `last_24h`), à traiter par `queue:retry` / `queue:forget`. |
+| `command.started` / `command.finished` | info (warning si code ≠ 0) | Commandes Artisan de l'application (trait `App\Console\Concerns\MonitorsExecution`) : `command`, `arguments`, `exit_code`, `duration_ms`, `metrics` (compteurs métier). |
+| `command.failed` | error | Exception dans une commande : log avec l'exception, la commande retourne `1`. |
+| `schedule.task.failed` | error | Tâche planifiée terminée avec un code ≠ 0 (hook `onFailure` posé sur **toutes** les tâches par `App\Console\Scheduling\ScheduleMonitor`) : `task`, `exit_code`, `expression`, fin de la sortie (`output`, 2000 caractères). Alerte `scheduled_task_failed`. |
+
+- Nouvelle commande : `use MonitorsExecution;` puis `return $this->monitored(function () { $this->metrics = [...]; return self::SUCCESS; });`.
+- Nouvelle tâche planifiée : la déclarer dans `App\Console\Kernel::schedule()` **avant** la boucle `ScheduleMonitor::watch()`.
+- La sortie des tâches est capturée dans `storage/logs/schedule-<hash>.log` (écrasée à chaque exécution).
+- Heartbeat : la closure `monitoring:heartbeat` appelle `SchedulerHeartbeat::beat()` chaque minute.

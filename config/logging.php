@@ -5,6 +5,17 @@ use Monolog\Handler\StreamHandler;
 use Monolog\Handler\SyslogUdpHandler;
 use Monolog\Processor\PsrLogMessageProcessor;
 
+// Canal quotidien partagé : même rétention, même niveau et même formateur
+// (LOG_FORMATTER=Monolog\Formatter\JsonFormatter en production).
+$dailyChannel = fn (string $file, ?string $level = null) => [
+    'driver' => 'daily',
+    'path' => storage_path("logs/{$file}.log"),
+    'level' => $level ?? env('LOG_LEVEL', 'debug'),
+    'days' => (int) env('LOG_DAILY_DAYS', 30),
+    'formatter' => env('LOG_FORMATTER') ?: null,
+    'replace_placeholders' => true,
+];
+
 return [
 
     /*
@@ -54,9 +65,17 @@ return [
     'channels' => [
         'stack' => [
             'driver' => 'stack',
-            'channels' => ['single'],
+            // LOG_STACK : liste de canaux séparés par des virgules (ex. "daily,stderr").
+            'channels' => explode(',', env('LOG_STACK', 'single')),
             'ignore_exceptions' => false,
         ],
+
+        // Canaux thématiques : chaque domaine a son fichier, filtrable par request_id.
+        'app' => $dailyChannel('app'),
+        'security' => $dailyChannel('security'),
+        'mail' => $dailyChannel('mail'),
+        'queue' => $dailyChannel('queue'),
+        'audit' => $dailyChannel('audit', 'info'),
 
         'single' => [
             'driver' => 'single',
@@ -69,7 +88,8 @@ return [
             'driver' => 'daily',
             'path' => storage_path('logs/laravel.log'),
             'level' => env('LOG_LEVEL', 'debug'),
-            'days' => 14,
+            'days' => (int) env('LOG_DAILY_DAYS', 30),
+            'formatter' => env('LOG_FORMATTER') ?: null,
             'replace_placeholders' => true,
         ],
 

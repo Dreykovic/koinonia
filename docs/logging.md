@@ -80,7 +80,23 @@ class VehicleReservationController extends Controller
 `logError()` ajoute `exception_class`, `error`, `location` (fichier:ligne) et
 `exception` (la stack trace est conservée par Monolog).
 
-## 5. Ce qu'il ne faut jamais journaliser
+## 5. Quoi journaliser, quoi ne pas journaliser
+
+### À journaliser
+
+- Chaque **échec** d'une opération demandée par l'utilisateur (`error`, avec l'exception) et
+  chaque **refus métier** (`warning`/`info` avec un champ `reason`) : on doit pouvoir répondre à
+  « je n'ai pas pu réserver / m'inscrire » à partir des logs.
+- Les **actions d'administration** (création, suppression, publication, décision) dans `audit`.
+- Les **dégradations** gérées : broadcast en échec, widget du dashboard indisponible, cache
+  absent, e-mail non envoyé.
+- Les **identifiants** utiles à la corrélation (`reservation_id`, `meal_id`, `failed_email_id`,
+  `job_id`…) et les **noms** des champs modifiés (`fields`), jamais leurs valeurs libres.
+- Aucun `catch` ne doit avaler une erreur : soit on relance, soit `report($e)`, soit
+  `logError()` / `logWarning()`. Dans un bloc qui ne doit jamais lever (handler, middleware de
+  mesure, envoi d'alerte), utiliser `App\Support\SafeLog::failure()` (section 8).
+
+### À ne jamais journaliser
 
 - Mots de passe (même invalides), mots de passe temporaires, tokens (CSRF, reset,
   API, `remember_token`), identifiants de session, clés Pusher/SMTP.
@@ -159,7 +175,8 @@ Règles et réglages (`config/monitoring.php`, variables dans `.env.example`) :
 | `menu_rotation_failure` | Calcul de rotation des menus en échec (`MenuRotation`) | constante (1 en 30 min) |
 | `meal_generation_failure` | `meals:generate` en échec pour au moins une date | aucun (à chaque échec) |
 
-Toutes ces règles se testent avec `php artisan monitoring:test-alert [règle]`.
+Toutes ces règles se testent avec `php artisan monitoring:test-alert [règle]`. Diagnostic et
+correction de chaque règle : runbook en section 20.
 
 Seuils de lenteur : `MONITORING_SLOW_QUERY_MS` (500 ms), `MONITORING_SLOW_REQUEST_MS` (2000 ms).
 
@@ -172,6 +189,7 @@ Seuils de lenteur : `MONITORING_SLOW_QUERY_MS` (500 ms), `MONITORING_SLOW_REQUES
 | `App\Services\AlertService` | `send()` / `hit()`, voir ci-dessus. |
 | `App\Support\SchedulerHeartbeat` | `beat()` (à appeler par le scheduler), `lastBeat()`, `isStale()`. Stocké dans le cache par défaut : le cron et le web doivent partager le même store (`CACHE_DRIVER=file` sur OVH). |
 | `App\Support\LogMask` | `email()` : masque une adresse avant de la journaliser. |
+| `App\Support\SafeLog` | `failure($event, $e, $context, $channel)` : `warning` avec l'exception, sans jamais lever ; si le canal lui-même échoue (`storage/logs` non inscriptible), écrit dans le log d'erreurs PHP (`error_log`). Pour les `catch` qui protègent une opération secondaire (alerte, métrique). Événements : `alert.dispatch.failed` (`rule`), `monitoring.request_metrics.failed`, `mail.failed_email.subject_unavailable` / `.payload_unavailable` (`mailable`). |
 
 ## 9. Sécurité et authentification (canal `security`)
 
@@ -423,13 +441,10 @@ Retrouver les erreurs d'un utilisateur : `grep '"user_id":42' storage/logs/app-*
   envoie l'alerte `scheduler_stale`. Pas d'alerte si aucun battement n'a jamais été
   enregistré hors production (installation de dev sans cron).
 - **Alerte de test** : `php artisan monitoring:test-alert` envoie une alerte `[TEST]` pour
-  chaque règle (`error_spike`, `job_failed`, `scheduled_task_failed`, `scheduler_stale`,
-  `mail_failure`, `broadcast_failure`) en ignorant le throttle ;
-  `php artisan monitoring:test-alert mail_failure` pour une seule règle.
+  chaque règle de la section 7 (liste dans `MonitoringTestAlertCommand::RULES`) en ignorant
+  le throttle ; `php artisan monitoring:test-alert mail_failure` pour une seule règle.
 
-<!-- Runbook d'erreurs (diagnostic par symptôme) : à compléter (issue #32). -->
-
-## 17. Consultation des journaux (#35)
+## 18. Consultation des journaux (#35)
 
 Page *Administration > Journaux* (`admin.logs.index`, rôle `admin`, lecture seule) :
 `App\Http\Controllers\Admin\LogController` + `App\Services\LogReader`.
@@ -461,3 +476,110 @@ Page *Administration > Journaux* (`admin.logs.index`, rôle `admin`, lecture seu
 
 Pour retrouver l'erreur d'un utilisateur : coller la référence de la page 500 dans le filtre
 *Request id*, ou filtrer par utilisateur et heure approximative avec le niveau `error`.
+
+## 19. Procédure d'investigation à partir d'un request_id
+
+Chaque requête HTTP reçoit un identifiant (`X-Request-Id`, UUID) présent dans **toutes** ses
+lignes de log, dans tous les canaux. C'est le point d'entrée de toute enquête.
+
+1. **Récupérer l'identifiant** auprès de l'utilisateur :
+   - page d'erreur (403, 404, 419, 429, 500, 503…) : « Référence de l'erreur à communiquer
+     au support : `<request_id>` » ;
+   - message flash d'échec (repas, menus…) : `(ref. abcd1234)`, les 8 premiers caractères ;
+   - message JavaScript d'un 5xx (`AppErrors.message`) : `réf. <request_id>` ;
+   - réponse JSON d'erreur : champ `request_id` ; sinon l'en-tête `X-Request-Id` (outils
+     de développement du navigateur, onglet Réseau).
+   Sans référence : filtrer par utilisateur et heure approximative avec le niveau `error`.
+2. **Page *Administration > Journaux*** (`/admin/logs`, admin) : coller la référence (complète
+   ou 8 caractères) dans le filtre *Request id*. Le filtre ignore la plage de dates et retrouve
+   aussi les jobs déclenchés par la requête (`origin_request_id`) et les erreurs front-end qui
+   la citent (`failed_request_id`).
+3. **Chronologie de la requête** (`/admin/logs/request/<request_id>`, bouton *Toute la requête* du
+   détail d'une entrée) : toutes les lignes dans l'ordre, tous canaux confondus. Lire de haut en bas :
+   contexte (`user_id`, `roles`, `route`, `method`, `url`), événements métier, puis l'erreur.
+   Le détail d'une entrée donne le contexte complet, `exception_class`, `location`
+   (fichier:ligne) et la stack trace repliable.
+4. **Remonter la chaîne** selon ce qu'on y trouve :
+   - `mail.send.failed` → `failed_email_id` → *Administration > Emails échoués* (`#id`) ;
+   - `queue.job.failed` → `job_id`/`uuid` → table `failed_jobs`, `php artisan queue:failed` ;
+   - `broadcast.failed` → état Pusher (tableau de bord Pusher), le planning est retombé sur le
+     polling `/api/v1` ;
+   - `client.network.failed` avec `failed_request_id` → recommencer à l'étape 2 avec cet id ;
+   - `db.query.slow` / `http.request.slow` → lenteur, pas une erreur : voir `duration_ms`.
+5. **Fichiers sur le serveur** (SSH, si la page admin est elle-même en panne) :
+
+   ```bash
+   cd ~/koinonia/storage/logs
+   grep -l '<request_id>' *.log                       # quels canaux sont concernés
+   grep -h '<request_id>' *-$(date +%F).log laravel*.log | less
+   grep -h '"exception_class"' app-$(date +%F).log | tail -n 20
+   ```
+
+   En JSON (`LOG_FORMATTER`), une ligne = une entrée : `grep … | python3 -m json.tool` pour la
+   lire. Les exceptions non gérées sont dans `laravel.log` (stack par défaut), les autres dans
+   leur canal. Ne jamais copier un extrait de log contenant le `.env`, un mot de passe ou un
+   e-mail en clair dans un ticket public.
+6. **Reproduire / corriger**, puis vérifier qu'aucune nouvelle ligne `error` n'apparaît pour
+   la même `route` (filtre *Route* de la page Journaux).
+
+Une page 500 **sans** référence ni ligne dans les logs signale en général un `storage/logs`
+non inscriptible ou un cache de configuration SSH : voir `docs/deploy-ovh.md`, section Dépannage.
+
+## 20. Runbook des alertes
+
+Une alerte arrive par e-mail (sujet avec la règle) et laisse une ligne `critical`
+`alert.<règle>` dans `app-*.log` avec le contexte. Les e-mails d'une même règle sont limités à
+un toutes les `ALERT_THROTTLE_MINUTES` : consulter le log pour le nombre réel d'occurrences.
+
+Recherche commune : `grep '"alert.' storage/logs/app-$(date +%F).log`, ou page Journaux,
+niveau `critical`, canal `app`.
+
+| Règle | Signification | Vérifier | Corriger |
+|-------|---------------|----------|----------|
+| `error_spike` | Au moins `ALERT_ERROR_SPIKE_THRESHOLD` erreurs serveur (exceptions reportées, 5xx explicites, échecs de `guardAction`) en `ALERT_ERROR_SPIKE_WINDOW` min. | `last_exception` / `last_error` / `last_status` dans l'alerte ; page Journaux, niveau `error`, dernière heure ; `laravel.log`. Grouper par `route` et `exception_class`. | Cause commune la plus probable : base indisponible (`/up` → `database`), disque plein, déploiement partiel (`composer install`, `migrate --force`). Sinon corriger le bug de la route en cause. |
+| `job_failed` | Un job est en échec définitif (après `--tries=3`) et a rejoint `failed_jobs`. | `queue.job.failed` dans `queue-*.log` (`job`, `uuid`, exception) ; `php artisan queue:failed`. Pour un mailable : *Emails échoués*. | Corriger la cause, puis `php artisan queue:retry <uuid>` (ou `all`) ; `queue:forget <uuid>` si le job est obsolète. `chmod -R a+rwX storage bootstrap/cache` après. |
+| `scheduled_task_failed` | Une tâche planifiée s'est terminée avec un code ≠ 0. | `schedule.task.failed` dans `queue-*.log` (`task`, `exit_code`, fin de `output`) ; `command.failed` juste avant ; `storage/logs/schedule-*.log`. | Relancer la commande à la main en SSH (ex. `php artisan meals:close`) pour voir l'erreur, corriger, puis `chmod`. |
+| `scheduler_stale` | Pas de battement de `schedule:run` depuis plus de `MONITORING_HEARTBEAT_MAX_AGE` min : **ni file d'attente, ni tâches planifiées**. | `/up` → `checks.scheduler.last_beat` ; Manager OVH → *Tâches automatisées (CRON)* (tâche active, dernière exécution) ; `php artisan schedule:list`. | Réactiver ou recréer le cron (`koinonia/artisan schedule:run`, chaque minute, même version PHP). Après un `cache:clear`, le battement est effacé : l'alerte disparaît à la minute suivante si le cron tourne. Vérifier que web et cron partagent le cache (`CACHE_DRIVER=file`). |
+| `mail_failure` | Au moins `ALERT_MAIL_FAILURE_THRESHOLD` envois en échec en `ALERT_MAIL_FAILURE_WINDOW` min. | `mail.send.failed` dans `mail-*.log` (`exception_class`, `error`) ; *Emails échoués*. | SMTP : identifiants `MAIL_*`, mot de passe d'application expiré, quota du fournisseur, port bloqué. Une fois réparé, bouton **Renvoyer** sur chaque entrée. Note : si le SMTP est en panne, l'e-mail d'alerte lui-même échoue (`alert.mail.failed` dans `mail-*.log`) : surveiller aussi le log. |
+| `broadcast_failure` | Au moins `ALERT_BROADCAST_FAILURE_THRESHOLD` diffusions temps réel en échec en `ALERT_BROADCAST_FAILURE_WINDOW` min. Les actions aboutissent, seul le temps réel est dégradé. | `broadcast.failed` dans `app-*.log` (`event`, `error`) ; tableau de bord Pusher (quota, application désactivée) ; `client.broadcast.connection_lost` côté navigateur. | Vérifier `PUSHER_*` et `BROADCAST_DRIVER=pusher` ; si la clé a changé, rebuild `public/build` (`VITE_PUSHER_*`). Le polling `/api/v1` assure le service en attendant. |
+| `auth_lockout` | Au moins `ALERT_AUTH_LOCKOUT_THRESHOLD` blocages de connexion (5 échecs e-mail+IP) en `ALERT_AUTH_LOCKOUT_WINDOW` min : tentative de force brute probable. | `auth.lockout` / `auth.login.failed` dans `security-*.log` : `ip`, `email` masqué, `reason`. | Une seule IP : la bloquer (`.htaccess` `Require not ip …`). Un seul compte visé : prévenir le membre, réinitialiser son mot de passe. Faux positif (membre qui a oublié son mot de passe) : rien à faire. |
+| `menu_rotation_failure` | Le calcul de la semaine de menu affichée a échoué ; la semaine enregistrée reste affichée (au plus une alerte par 30 min). | `menu.rotation.failed` dans `app-*.log` (`step`, exception) ; `menu.rotation.*` en warning juste avant. | *Gestion Menu* (`/week-menu/admin/edit`) : vérifier le cycle (semaines actives, ordre, semaine d'ancrage), réenregistrer l'ordre ou désactiver puis réactiver la rotation. |
+| `meal_generation_failure` | `meals:generate` (dimanche 00:00) n'a pas pu créer le repas d'au moins une date. | `meal.generate.failed` / `.incomplete` dans `app-*.log` (`failed_dates`). | Corriger la cause (base, données), puis relancer `php artisan meals:generate 4` (les dates existantes sont ignorées) ou créer le repas à la main dans *Repas*. |
+
+Lignes liées à la chaîne d'alerte elle-même :
+
+- `alert.mail.failed` (`mail`, error) : l'e-mail d'alerte n'est pas parti (SMTP) ; l'alerte
+  reste dans le log. Voir `mail_failure`.
+- `alert.no_recipients` (`app`, warning) : ni `ALERT_MAIL_TO` ni administrateur actif. Définir
+  `ALERT_MAIL_TO`.
+- `alert.recipients.failed` (`app`, error) : la liste des admins n'a pas pu être lue (base en
+  panne) ; définir `ALERT_MAIL_TO` pour ne pas dépendre de la base.
+- `alert.dispatch.failed` (`app`, warning, `rule`) : le déclenchement d'une alerte a levé une
+  exception (cache indisponible…) ; l'erreur d'origine est quand même reportée.
+
+**Envoyer une alerte de test** (après chaque déploiement, ou après un changement de SMTP ou de
+destinataires) :
+
+```bash
+php artisan monitoring:test-alert                 # une alerte [TEST] par règle
+php artisan monitoring:test-alert scheduler_stale  # une seule règle
+chmod -R a+rwX storage bootstrap/cache
+```
+
+Le tableau de sortie donne `envoyée` ou `échec` par règle ; en cas d'échec, lire
+`storage/logs/mail-*.log` (`alert.mail.failed`). Le test ignore puis libère le throttle : il
+ne masque pas une vraie alerte qui suivrait.
+
+## 21. Tests et garde-fous (CI)
+
+La CI (`.github/workflows/tests.yml`, MySQL 8, à chaque pull request et push sur `main`) lance
+toute la suite. Tests liés au logging :
+
+| Test | Vérifie |
+|------|---------|
+| `LoggingCoverageTest` | Chaque route appartient au groupe `web` ou `api` et reçoit `AddRequestContext` (via `Router::gatherRouteMiddleware`). Exceptions justifiées dans `WITHOUT_CONTEXT` (routes de développement `_ignition/*` uniquement). `SafeLog` ne lève jamais. |
+| `ErrorPagesTest` | Une réponse par type d'erreur (401, 403, 404, 405, 410/4xx, 419, 422, 429, 500, 502/5xx, 503), en HTML et en JSON, avec request_id ; exception reportée avec son contexte ; bruit 4xx non reporté ; échec d'alerte tracé. |
+| `SecurityLoggingTest`, `VehicleReservationLoggingTest`, `MealMenuLoggingTest`, `BulletinDashboardLoggingTest`, `MailFailureLoggingTest`, `QueueConsoleMonitoringTest`… | Assertions sur les logs des routes critiques : `auth.login.failed`, `reservation.conflict`, `meal.inscription.*`, `bulletin.published`, `mail.send.failed`, `queue.job.failed`. |
+
+Une nouvelle route hors `web`/`api` fait échouer `LoggingCoverageTest` : l'ajouter à un groupe,
+ou justifier l'exception dans `WITHOUT_CONTEXT`.

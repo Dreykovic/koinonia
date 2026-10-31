@@ -9,7 +9,8 @@ Testé sur une offre **Agency** (PHP 8.2 en ligne de commande, `git` et `compose
 - **Pas de worker permanent** : la file d'attente est traitée par le scheduler (`queue:work --stop-when-empty` chaque minute, voir `app/Console/Kernel.php`). Un **seul cron** `schedule:run` suffit, pas besoin de Supervisor.
 - **Temps réel** : Pusher (service externe). Aucun daemon WebSocket à héberger.
 - **Assets Vite** : `public/build` est versionné dans git. Pas besoin de Node sur le serveur.
-- **Tâches planifiées** : fermeture des repas (samedi 18h), génération des repas (dimanche 0h), nettoyage des notifications (3h).
+- **Tâches planifiées** : fermeture des repas (samedi 18h), génération des repas (dimanche 0h), nettoyage des notifications (3h), rapport des jobs en échec (7h), battement de cœur du scheduler (chaque minute).
+- **Logs et alertes 100 % locaux** : fichiers dans `storage/logs/` et e-mails d'alerte envoyés par le SMTP de l'application (aucun service externe). Conventions, investigation et runbook : [logging.md](logging.md).
 
 ## Pièges propres à l'hébergement mutualisé OVH
 
@@ -66,7 +67,32 @@ APP_NAME=Koinonia
 APP_ENV=production
 APP_DEBUG=false
 APP_URL=https://NOUVEAU          # avec https://, sinon les liens générés sont faux
-LOG_LEVEL=warning
+
+# Journaux (docs/logging.md) : fichiers quotidiens, JSON, 30 jours
+LOG_CHANNEL=stack
+LOG_STACK=daily
+LOG_FORMATTER=Monolog\Formatter\JsonFormatter
+LOG_DAILY_DAYS=30
+LOG_LEVEL=info                   # info : garde les événements métier et l'audit ; warning pour réduire
+
+# Alertes locales : ligne critical + e-mail aux admins via MAIL_*
+ALERT_ENABLED=true
+ALERT_MAIL_TO=admin@NOUVEAU      # vide = administrateurs actifs ; recommandé : ne dépend pas de la base
+ALERT_THROTTLE_MINUTES=30
+ALERT_ERROR_SPIKE_THRESHOLD=10
+ALERT_ERROR_SPIKE_WINDOW=5
+ALERT_MAIL_FAILURE_THRESHOLD=3
+ALERT_MAIL_FAILURE_WINDOW=15
+ALERT_BROADCAST_FAILURE_THRESHOLD=5
+ALERT_BROADCAST_FAILURE_WINDOW=10
+ALERT_AUTH_LOCKOUT_THRESHOLD=10
+ALERT_AUTH_LOCKOUT_WINDOW=15
+ALERT_QUEUE_FAILURE=true
+
+# Seuils de surveillance
+MONITORING_SLOW_QUERY_MS=500
+MONITORING_SLOW_REQUEST_MS=2000
+MONITORING_HEARTBEAT_MAX_AGE=5   # minutes sans schedule:run avant l'alerte scheduler_stale
 
 DB_CONNECTION=mysql
 DB_HOST=NOM-BASE.mysql.db
@@ -177,6 +203,35 @@ Si la fréquence minimale de l'offre est supérieure à 1 minute, les e-mails en
 
 Vérification par SSH : `php artisan schedule:list`.
 
+**Ce cron est aussi le battement de cœur de la supervision.** La tâche `monitoring:heartbeat` enregistre chaque minute un battement dans le cache ; sans battement depuis `MONITORING_HEARTBEAT_MAX_AGE` minutes, l'application envoie l'alerte `scheduler_stale` (vérifiée au plus toutes les 5 minutes lors d'une requête web) et `/up` répond 503. Le cron et le site doivent donc partager le même cache : garder `CACHE_DRIVER=file`. Après un `php artisan cache:clear`, le battement est effacé jusqu'à la minute suivante.
+
+## 6 bis. Journaux, alertes et supervision
+
+**Permissions de `storage/logs`.** Les fichiers `app-AAAA-MM-JJ.log`, `security-*`, `mail-*`, `queue-*`, `audit-*` et `laravel-*` sont créés par le premier processus qui écrit ce jour-là : le site (utilisateur principal) ou le cron / une commande SSH (utilisateur secondaire). Un fichier créé par l'un peut être illisible ou non inscriptible pour l'autre : c'est la cause classique d'une **500 sans aucune ligne de log**. Après toute commande `artisan` lancée en SSH :
+
+```bash
+chmod -R a+rwX storage bootstrap/cache
+```
+
+Ne jamais lancer `config:cache` en SSH : le chemin de `storage/logs` mis en cache serait celui de l'utilisateur SSH (voir les pièges en tête de document).
+
+**Health check `GET /up`** (public, sans session) : JSON `{"status": "ok|degraded", "checks": {...}}` avec `database`, `cache`, `queue` (`pending`, `failed`), `storage` et `scheduler` (`last_beat`). Code **200** si tout est `ok`, **503** sinon. Utilisable par un moniteur de disponibilité ; aucun message d'erreur dans la réponse, le détail est dans `app-*.log` (`health.check.failed`).
+
+```bash
+curl -s https://NOUVEAU/up | python3 -m json.tool
+```
+
+**Alerte de test** après chaque déploiement ou changement de SMTP / destinataires :
+
+```bash
+php artisan monitoring:test-alert            # une alerte [TEST] par règle, ignore le throttle
+chmod -R a+rwX storage bootstrap/cache
+```
+
+Chaque règle doit afficher `envoyée`. Sinon, lire `storage/logs/mail-*.log` (`alert.mail.failed`) et vérifier `MAIL_*` / `ALERT_MAIL_TO`. Que faire à la réception d'une alerte : runbook dans [logging.md](logging.md#20-runbook-des-alertes).
+
+**Consultation** : *Administration > Journaux* (lecture seule) ; en SSH, `grep '<request_id>' storage/logs/*.log`. Rétention : `LOG_DAILY_DAYS` jours, les fichiers plus anciens sont supprimés automatiquement.
+
 ## 7. DNS et SSL
 
 Le point qui a coûté le plus de temps : **vérifier quels serveurs répondent réellement pour le domaine**.
@@ -222,7 +277,10 @@ Le serveur d'hébergement lui-même ne résout pas toujours le nom : y utiliser 
 - [ ] QR code du formulaire de demande (`/demande`) : le PNG se télécharge et pointe vers `NOUVEAU`.
 - [ ] E-mail réel (approbation de compte) reçu, lien correct.
 - [ ] `failed_jobs` et `failed_emails` sans nouvelle entrée après quelques minutes.
-- [ ] `storage/logs` sans erreur 500 ni 419.
+- [ ] `storage/logs` sans erreur 500 ni 419 ; fichiers `app-AAAA-MM-JJ.log`… créés et inscriptibles par le site.
+- [ ] `https://NOUVEAU/up` renvoie 200 et `"status": "ok"` (`scheduler.last_beat` récent : le cron tourne).
+- [ ] `php artisan monitoring:test-alert` : toutes les règles `envoyée`, e-mails reçus par les administrateurs.
+- [ ] *Administration > Journaux* affiche les entrées du jour.
 - [ ] `APP_DEBUG=false` : une page inexistante n'affiche ni trace ni chemins.
 - [ ] `https://NOUVEAU/.env` et `https://NOUVEAU/composer.json` renvoient **404/403**.
 
@@ -235,9 +293,10 @@ composer install --no-dev --optimize-autoloader
 php artisan migrate --force
 chmod -R a+rwX storage bootstrap/cache
 php artisan queue:restart
+curl -s -o /dev/null -w '%{http_code}\n' https://NOUVEAU/up   # 200 attendu
 ```
 
-Ne pas lancer `config:cache`.
+Ne pas lancer `config:cache`. Si `.env.example` a gagné des variables (`LOG_*`, `ALERT_*`, `MONITORING_*`), les reporter dans `.env` (sinon les valeurs par défaut s'appliquent).
 
 ## 10. Dépannage
 
@@ -249,6 +308,10 @@ Ne pas lancer `config:cache`.
 | `getaddrinfo ... Name or service not known` dans le log | Hôte MySQL erroné dans `.env` | Copier l'hôte exact affiché dans l'onglet *Bases de données* |
 | `There is no existing directory ... storage/logs` | Chemin SSH mis en cache | Voir la ligne précédente |
 | Liens en `http://localhost/...` | `APP_URL` sans `https://` | Corriger `APP_URL` |
+| 500 avec référence, ligne dans les logs | Erreur applicative | Coller la référence dans *Administration > Journaux* ; procédure dans [logging.md](logging.md#19-procédure-dinvestigation-à-partir-dun-request_id) |
+| `Permission denied` sur `storage/logs/*.log` | Fichier du jour créé par l'utilisateur SSH ou le cron | `chmod -R a+rwX storage bootstrap/cache` |
+| Alerte `scheduler_stale`, `/up` en 503 sur `scheduler` | Cron arrêté ou cache vidé | Section 6 ; vérifier la tâche CRON dans le Manager |
+| Aucune alerte reçue | SMTP en panne ou pas de destinataire | `php artisan monitoring:test-alert`, puis `mail-*.log` (`alert.mail.failed`, `alert.no_recipients`) |
 
 Pour afficher l'erreur réelle : mettre `APP_DEBUG=true` **quelques instants seulement**, recharger la page, puis remettre `false`.
 

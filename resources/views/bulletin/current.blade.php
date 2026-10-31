@@ -535,6 +535,8 @@
 @endpush
 
 @section('content')
+<x-degraded-notice :message="$degradedNotice ?? null" />
+
 <div class="bulletin-page">
     @if($bulletin)
         <!-- En-tete du bulletin -->

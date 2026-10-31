@@ -283,3 +283,22 @@ Toutes les actions des groupes `meals.*` et `week-menus.*` passent par le trait
 | `menu.rotation.anchor_lost` | warning | app | Ancre sortie du cycle : la rotation repart de la première semaine. |
 | `menu.rotation.anchor_in_future` / `menu.rotation.empty_cycle` | warning | app | Cycle incohérent ; écrit au plus une fois par heure (calculé à chaque affichage). |
 | `menu.rotation.failed` | error | app | Calcul de rotation en échec (`step`) : la semaine enregistrée reste affichée, alerte `menu_rotation_failure` (au plus une par 30 min). |
+
+## Bulletin, dashboard, guide, nouveautés et QR codes (#27)
+
+- **Dashboard** : chaque widget (repas, réservations, demandes, statistiques, bulletin,
+  anniversaires, menu du jour) est chargé séparément. Un échec écrit
+  `dashboard.widget.failed` (`widget`) puis `dashboard.degraded` (`failed_widgets`) ; la page
+  s'affiche avec une valeur vide et un avertissement (`<x-degraded-notice>`).
+- **Bulletin** : chaque écriture échouée écrit `bulletin.<action>.failed` dans `app`
+  (`store`, `update`, `destroy`, `publish`, `service.*`, `activity.*`, `reflection.*`) avec
+  les identifiants seulement (jamais titres ni textes), puis renvoie au formulaire avec la saisie.
+  Création, publication/dépublication et suppression d'une édition sont tracées dans `audit`
+  (`bulletin.created`, `bulletin.published`, `bulletin.unpublished`, `bulletin.deleted`).
+  Lecture : `bulletin.current.failed` (page affichée sans bulletin), `bulletin.index.failed`,
+  `bulletin.show.failed`, `bulletin.edit.failed`.
+- **Services** : `BirthdayService` renvoie une collection vide (`birthday.week.failed`) ;
+  `QRCodeService` journalise `qrcode.generate.failed` avec `size`, `mode` et `payload_length`
+  (jamais l'URL encodée).
+- **Guide / nouveautés** : `guide.load.failed` (guide vide + avertissement),
+  `whats_new.seen.failed` (500 JSON avec `request_id`, ou retour avec message).

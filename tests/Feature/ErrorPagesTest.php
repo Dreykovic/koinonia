@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Http\Middleware\AddRequestContext;
 use App\Mail\MonitoringAlert;
+use App\Services\AlertService;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\Exceptions\ThrottleRequestsException;
 use Illuminate\Session\TokenMismatchException;
@@ -21,6 +22,7 @@ class ErrorPagesTest extends TestCase
         config(['app.debug' => false]);
 
         Route::middleware('web')->prefix('_errors')->group(function () {
+            Route::get('401', fn () => abort(401));
             Route::get('403', fn () => abort(403));
             Route::get('403-custom', fn () => abort(403, 'Réservé aux administrateurs.'));
             Route::get('404', fn () => throw (new ModelNotFoundException())->setModel('App\Models\User', [1]));
@@ -28,6 +30,9 @@ class ErrorPagesTest extends TestCase
             Route::get('429', fn () => throw new ThrottleRequestsException('Too Many Attempts.', null, ['Retry-After' => 60]));
             Route::get('500', fn () => throw new \RuntimeException('secret-detail-from-sql'));
             Route::get('503', fn () => abort(503));
+            Route::get('410', fn () => abort(410));
+            Route::get('502', fn () => abort(502));
+            Route::get('405', fn () => 'GET seulement');
             Route::get('422', fn () => request()->validate(['name' => 'required']));
         });
     }
@@ -35,12 +40,24 @@ class ErrorPagesTest extends TestCase
     public static function codes(): array
     {
         return [
+            '401' => [401, 'Authentification requise'],
             '403' => [403, 'Accès refusé'],
             '404' => [404, 'Page introuvable'],
             '419' => [419, 'Session expirée'],
             '429' => [429, 'Trop de requêtes'],
             '500' => [500, 'Erreur serveur'],
             '503' => [503, 'Maintenance en cours'],
+        ];
+    }
+
+    /**
+     * Codes sans vue dédiée : gabarits génériques errors/4xx et errors/5xx.
+     */
+    public static function genericCodes(): array
+    {
+        return [
+            '410' => [410, 'Requête impossible', \App\Exceptions\Handler::MESSAGES[400]],
+            '502' => [502, 'Service indisponible', \App\Exceptions\Handler::MESSAGES[500]],
         ];
     }
 
@@ -70,6 +87,87 @@ class ErrorPagesTest extends TestCase
                 'status' => $status,
                 'request_id' => $response->headers->get(AddRequestContext::HEADER),
             ]);
+    }
+
+    /** @dataProvider genericCodes */
+    public function test_codes_without_dedicated_view_use_the_generic_templates(int $status, string $heading, string $message): void
+    {
+        $response = $this->get("/_errors/{$status}");
+
+        $response->assertStatus($status)
+            ->assertSee($heading)
+            ->assertSee($response->headers->get(AddRequestContext::HEADER));
+
+        $this->getJson("/_errors/{$status}")
+            ->assertStatus($status)
+            ->assertJsonPath('status', $status)
+            ->assertJsonPath('message', $message);
+    }
+
+    public function test_wrong_http_method_returns_405_in_french(): void
+    {
+        $this->postJson('/_errors/405')
+            ->assertStatus(405)
+            ->assertJsonPath('message', \App\Exceptions\Handler::MESSAGES[405])
+            ->assertJsonPath('status', 405);
+
+        $this->post('/_errors/405')
+            ->assertStatus(405)
+            ->assertSee('Requête impossible');
+    }
+
+    public function test_unauthenticated_web_request_is_redirected_to_login(): void
+    {
+        Route::middleware(['web', 'auth'])->get('/_errors/protected', fn () => 'ok');
+
+        $this->get('/_errors/protected')->assertRedirect(route('login'));
+    }
+
+    public function test_unhandled_exception_is_reported_with_request_context(): void
+    {
+        $default = new TestHandler();
+        $this->app['log']->driver()->getLogger()->pushHandler($default);
+
+        $response = $this->get('/_errors/500')->assertStatus(500);
+
+        $record = collect($default->getRecords())->first(fn ($r) => $r->level->name === 'Error');
+        $this->assertNotNull($record, 'L\'exception non gérée doit être reportée.');
+        $this->assertSame($response->headers->get(AddRequestContext::HEADER), $record->context['request_id']);
+        $this->assertSame(\RuntimeException::class, $record->context['exception_class']);
+        $this->assertSame('GET', $record->context['method']);
+        $this->assertInstanceOf(\RuntimeException::class, $record->context['exception']);
+    }
+
+    public function test_expected_client_errors_are_not_reported_as_errors(): void
+    {
+        $default = new TestHandler();
+        $this->app['log']->driver()->getLogger()->pushHandler($default);
+
+        foreach ([401, 403, 404, 410, 422] as $status) {
+            $this->get("/_errors/{$status}");
+        }
+
+        $this->assertFalse($default->hasErrorRecords());
+    }
+
+    public function test_alert_failure_is_logged_and_does_not_hide_the_original_error(): void
+    {
+        $this->app->instance(AlertService::class, new class extends AlertService
+        {
+            public function hit(string $rule, string $message, array $context, int $threshold, int $windowMinutes): void
+            {
+                throw new \RuntimeException('cache indisponible');
+            }
+        });
+        $app = new TestHandler();
+        $this->app['log']->channel('app')->getLogger()->pushHandler($app);
+        $default = new TestHandler();
+        $this->app['log']->driver()->getLogger()->pushHandler($default);
+
+        $this->get('/_errors/500')->assertStatus(500)->assertSee('Erreur serveur');
+
+        $this->assertTrue($app->hasWarningThatContains('alert.dispatch.failed'));
+        $this->assertTrue($default->hasErrorThatContains('secret-detail-from-sql'));
     }
 
     public function test_explicit_abort_message_is_kept(): void

@@ -285,6 +285,28 @@ class MailFailureLoggingTest extends TestCase
         $this->assertSame($failed->id, $log->context['failed_email_id']);
     }
 
+    public function test_unserializable_mailable_is_recorded_without_payload_and_logged(): void
+    {
+        // Une classe anonyme n'est pas sérialisable : l'échec est tracé, sans possibilité de renvoi.
+        $mailable = new class extends Mailable
+        {
+            public function build(): static
+            {
+                return $this->subject('Test')->html('<p>Test</p>');
+            }
+        };
+
+        $this->assertFalse($this->sender()->sendMailSafely('jean.dupont@example.com', $mailable, null, true));
+
+        $this->assertFalse(FailedEmail::sole()->canBeRetried());
+        $this->assertNotNull($this->record($this->mailLog, 'mail.send.failed'));
+
+        $log = $this->record($this->mailLog, 'mail.failed_email.payload_unavailable');
+        $this->assertNotNull($log);
+        $this->assertSame('Warning', $log->level->name);
+        $this->assertSame(get_class($mailable), $log->context['mailable']);
+    }
+
     public function test_retry_without_payload_is_reported_as_unavailable(): void
     {
         $failed = FailedEmail::create([

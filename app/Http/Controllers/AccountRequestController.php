@@ -2,28 +2,38 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\PlatformRole;
 use App\Mail\AccountApprovedMail;
 use App\Mail\AccountRequestRejectedMail;
 use App\Mail\NewAccountRequestMail;
 use App\Models\AccountRequest;
 use App\Models\Community;
 use App\Models\User;
+use App\Support\LogMask;
+use App\Traits\SafeMailSender;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
-use App\Traits\SafeMailSender;
-use App\Enums\PlatformRole;
+use Illuminate\Validation\ValidationException;
 
+/**
+ * Demandes de compte : soumission publique, approbation/rejet par un admin.
+ * Chaque étape est tracée dans le canal security (e-mail masqué, jamais de mot de passe).
+ */
 class AccountRequestController extends Controller
 {
     use SafeMailSender;
+
     /**
      * Show the public registration request form.
      */
     public function create()
     {
         $communities = Community::active()->ordered()->get();
+
+        Log::channel('security')->debug('account_request.form');
 
         return view('account-requests.create', compact('communities'));
     }
@@ -33,16 +43,32 @@ class AccountRequestController extends Controller
      */
     public function store(Request $request)
     {
-        $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'email' => 'required|email|unique:account_requests,email|unique:users,email',
-            'phone' => 'nullable|string|max:20',
-            'community_id' => 'nullable|exists:communities,id',
-        ], [
-            'email.unique' => 'Cette adresse email est déjà utilisée ou une demande est déjà en cours.',
-        ]);
+        try {
+            $validated = $request->validate([
+                'name' => 'required|string|max:255',
+                'email' => 'required|email|unique:account_requests,email|unique:users,email',
+                'phone' => 'nullable|string|max:20',
+                'community_id' => 'nullable|exists:communities,id',
+            ], [
+                'email.unique' => 'Cette adresse email est déjà utilisée ou une demande est déjà en cours.',
+            ]);
+        } catch (ValidationException $e) {
+            // Seuls les noms de champs en erreur : un doublon d'e-mail peut signaler une énumération.
+            Log::channel('security')->notice('account_request.submit.invalid', [
+                'email' => LogMask::email((string) $request->input('email')),
+                'fields' => array_keys($e->errors()),
+            ]);
+
+            throw $e;
+        }
 
         $accountRequest = AccountRequest::create($validated);
+
+        Log::channel('security')->info('account_request.submitted', [
+            'account_request_id' => $accountRequest->id,
+            'email' => LogMask::email($accountRequest->email),
+            'community_id' => $accountRequest->community_id,
+        ]);
 
         // Send email to all admins (non-bloquant)
         $admins = User::active()->byRole(PlatformRole::ADMIN)->get();
@@ -58,6 +84,8 @@ class AccountRequestController extends Controller
      */
     public function success()
     {
+        Log::channel('security')->debug('account_request.success_page');
+
         return view('account-requests.success');
     }
 
@@ -102,12 +130,16 @@ class AccountRequestController extends Controller
      */
     public function approve(Request $request, AccountRequest $accountRequest)
     {
-        if (!$accountRequest->isPending()) {
+        if (! $accountRequest->isPending()) {
+            $this->logSkipped('approve', $accountRequest, 'already_processed');
+
             return back()->with('error', 'Cette demande a déjà été traitée.');
         }
 
         // Check if email is still available
         if (User::where('email', $accountRequest->email)->exists()) {
+            $this->logSkipped('approve', $accountRequest, 'email_taken');
+
             return back()->with('error', 'Un utilisateur avec cette adresse email existe déjà.');
         }
 
@@ -133,6 +165,13 @@ class AccountRequestController extends Controller
             'admin_notes' => $request->input('admin_notes'),
         ]);
 
+        // Jamais le mot de passe temporaire ; processed_by = user_id du contexte partagé.
+        Log::channel('security')->info('account_request.approved', [
+            'account_request_id' => $accountRequest->id,
+            'created_user_id' => $user->id,
+            'email' => LogMask::email($user->email),
+        ]);
+
         // Send email to new user with credentials (non-bloquant)
         $this->sendMailSafely($user, new AccountApprovedMail($user, $temporaryPassword), $user);
 
@@ -145,7 +184,9 @@ class AccountRequestController extends Controller
      */
     public function reject(Request $request, AccountRequest $accountRequest)
     {
-        if (!$accountRequest->isPending()) {
+        if (! $accountRequest->isPending()) {
+            $this->logSkipped('reject', $accountRequest, 'already_processed');
+
             return back()->with('error', 'Cette demande a déjà été traitée.');
         }
 
@@ -160,14 +201,29 @@ class AccountRequestController extends Controller
             'admin_notes' => $validated['admin_notes'] ?? null,
         ]);
 
+        // Le contenu des notes n'est pas journalisé (données libres, potentiellement personnelles).
+        Log::channel('security')->info('account_request.rejected', [
+            'account_request_id' => $accountRequest->id,
+            'email' => LogMask::email($accountRequest->email),
+            'has_notes' => filled($validated['admin_notes'] ?? null),
+        ]);
+
         // Notifier le demandeur du rejet (non-bloquant)
         $this->sendMailSafely($accountRequest->email, new AccountRequestRejectedMail($accountRequest), $accountRequest);
 
         return redirect()->route('account-requests.index')
             ->with('success', 'La demande a été rejetée. Un email a été envoyé au demandeur.');
     }
+
+    /**
+     * Action d'administration refusée car la demande n'est plus traitable.
+     */
+    private function logSkipped(string $action, AccountRequest $accountRequest, string $reason): void
+    {
+        Log::channel('security')->warning("account_request.{$action}.skipped", [
+            'account_request_id' => $accountRequest->id,
+            'status' => $accountRequest->status,
+            'reason' => $reason,
+        ]);
+    }
 }
-
-
-
-

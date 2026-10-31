@@ -6,6 +6,7 @@ use App\Enums\PlatformRole;
 use App\Mail\MonitoringAlert;
 use App\Models\User;
 use App\Support\LogMask;
+use App\Support\SafeLog;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
@@ -34,23 +35,33 @@ class AlertService
      */
     public function send(string $rule, string $message, array $context = []): bool
     {
-        Log::channel('app')->critical("alert.{$rule}", ['rule' => $rule, 'alert' => $message] + $context);
+        // Les valeurs textuelles partent par e-mail : e-mails et hash masqués par précaution.
+        $context = array_map(fn ($value) => is_string($value) ? LogMask::text($value) : $value, $context);
 
-        if (! config('monitoring.alerts.enabled')) {
-            return false;
-        }
+        try {
+            Log::channel('app')->critical("alert.{$rule}", ['rule' => $rule, 'alert' => $message] + $context);
 
-        $recipients = $this->recipients();
+            if (! config('monitoring.alerts.enabled')) {
+                return false;
+            }
 
-        if ($recipients === []) {
-            Log::channel('app')->warning('alert.no_recipients', ['rule' => $rule]);
+            $recipients = $this->recipients();
 
-            return false;
-        }
+            if ($recipients === []) {
+                Log::channel('app')->warning('alert.no_recipients', ['rule' => $rule]);
 
-        // Cache::add est atomique : un seul e-mail par règle et par période, même en concurrence.
-        $minutes = max(1, (int) config('monitoring.alerts.throttle_minutes', 30));
-        if (! Cache::add(self::CACHE_PREFIX."throttle:{$rule}", now()->timestamp, now()->addMinutes($minutes))) {
+                return false;
+            }
+
+            // Cache::add est atomique : un seul e-mail par règle et par période, même en concurrence.
+            $minutes = max(1, (int) config('monitoring.alerts.throttle_minutes', 30));
+            if (! Cache::add(self::CACHE_PREFIX."throttle:{$rule}", now()->timestamp, now()->addMinutes($minutes))) {
+                return false;
+            }
+        } catch (Throwable $e) {
+            // Cache ou disque indisponible (quota plein…) : l'appelant ne doit jamais échouer.
+            SafeLog::failure('alert.dispatch.failed', $e, ['rule' => $rule]);
+
             return false;
         }
 
@@ -65,7 +76,7 @@ class AlertService
                 'rule' => $rule,
                 'recipients' => array_map([LogMask::class, 'email'], $recipients),
                 'exception_class' => get_class($e),
-                'error' => $e->getMessage(),
+                'error' => LogMask::text($e->getMessage()),
             ]);
 
             return false;
@@ -73,21 +84,40 @@ class AlertService
     }
 
     /**
-     * Compteur sur fenêtre glissante fixe : déclenche send() quand le nombre d'occurrences
-     * atteint $threshold dans les $windowMinutes suivant la première occurrence.
-     * Utilisé pour les pics (5xx, échecs mail, échecs broadcast).
+     * Compteur par fenêtre fixe de $windowMinutes : déclenche send() une fois par fenêtre,
+     * dès que le nombre d'occurrences atteint $threshold. Utilisé pour les pics (5xx,
+     * échecs mail, échecs broadcast). Ne lève jamais d'exception.
+     *
+     * La clé porte le numéro de fenêtre : avec le cache fichier, increment() peut perdre
+     * le TTL d'une clé expirée entre add() et increment() ; une telle clé "éternelle"
+     * n'est alors plus jamais relue et ne bloque pas la règle. Le seuil est testé avec >=
+     * (une occurrence perdue par un increment non atomique ne supprime pas l'alerte) et
+     * le déclenchement est dédoublonné par fenêtre.
      */
     public function hit(string $rule, string $message, array $context, int $threshold, int $windowMinutes): void
     {
-        $key = self::CACHE_PREFIX."hits:{$rule}";
+        try {
+            $window = max(1, $windowMinutes);
+            $bucket = intdiv(now()->timestamp, $window * 60);
+            $key = self::CACHE_PREFIX."hits:{$rule}:{$bucket}";
 
-        Cache::add($key, 0, now()->addMinutes(max(1, $windowMinutes)));
-        $count = (int) Cache::increment($key);
+            Cache::add($key, 0, now()->addMinutes($window * 2));
+            $count = (int) Cache::increment($key);
 
-        // Égalité stricte : une seule alerte par fenêtre, pas une par occurrence au-delà du seuil.
-        if ($count === max(1, $threshold)) {
-            $this->send($rule, $message, $context + ['count' => $count, 'window_minutes' => $windowMinutes]);
+            if ($count < max(1, $threshold)) {
+                return;
+            }
+
+            if (! Cache::add(self::CACHE_PREFIX."fired:{$rule}:{$bucket}", $count, now()->addMinutes($window * 2))) {
+                return;
+            }
+        } catch (Throwable $e) {
+            SafeLog::failure('alert.dispatch.failed', $e, ['rule' => $rule]);
+
+            return;
         }
+
+        $this->send($rule, $message, $context + ['count' => $count, 'window_minutes' => $windowMinutes]);
     }
 
     /**

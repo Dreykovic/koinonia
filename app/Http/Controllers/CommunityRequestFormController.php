@@ -140,7 +140,7 @@ class CommunityRequestFormController extends Controller
             return $qrCodeService->downloadPng($url);
         } catch (Throwable $e) {
             // Pas d'URL ni de contenu du QR code dans le log.
-            $this->logError('community_request.qr.failed', $e);
+            $this->logHandledError('community_request.qr.failed', $e);
 
             return back()->with('error', 'Le QR code n\'a pas pu etre genere. Veuillez reessayer.');
         }
@@ -157,7 +157,7 @@ class CommunityRequestFormController extends Controller
         try {
             $communityRequest = CommunityRequest::create($formData);
         } catch (Throwable $e) {
-            $this->logError('community_request.store.failed', $e, [
+            $this->logHandledError('community_request.store.failed', $e, [
                 'request_type' => $formData['request_type'] ?? null,
                 'community_id' => $formData['community_id'] ?? null,
             ]);

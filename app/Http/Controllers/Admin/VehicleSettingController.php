@@ -56,7 +56,7 @@ class VehicleSettingController extends Controller
 
             $settings->update($new);
         } catch (Throwable $e) {
-            $this->logError('vehicle_settings.update.failed', $e, ['new' => $new]);
+            $this->logHandledError('vehicle_settings.update.failed', $e, ['new' => $new]);
 
             return back()->withInput()
                 ->with('error', 'Les parametres de reservation n\'ont pas pu etre enregistres. Veuillez reessayer.');

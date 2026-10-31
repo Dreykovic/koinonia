@@ -36,7 +36,7 @@ class CommunityController extends Controller
         try {
             $community = Community::create($validated);
         } catch (Throwable $e) {
-            $this->logError('community.store.failed', $e, ['name' => $validated['name']]);
+            $this->logHandledError('community.store.failed', $e, ['name' => $validated['name']]);
 
             return back()->withInput()->with('error', 'La communaute n\'a pas pu etre ajoutee. Veuillez reessayer.');
         }
@@ -61,7 +61,7 @@ class CommunityController extends Controller
         try {
             $community->update($validated);
         } catch (Throwable $e) {
-            $this->logError('community.update.failed', $e, ['community_id' => $community->id]);
+            $this->logHandledError('community.update.failed', $e, ['community_id' => $community->id]);
 
             return back()->withInput()->with('error', 'La communaute n\'a pas pu etre mise a jour. Veuillez reessayer.');
         }
@@ -101,7 +101,7 @@ class CommunityController extends Controller
         try {
             $community->delete();
         } catch (Throwable $e) {
-            $this->logError('community.destroy.failed', $e, ['community_id' => $community->id]);
+            $this->logHandledError('community.destroy.failed', $e, ['community_id' => $community->id]);
 
             return back()->with('error', 'La communaute n\'a pas pu etre supprimee. Veuillez reessayer.');
         }

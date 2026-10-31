@@ -3,6 +3,7 @@
 namespace App\Http\Middleware;
 
 use App\Services\AlertService;
+use App\Support\ErrorSpike;
 use App\Support\SafeLog;
 use App\Support\SchedulerHeartbeat;
 use Closure;
@@ -36,7 +37,12 @@ class LogRequestDuration
 
         try {
             $this->logIfSlow($response, (microtime(true) - $start) * 1000);
-            $this->countServerError($response);
+
+            // Un 503 de /up décrit l'état d'une dépendance (déjà alertée par sa propre règle),
+            // pas une erreur applicative : un moniteur de disponibilité ne doit pas gonfler error_spike.
+            if (! $request->routeIs('health')) {
+                $this->countServerError($response);
+            }
         } catch (Throwable $e) {
             // La mesure ne doit jamais casser la réponse.
             SafeLog::failure('monitoring.request_metrics.failed', $e);
@@ -92,18 +98,13 @@ class LogRequestDuration
             return;
         }
 
-        app(AlertService::class)->hit(
-            'error_spike',
-            'Pic d\'erreurs serveur (5xx).',
-            ['last_status' => $status],
-            (int) config('monitoring.error_spike.threshold', 10),
-            (int) config('monitoring.error_spike.window_minutes', 5),
-        );
+        ErrorSpike::count($status);
     }
 
     /**
-     * Sur une installation neuve (jamais de battement) hors production, pas d'alerte :
-     * le cron n'est simplement pas encore configuré.
+     * Sans battement du tout (installation neuve, cache vidé), isStale() laisse au cron
+     * heartbeat_max_age_minutes pour battre avant de le déclarer arrêté. Hors production,
+     * pas d'alerte dans ce cas : le cron n'est simplement pas configuré en local.
      */
     private function checkScheduler(): void
     {

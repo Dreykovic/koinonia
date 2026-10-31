@@ -18,7 +18,7 @@ class RequestContextTest extends TestCase
     {
         return User::create([
             'name' => 'Test',
-            'email' => 'ctx-' . uniqid() . '@example.test',
+            'email' => 'ctx-'.uniqid().'@example.test',
             'password' => 'password',
             'roles' => [PlatformRole::MEMBRE],
         ]);
@@ -54,14 +54,33 @@ class RequestContextTest extends TestCase
         })->name('probe');
 
         $user = $this->user();
-        $this->actingAs($user)->get('/_probe')->assertOk();
+        $this->actingAs($user)->get('/_probe?token=secret-value&email=x@example.test')->assertOk();
 
         $record = collect($handler->getRecords())->first(fn ($r) => $r->message === 'probe');
 
         $this->assertSame($user->id, $record->context['user_id']);
+        $this->assertSame([PlatformRole::MEMBRE], $record->context['roles']);
         $this->assertSame('probe', $record->context['route']);
         $this->assertSame('GET', $record->context['method']);
         $this->assertNotEmpty($record->context['request_id']);
+        $this->assertSame('127.0.0.1', $record->context['ip']);
+        // URL sans query string (tokens, e-mails).
+        $this->assertStringEndsWith('/_probe', $record->context['url']);
+        $this->assertStringNotContainsString('secret-value', json_encode($record->context));
+    }
+
+    public function test_reset_password_token_is_masked_in_the_logged_url(): void
+    {
+        $handler = new TestHandler();
+        $this->app['log']->channel('security')->getLogger()->pushHandler($handler);
+
+        $this->get('/reset-password/tok-SECRET-123?email=jean@example.test')->assertOk();
+
+        $record = collect($handler->getRecords())->first(fn ($r) => $r->message === 'auth.password.reset_form');
+
+        $this->assertStringEndsWith('/reset-password/***', $record->context['url']);
+        $this->assertStringNotContainsString('tok-SECRET-123', json_encode($record->context));
+        $this->assertSame('j***@example.test', $record->context['email']);
     }
 
     public function test_unhandled_exception_is_logged_with_request_context(): void

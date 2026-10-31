@@ -57,7 +57,7 @@ class BulletinController extends Controller
                     ->first();
             }
         } catch (Throwable $e) {
-            $this->logError('bulletin.current.failed', $e);
+            $this->logHandledError('bulletin.current.failed', $e);
             $bulletin = null;
             $degradedNotice = 'Le bulletin de la semaine est momentanément indisponible. Veuillez réessayer plus tard.';
         }
@@ -103,7 +103,7 @@ class BulletinController extends Controller
 
             $years = BulletinEdition::selectRaw('DISTINCT year')->orderBy('year', 'desc')->pluck('year');
         } catch (Throwable $e) {
-            $this->logError('bulletin.index.failed', $e, [
+            $this->logHandledError('bulletin.index.failed', $e, [
                 'filters' => $request->only(['year', 'status']),
                 'has_search' => $request->filled('search'),
             ]);
@@ -143,7 +143,7 @@ class BulletinController extends Controller
 
             $users = User::active()->orderBy('name')->get();
         } catch (Throwable $e) {
-            $this->logError('bulletin.create.failed', $e);
+            $this->logHandledError('bulletin.create.failed', $e);
 
             return redirect()->route('bulletin.index')
                 ->with('error', 'Impossible d\'ouvrir le formulaire de création. Veuillez réessayer plus tard.');
@@ -202,7 +202,7 @@ class BulletinController extends Controller
         try {
             $bulletin->load([...self::BULLETIN_RELATIONS, 'creator']);
         } catch (Throwable $e) {
-            $this->logError('bulletin.show.failed', $e, ['bulletin_id' => $bulletin->id]);
+            $this->logHandledError('bulletin.show.failed', $e, ['bulletin_id' => $bulletin->id]);
 
             return redirect()->route('dashboard')
                 ->with('error', 'Impossible d\'afficher ce bulletin. Veuillez réessayer plus tard.');
@@ -226,7 +226,7 @@ class BulletinController extends Controller
 
             $users = User::active()->orderBy('name')->get();
         } catch (Throwable $e) {
-            $this->logError('bulletin.edit.failed', $e, ['bulletin_id' => $bulletin->id]);
+            $this->logHandledError('bulletin.edit.failed', $e, ['bulletin_id' => $bulletin->id]);
 
             return redirect()->route('bulletin.index')
                 ->with('error', 'Impossible d\'ouvrir cette édition. Veuillez réessayer plus tard.');
@@ -551,7 +551,7 @@ class BulletinController extends Controller
         try {
             return $action();
         } catch (Throwable $e) {
-            $this->logError($event, $e, $context);
+            $this->logHandledError($event, $e, $context);
 
             $redirect = back()->with('error', $errorMessage);
 

@@ -3,6 +3,7 @@
 namespace App\Mail\Concerns;
 
 use App\Services\FailedEmailRecorder;
+use App\Support\CurrentJob;
 use Illuminate\Database\Eloquent\Model;
 use Throwable;
 
@@ -37,6 +38,8 @@ trait RecordsDeliveryFailure
     public function failed(Throwable $e): void
     {
         $recorder = app(FailedEmailRecorder::class);
+        // Laravel appelle failed() avant JobFailed : la tentative du job courant est encore connue.
+        $attempts = CurrentJob::attempts() ?? (int) ($this->tries ?? 1);
 
         foreach ($this->to ?: [['address' => 'unknown', 'name' => null]] as $recipient) {
             $recorder->record(
@@ -47,6 +50,7 @@ trait RecordsDeliveryFailure
                 FailedEmailRecorder::SOURCE_QUEUE,
                 ['type' => $this->failureRelatedType, 'id' => $this->failureRelatedId],
                 $this->failureRequestId,
+                $attempts,
             );
         }
     }

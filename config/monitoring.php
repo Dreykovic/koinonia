@@ -61,7 +61,13 @@ return [
 
     'scheduler' => [
         // Âge maximal (minutes) du dernier battement de schedule:run avant de le considérer inactif.
+        // Doit dépasser l'intervalle du cron avec une marge (2 × intervalle + 1) : 5 pour un cron
+        // chaque minute, 121 pour un cron horaire. Sinon /up répond 503 et scheduler_stale part entre deux passages.
         'heartbeat_max_age_minutes' => (int) env('MONITORING_HEARTBEAT_MAX_AGE', 5),
     ],
+
+    // Jeton optionnel : GET /up?token=... ajoute le détail (volumes de file, dernier battement).
+    // Vide = réponse publique limitée aux statuts.
+    'health_token' => env('MONITORING_HEALTH_TOKEN', ''),
 
 ];

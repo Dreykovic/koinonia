@@ -100,7 +100,7 @@ class UserController extends Controller
         try {
             $user = User::create($validated);
         } catch (Throwable $e) {
-            $this->logError('user.store.failed', $e, [
+            $this->logHandledError('user.store.failed', $e, [
                 'email' => LogMask::email($validated['email']),
                 'roles' => $validated['roles'],
             ]);
@@ -173,7 +173,7 @@ class UserController extends Controller
         try {
             $user->update($validated);
         } catch (Throwable $e) {
-            $this->logError('user.update.failed', $e, ['target_user_id' => $user->id]);
+            $this->logHandledError('user.update.failed', $e, ['target_user_id' => $user->id]);
 
             return back()->withInput($request->except(self::SENSITIVE_INPUT))
                 ->with('error', 'Le membre n\'a pas pu etre mis a jour. Veuillez reessayer.');
@@ -224,7 +224,7 @@ class UserController extends Controller
                 $user->delete();
             });
         } catch (Throwable $e) {
-            $this->logError('user.destroy.failed', $e, ['target_user_id' => $user->id, 'rolled_back' => true]);
+            $this->logHandledError('user.destroy.failed', $e, ['target_user_id' => $user->id, 'rolled_back' => true]);
 
             return back()->with('error', "Le membre {$name} n'a pas pu etre supprime. Aucune donnee n'a ete modifiee.");
         }
@@ -247,7 +247,7 @@ class UserController extends Controller
         try {
             $user->update(['is_active' => ! $user->is_active]);
         } catch (Throwable $e) {
-            $this->logError('user.toggle_active.failed', $e, ['target_user_id' => $user->id]);
+            $this->logHandledError('user.toggle_active.failed', $e, ['target_user_id' => $user->id]);
 
             return back()->with('error', "Le statut du membre {$user->name} n'a pas pu etre modifie.");
         }

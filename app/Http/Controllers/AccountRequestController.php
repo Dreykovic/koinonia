@@ -33,7 +33,7 @@ class AccountRequestController extends Controller
     {
         $communities = Community::active()->ordered()->get();
 
-        Log::channel('security')->debug('account_request.form');
+        Log::channel('security')->info('account_request.form');
 
         return view('account-requests.create', compact('communities'));
     }
@@ -84,7 +84,7 @@ class AccountRequestController extends Controller
      */
     public function success()
     {
-        Log::channel('security')->debug('account_request.success_page');
+        Log::channel('security')->info('account_request.success_page');
 
         return view('account-requests.success');
     }

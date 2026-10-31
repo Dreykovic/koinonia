@@ -36,7 +36,7 @@ class AuthController extends Controller
             return redirect()->route('dashboard');
         }
 
-        Log::channel('security')->debug('auth.login.form');
+        Log::channel('security')->info('auth.login.form');
 
         return view('auth.login');
     }
@@ -121,7 +121,7 @@ class AuthController extends Controller
      */
     public function showForgotPassword()
     {
-        Log::channel('security')->debug('auth.password.forgot_form');
+        Log::channel('security')->info('auth.password.forgot_form');
 
         return view('auth.forgot-password');
     }
@@ -163,14 +163,19 @@ class AuthController extends Controller
      */
     public function showResetForm(Request $request, string $token)
     {
+        // Paramètre non fiable : seule une adresse valide est journalisée et pré-remplie
+        // (évite l'injection de fausses lignes dans les logs via ?email=).
+        $email = $request->query('email');
+        $email = is_string($email) && filter_var($email, FILTER_VALIDATE_EMAIL) ? $email : null;
+
         // Ouverture d'un lien de réinitialisation : jamais le token.
         Log::channel('security')->info('auth.password.reset_form', [
-            'email' => LogMask::email($request->query('email')),
+            'email' => LogMask::email($email),
         ]);
 
         return view('auth.reset-password', [
             'token' => $token,
-            'email' => $request->email,
+            'email' => $email,
         ]);
     }
 

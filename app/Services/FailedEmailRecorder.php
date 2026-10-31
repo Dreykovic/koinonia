@@ -38,6 +38,7 @@ class FailedEmailRecorder
      * Enregistre un échec d'envoi et le journalise. Ne lève jamais d'exception.
      *
      * @param  array{type?: ?string, id?: int|string|null}  $related  Modèle lié (classe + id)
+     * @param  int  $attempts  Tentatives déjà faites (le worker en fait plusieurs avant failed())
      */
     public function record(
         MailableContract $mailable,
@@ -47,7 +48,9 @@ class FailedEmailRecorder
         string $source = self::SOURCE_SYNC,
         array $related = [],
         ?string $requestId = null,
+        int $attempts = 1,
     ): ?FailedEmail {
+        $attempts = max(1, $attempts);
         $recorded = self::$recorded ??= new WeakMap();
 
         $already = $recorded[$e] ?? [];
@@ -70,7 +73,7 @@ class FailedEmailRecorder
                 'related_model_id' => $related['id'] ?? null,
                 'source' => $source,
                 'request_id' => $requestId,
-                'attempts' => 1,
+                'attempts' => $attempts,
                 'last_attempt_at' => now(),
                 'payload' => $this->payload($mailable),
             ]);
@@ -81,7 +84,7 @@ class FailedEmailRecorder
             Log::channel('mail')->error('mail.failed_email.store_failed', [
                 'mailable' => get_class($mailable),
                 'exception_class' => get_class($dbException),
-                'error' => $dbException->getMessage(),
+                'error' => LogMask::exceptionMessage($dbException),
             ]);
         }
 
@@ -89,13 +92,14 @@ class FailedEmailRecorder
             'failed_email_id' => $failedEmail?->id,
             'mailable' => get_class($mailable),
             'recipient' => LogMask::email($recipientEmail),
-            'attempt' => 1,
+            'attempt' => $attempts,
             'source' => $source,
             'related_model' => isset($related['type']) ? $related['type'].'#'.($related['id'] ?? '?') : null,
             // En file, le contexte de requête n'est plus partagé : on garde celui d'origine.
             'origin_request_id' => $source === self::SOURCE_QUEUE ? $requestId : null,
             'exception_class' => get_class($e),
-            'error' => $e->getMessage(),
+            // La réponse SMTP répète souvent l'adresse complète : masquée comme 'recipient'.
+            'error' => LogMask::text($e->getMessage()),
         ], fn ($value) => $value !== null));
 
         $this->countFailure(get_class($mailable), $e);
@@ -141,7 +145,7 @@ class FailedEmailRecorder
 
             Log::channel('mail')->error('mail.retry.failed', $context + [
                 'exception_class' => get_class($e),
-                'error' => $e->getMessage(),
+                'error' => LogMask::text($e->getMessage()),
             ]);
 
             $this->countFailure($failedEmail->mailable_class, $e);
@@ -187,7 +191,7 @@ class FailedEmailRecorder
         app(AlertService::class)->hit(
             'mail_failure',
             'Échecs répétés d\'envoi d\'e-mails.',
-            ['mailable' => $mailableClass, 'exception_class' => get_class($e), 'error' => $e->getMessage()],
+            ['mailable' => $mailableClass, 'exception_class' => get_class($e), 'error' => LogMask::text($e->getMessage())],
             (int) config('monitoring.mail_failure.threshold', 3),
             (int) config('monitoring.mail_failure.window_minutes', 15),
         );

@@ -61,7 +61,15 @@ class ObservabilityTest extends TestCase
             'payload' => '{}', 'exception' => 'x', 'failed_at' => now(),
         ]);
 
-        $this->getJson('/up')
+        // Public : statuts seulement, sans volumes de file ni battement.
+        $public = $this->getJson('/up')->assertOk()->json();
+        $this->assertSame(['status' => 'ok'], $public['checks']['queue']);
+        $this->assertSame(['status' => 'ok'], $public['checks']['scheduler']);
+
+        config(['monitoring.health_token' => 'jeton-supervision']);
+        $this->getJson('/up?token=faux')->assertOk()->assertJsonPath('checks.queue', ['status' => 'ok']);
+
+        $this->getJson('/up?token=jeton-supervision')
             ->assertOk()
             ->assertHeader('Cache-Control')
             ->assertJsonPath('status', 'ok')

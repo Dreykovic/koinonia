@@ -37,7 +37,7 @@ class CheckRole
             abort(403, 'Vous n\'avez pas les permissions necessaires pour acceder a cette page.');
         }
 
-        Log::channel('security')->debug('auth.access.granted', $context);
+        Log::channel('security')->info('auth.access.granted', $context);
 
         return $next($request);
     }

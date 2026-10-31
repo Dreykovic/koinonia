@@ -129,10 +129,14 @@ class MonitoringHelpersTest extends TestCase
     {
         config(['monitoring.scheduler.heartbeat_max_age_minutes' => 5]);
 
+        $this->freezeSecond();
+
+        // Sans battement (cache vidé) : délai de grâce de max_age à partir du premier constat.
         $this->assertNull(SchedulerHeartbeat::lastBeat());
+        $this->assertFalse(SchedulerHeartbeat::isStale());
+        $this->travel(6)->minutes();
         $this->assertTrue(SchedulerHeartbeat::isStale());
 
-        $this->freezeSecond();
         SchedulerHeartbeat::beat();
         $this->assertTrue(SchedulerHeartbeat::lastBeat()->equalTo(now()));
         $this->assertFalse(SchedulerHeartbeat::isStale());

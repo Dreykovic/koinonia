@@ -57,7 +57,7 @@ class UserProfileVehicleTypeController extends Controller
                 'updated_at' => now(),
             ]);
         } catch (Throwable $e) {
-            $this->logError('profile_vehicle_type.store.failed', $e, $context);
+            $this->logHandledError('profile_vehicle_type.store.failed', $e, $context);
 
             return redirect()->back()->with('error', 'Le type de véhicule n\'a pas pu être associé. Veuillez réessayer.');
         }
@@ -90,7 +90,7 @@ class UserProfileVehicleTypeController extends Controller
                 'updated_at' => now(),
             ]);
         } catch (Throwable $e) {
-            $this->logError('profile_vehicle_type.update.failed', $e, $context);
+            $this->logHandledError('profile_vehicle_type.update.failed', $e, $context);
 
             return redirect()->back()->with('error', 'Le statut n\'a pas pu être mis à jour. Veuillez réessayer.');
         }
@@ -115,7 +115,7 @@ class UserProfileVehicleTypeController extends Controller
         try {
             $userProfile->vehicleTypes()->detach($vehicleType->id);
         } catch (Throwable $e) {
-            $this->logError('profile_vehicle_type.destroy.failed', $e, $context);
+            $this->logHandledError('profile_vehicle_type.destroy.failed', $e, $context);
 
             return redirect()->back()->with('error', 'Le type de véhicule n\'a pas pu être dissocié. Veuillez réessayer.');
         }

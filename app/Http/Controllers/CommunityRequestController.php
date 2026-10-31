@@ -110,7 +110,7 @@ class CommunityRequestController extends Controller
         try {
             $communityRequest->save();
         } catch (Throwable $e) {
-            $this->logError('community_request.update.failed', $e, [
+            $this->logHandledError('community_request.update.failed', $e, [
                 'community_request_id' => $communityRequest->id,
                 'old_status' => $oldStatus,
                 'new_status' => $validated['status'],
@@ -151,7 +151,7 @@ class CommunityRequestController extends Controller
         try {
             $communityRequest->delete();
         } catch (Throwable $e) {
-            $this->logError('community_request.destroy.failed', $e, ['community_request_id' => $communityRequest->id]);
+            $this->logHandledError('community_request.destroy.failed', $e, ['community_request_id' => $communityRequest->id]);
 
             return back()->with('error', 'La demande n\'a pas pu etre supprimee. Veuillez reessayer.');
         }
@@ -192,7 +192,7 @@ class CommunityRequestController extends Controller
                 'by_month' => $this->getRequestsByMonth(),
             ];
         } catch (Throwable $e) {
-            $this->logError('community_request.statistics.failed', $e);
+            $this->logHandledError('community_request.statistics.failed', $e);
 
             return redirect()->route('community-requests.index')
                 ->with('error', 'Les statistiques n\'ont pas pu etre calculees. Veuillez reessayer.');
@@ -246,7 +246,7 @@ class CommunityRequestController extends Controller
 
             $requests = $query->latest()->get();
         } catch (Throwable $e) {
-            $this->logError('community_request.export.failed', $e, ['filters' => $filters]);
+            $this->logHandledError('community_request.export.failed', $e, ['filters' => $filters]);
 
             return back()->with('error', 'L\'export des demandes a echoue. Veuillez reessayer.');
         }
@@ -302,7 +302,7 @@ class CommunityRequestController extends Controller
                 }
             } catch (Throwable $e) {
                 // Les en-tetes sont deja envoyes : impossible d'afficher un message, on trace le fichier tronque.
-                $this->logError('community_request.export.stream_failed', $e, ['filters' => $filters, 'truncated' => true]);
+                $this->logHandledError('community_request.export.stream_failed', $e, ['filters' => $filters, 'truncated' => true]);
             } finally {
                 fclose($file);
             }

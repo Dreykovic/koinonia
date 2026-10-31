@@ -56,7 +56,7 @@ class VehicleController extends Controller
         try {
             $vehicle = Vehicle::create($validated);
         } catch (Throwable $e) {
-            $this->logError('vehicle.store.failed', $e, ['vehicle_type_id' => $validated['vehicle_type_id']]);
+            $this->logHandledError('vehicle.store.failed', $e, ['vehicle_type_id' => $validated['vehicle_type_id']]);
 
             return back()->withInput()->with('error', 'Le vehicule n\'a pas pu etre cree. Reessayez.');
         }
@@ -107,7 +107,7 @@ class VehicleController extends Controller
         try {
             $vehicle->update($validated);
         } catch (Throwable $e) {
-            $this->logError('vehicle.update.failed', $e, $this->vehicleContext($vehicle));
+            $this->logHandledError('vehicle.update.failed', $e, $this->vehicleContext($vehicle));
 
             return back()->withInput()->with('error', 'Le vehicule n\'a pas pu etre mis a jour. Reessayez.');
         }
@@ -145,7 +145,7 @@ class VehicleController extends Controller
         try {
             $vehicle->delete();
         } catch (Throwable $e) {
-            $this->logError('vehicle.delete.failed', $e, $context);
+            $this->logHandledError('vehicle.delete.failed', $e, $context);
 
             return back()->with('error', 'Le vehicule n\'a pas pu etre supprime. Reessayez.');
         }
@@ -169,7 +169,7 @@ class VehicleController extends Controller
         try {
             $vehicle->update(['is_available' => ! $vehicle->is_available]);
         } catch (Throwable $e) {
-            $this->logError('vehicle.availability.failed', $e, $this->vehicleContext($vehicle));
+            $this->logHandledError('vehicle.availability.failed', $e, $this->vehicleContext($vehicle));
 
             return back()->with('error', 'La disponibilite du vehicule n\'a pas pu etre modifiee. Reessayez.');
         }

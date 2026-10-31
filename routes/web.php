@@ -7,6 +7,7 @@ use App\Http\Controllers\Admin\LogController;
 use App\Http\Controllers\Admin\VehicleSettingController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\BulletinController;
+use App\Http\Controllers\CommunityController;
 use App\Http\Controllers\CommunityRequestController;
 use App\Http\Controllers\CommunityRequestFormController;
 use App\Http\Controllers\DashboardController;
@@ -14,15 +15,14 @@ use App\Http\Controllers\GuideController;
 use App\Http\Controllers\HealthController;
 use App\Http\Controllers\MealController;
 use App\Http\Controllers\MealInscriptionController;
+use App\Http\Controllers\MenuWeekController;
 use App\Http\Controllers\ProfileController;
-use App\Http\Controllers\CommunityController;
 use App\Http\Controllers\RepairLocationController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\UserProfileVehicleTypeController;
 use App\Http\Controllers\VehicleController;
-use App\Http\Controllers\WeekMenuController;
-use App\Http\Controllers\MenuWeekController;
 use App\Http\Controllers\VehicleReservationController;
+use App\Http\Controllers\WeekMenuController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -33,6 +33,7 @@ use Illuminate\Support\Facades\Route;
 
 // Health check public (supervision) : pas d'authentification ni de session.
 Route::get('up', HealthController::class)
+    ->middleware('throttle:30,1')
     ->withoutMiddleware([
         \App\Http\Middleware\EncryptCookies::class,
         \Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse::class,
@@ -166,7 +167,6 @@ Route::middleware('auth')->group(function () {
         Route::post('users/{user}/toggle-active', [UserController::class, 'toggleActive'])->name('users.toggle-active');
     });
 
-
     // Profile
     Route::get('profile', [ProfileController::class, 'show'])->name('profile.show');
     Route::get('profile/edit', [ProfileController::class, 'edit'])->name('profile.edit');
@@ -238,8 +238,6 @@ Route::middleware('auth')->group(function () {
         Route::get('/qr-download', [CommunityRequestFormController::class, 'downloadQR'])->name('qr-download');
     });
 
-
-
     // Week menu - Member routes
     Route::prefix('week-menu')->name('week-menus.')->group(function () {
         Route::get('/', [WeekMenuController::class, 'index'])->name('index');
@@ -282,41 +280,18 @@ Route::middleware('auth')->group(function () {
         });
     });
 
-
     // uSER pROFILE & vehicle type
     Route::middleware(['role:admin'])->group(function () {
         Route::prefix('user-profile-vehicle-types')->name('user-profile-vehicle-types.')->group(function () {
-        Route::get('/', [UserProfileVehicleTypeController::class, 'index'])
-            ->name('index');
-        Route::post('/', [UserProfileVehicleTypeController::class, 'store'])
-            ->name('store');
-        Route::put('/{userProfile}/{vehicleType}', [UserProfileVehicleTypeController::class, 'update'])
-            ->name('update');
-        Route::delete('/{userProfile}/{vehicleType}', [UserProfileVehicleTypeController::class, 'destroy'])
-            ->name('destroy');
+            Route::get('/', [UserProfileVehicleTypeController::class, 'index'])
+                ->name('index');
+            Route::post('/', [UserProfileVehicleTypeController::class, 'store'])
+                ->name('store');
+            Route::put('/{userProfile}/{vehicleType}', [UserProfileVehicleTypeController::class, 'update'])
+                ->name('update');
+            Route::delete('/{userProfile}/{vehicleType}', [UserProfileVehicleTypeController::class, 'destroy'])
+                ->name('destroy');
         });
-
 
     });
 });
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

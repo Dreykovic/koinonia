@@ -133,7 +133,7 @@ class DashboardController extends Controller
             return $loader();
         } catch (Throwable $e) {
             $this->failedWidgets[] = $name;
-            $this->logError('dashboard.widget.failed', $e, ['widget' => $name]);
+            $this->logHandledError('dashboard.widget.failed', $e, ['widget' => $name]);
 
             return $fallback;
         }

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Support\AppVersion;
+use App\Support\LogMask;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -141,15 +142,6 @@ class ClientErrorController extends Controller
      */
     public static function redact(string $value): string
     {
-        $patterns = [
-            // Lien de réinitialisation de mot de passe : le token est dans le chemin.
-            '#(reset-password/)[^/\s?\#:"\'<>]+#i' => '$1[redacted]',
-            // Paramètres de requête sensibles (token, signature, password…).
-            '/([?&][^=&\s#]*(?:token|signature|password|secret|key|code|email)[^=&\s#]*=)[^&\s#"\'<>]*/i' => '$1[redacted]',
-            // Adresses e-mail : "jean@example.com" => "j***@example.com" (cf. LogMask).
-            '/\b([A-Za-z0-9])[A-Za-z0-9._%+-]*@([A-Za-z0-9.-]+\.[A-Za-z]{2,})\b/' => '$1***@$2',
-        ];
-
-        return (string) preg_replace(array_keys($patterns), array_values($patterns), $value);
+        return LogMask::text($value);
     }
 }

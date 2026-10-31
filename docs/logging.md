@@ -78,7 +78,16 @@ class VehicleReservationController extends Controller
 ```
 
 `logError()` ajoute `exception_class`, `error`, `location` (fichier:ligne) et
-`exception` (la stack trace est conservée par Monolog).
+`exception` (la stack trace est conservée : `formatter_with.includeStacktraces` est forcé
+dans `config/logging.php`, y compris avec `LOG_FORMATTER=JsonFormatter`). Le message est
+passé par `LogMask::exceptionMessage()` : e-mails et hash masqués, et une `QueryException`
+est journalisée sans ses valeurs liées (`error` = message du driver, `sql` avec ses `?`,
+`sql_state`) ; l'exception est remplacée par une copie masquée qui garde la trace.
+
+`logError()` est réservé aux `catch` qui **relancent** l'exception (le handler la reporte et
+la compte). Un `catch` qui transforme l'erreur en redirection ou en page dégradée utilise
+`logHandledError()` : même log, plus le compteur `error_spike` (sinon une panne de base
+qui ne produit que des messages « Veuillez réessayer » n'alerterait jamais).
 
 ## 5. Quoi journaliser, quoi ne pas journaliser
 
@@ -113,6 +122,16 @@ use App\Support\LogMask;
 Log::channel('security')->warning('auth.login.failed', ['email' => LogMask::email($email)]);
 // "jean.dupont@example.com" => "j***@example.com"
 ```
+
+- `LogMask::email()` renvoie `***` si le domaine n'est pas un nom d'hôte plausible
+  (retours à la ligne, caractères de contrôle) : une valeur saisie ne peut pas forger de
+  fausses lignes de log. Valider aussi l'entrée avant de la journaliser quand c'est possible.
+- Texte libre venant de l'extérieur (réponse SMTP, message d'exception) : `LogMask::text()`
+  (e-mails, hash, tokens de réinitialisation, paramètres sensibles d'URL).
+- Les canaux fichiers ont un tap `App\Logging\MaskSensitiveData` : une `QueryException`
+  reportée telle quelle (handler d'exceptions) est réécrite sans valeurs liées.
+- Les e-mails d'alerte ne contiennent jamais de message d'exception : seulement la classe,
+  le `request_id` ou l'identifiant du job ; le détail reste dans les logs locaux.
 
 ## 6. Erreurs HTTP et pages d'erreur
 
@@ -165,12 +184,12 @@ Règles et réglages (`config/monitoring.php`, variables dans `.env.example`) :
 
 | Règle | Déclencheur | Réglage |
 |-------|-------------|---------|
-| `error_spike` | Exceptions reportées (5xx) via `Handler::register()`, 5xx explicites via `LogRequestDuration`, échecs interceptés par `GuardsMealMenuActions::guardAction()` | `ALERT_ERROR_SPIKE_THRESHOLD` / `_WINDOW` (10 en 5 min) |
+| `error_spike` | Exceptions reportées (5xx) via `Handler::register()`, 5xx explicites via `LogRequestDuration` (hors `/up`), échecs interceptés par un `catch` de contrôleur (`logHandledError()`, `GuardsMealMenuActions::guardAction()`), tous via `App\Support\ErrorSpike` | `ALERT_ERROR_SPIKE_THRESHOLD` / `_WINDOW` (10 en 5 min) |
 | `mail_failure` | Échecs d'envoi d'e-mails | `ALERT_MAIL_FAILURE_THRESHOLD` / `_WINDOW` (3 en 15 min) |
-| `broadcast_failure` | Échecs de `broadcastSafely()` | `ALERT_BROADCAST_FAILURE_THRESHOLD` / `_WINDOW` (5 en 10 min) |
+| `broadcast_failure` | Échecs de `broadcastSafely()` (mise en file) et de chaque tentative d'un job `BroadcastEvent` dans le worker (appel Pusher, `QueueMonitoringServiceProvider`) | `ALERT_BROADCAST_FAILURE_THRESHOLD` / `_WINDOW` (5 en 10 min) |
 | `job_failed` | Job en échec définitif (`QueueMonitoringServiceProvider`) | `ALERT_QUEUE_FAILURE` (true/false) |
 | `scheduled_task_failed` | Tâche planifiée en échec (`ScheduleMonitor`, hook `onFailure`) | aucun (à chaque échec) |
-| `scheduler_stale` | `SchedulerHeartbeat::isStale()`, vérifié par `LogRequestDuration` (toutes les 5 min) | `MONITORING_HEARTBEAT_MAX_AGE` (5 min) |
+| `scheduler_stale` | `SchedulerHeartbeat::isStale()`, vérifié par `LogRequestDuration` (toutes les 5 min) | `MONITORING_HEARTBEAT_MAX_AGE` (5 min ; > intervalle du cron, voir deploy-ovh.md §6) |
 | `auth_lockout` | Blocages de connexion (`LogAuthenticationEvents`) | `ALERT_AUTH_LOCKOUT_THRESHOLD` / `_WINDOW` (10 en 15 min) |
 | `menu_rotation_failure` | Calcul de rotation des menus en échec (`MenuRotation`) | constante (1 en 30 min) |
 | `meal_generation_failure` | `meals:generate` en échec pour au moins une date | aucun (à chaque échec) |
@@ -184,12 +203,13 @@ Seuils de lenteur : `MONITORING_SLOW_QUERY_MS` (500 ms), `MONITORING_SLOW_REQUES
 
 | Helper | Rôle |
 |--------|------|
-| `App\Traits\LogsErrors` | `logError($event, $e, $context, $channel)`, `logWarning(...)`, `logInfo(...)`. |
+| `App\Traits\LogsErrors` | `logError($event, $e, $context, $channel)` (exception relancée), `logHandledError(...)` (exception interceptée : log + `error_spike`), `logWarning(...)`, `logInfo(...)`. |
+| `App\Support\ErrorSpike` | `count($exceptionOrStatus)` : compteur `error_spike`, sans message d'exception dans l'alerte, ne lève jamais. |
 | `App\Traits\BroadcastsSafely` | `broadcastSafely($event, $context, $toOthers)` : diffuse sans jamais lever d'exception, log `broadcast.failed` + compteur `broadcast_failure`. Retourne `true` si diffusé. |
 | `App\Services\AlertService` | `send()` / `hit()`, voir ci-dessus. |
 | `App\Support\SchedulerHeartbeat` | `beat()` (à appeler par le scheduler), `lastBeat()`, `isStale()`. Stocké dans le cache par défaut : le cron et le web doivent partager le même store (`CACHE_DRIVER=file` sur OVH). |
-| `App\Support\LogMask` | `email()` : masque une adresse avant de la journaliser. |
-| `App\Support\SafeLog` | `failure($event, $e, $context, $channel)` : `warning` avec l'exception, sans jamais lever ; si le canal lui-même échoue (`storage/logs` non inscriptible), écrit dans le log d'erreurs PHP (`error_log`). Pour les `catch` qui protègent une opération secondaire (alerte, métrique). Événements : `alert.dispatch.failed` (`rule`), `monitoring.request_metrics.failed`, `mail.failed_email.subject_unavailable` / `.payload_unavailable` (`mailable`). |
+| `App\Support\LogMask` | `email()` : masque une adresse ; `text()` : masque e-mails, hash et tokens d'un texte libre ; `exceptionMessage()` / `exceptionContext()` : message et contexte d'exception sans données liées. |
+| `App\Support\SafeLog` | `failure($event, $e, $context, $channel)` : `warning` avec l'exception, sans jamais lever ; si le canal lui-même échoue (`storage/logs` non inscriptible), écrit dans le log d'erreurs PHP (`error_log`). Pour les `catch` qui protègent une opération secondaire (alerte, métrique). Événements : `alert.dispatch.failed` (`rule`), `monitoring.request_metrics.failed`, `request.context.user_unavailable` (utilisateur illisible, base en panne : le contexte est partagé sans `user_id`), `mail.failed_email.subject_unavailable` / `.payload_unavailable` (`mailable`). |
 
 ## 9. Sécurité et authentification (canal `security`)
 
@@ -207,7 +227,7 @@ partagé ; les e-mails sont toujours masqués, jamais de mot de passe ni de toke
 | `auth.password.reset` / `.reset.failed` | info / warning | PasswordReset / `AuthController` | `user_id` ou `status` (`passwords.token`…) |
 | `auth.unauthenticated` | info | `Authenticate`, `CheckRole` | `middleware`, `guards` ou `required_roles` |
 | `auth.access.denied` | warning | `CheckRole` (403) | `required_roles` |
-| `auth.access.granted` | debug | `CheckRole` | `required_roles` |
+| `auth.access.granted` | info | `CheckRole` | `required_roles` |
 | `account_request.submitted` / `.submit.invalid` | info / notice | `AccountRequestController` | `account_request_id`, `email` masqué / `fields` en erreur |
 | `account_request.approved` / `.rejected` | info | `AccountRequestController` | `account_request_id`, `created_user_id`, `has_notes` (jamais le contenu des notes ni le mot de passe temporaire) |
 | `account_request.approve.skipped` / `.reject.skipped` | warning | `AccountRequestController` | `reason` (`already_processed`, `email_taken`) |
@@ -215,7 +235,9 @@ partagé ; les e-mails sont toujours masqués, jamais de mot de passe ni de toke
 | `profile.password.changed` / `.change_failed` | info / warning | `ProfileController` | `reason` (`wrong_current_password`, `invalid_new_password`) |
 
 Les affichages de formulaires publics (`auth.login.form`, `auth.password.forgot_form`,
-`account_request.form`, `account_request.success_page`) sont tracés en `debug`.
+`account_request.form`, `account_request.success_page`) sont tracés en `info`. Le canal
+`security` n'est jamais plus strict que `info` (même avec `LOG_LEVEL=warning`) : chaque accès
+invité ou `role:*` laisse une trace en production.
 
 Alerte `auth_lockout` : `monitoring.auth_lockout.threshold` / `window_minutes`
 (défaut : 10 blocages en 15 min).
@@ -420,11 +442,14 @@ Retrouver les erreurs d'un utilisateur : `grep '"user_id":42' storage/logs/app-*
 
 ## 17. Observabilité (health check, lenteurs, N+1)
 
-- **`GET /up`** (route `health`, sans authentification ni session) : JSON
+- **`GET /up`** (route `health`, sans authentification ni session, `throttle:30,1` par IP) : JSON
   `{"status": "ok|degraded", "checks": {"database", "cache", "queue", "storage", "scheduler"}}`,
-  **200** si tout est `ok`, **503** sinon. `queue` donne `pending` / `failed` (tables `jobs`
-  et `failed_jobs`), `scheduler` donne `last_beat`. Aucun message d'exception dans la
-  réponse : le détail est journalisé (`health.check.failed`, canal `app`).
+  **200** si tout est `ok`, **503** sinon. Publiquement, chaque vérification ne donne que son
+  `status` ; avec `?token=` égal à `MONITORING_HEALTH_TOKEN`, `queue` ajoute `pending` /
+  `failed` et `scheduler` ajoute `last_beat`. Aucun message d'exception dans la réponse : le
+  détail est journalisé (`health.check.failed`, canal `app`), au plus une fois par
+  vérification toutes les 5 minutes ; si la base est en panne, `queue` n'est pas testée
+  (une seule ligne). Un 503 de `/up` ne compte pas pour `error_spike`.
 - **Requêtes SQL lentes** (`App\Providers\ObservabilityServiceProvider`) : `db.query.slow`
   en `warning` au-delà de `MONITORING_SLOW_QUERY_MS` (SQL avec placeholders, sans valeurs
   liées ; seuil négatif = désactivé).
@@ -438,8 +463,10 @@ Retrouver les erreurs d'un utilisateur : `grep '"user_id":42' storage/logs/app-*
   sont déjà comptées par le handler : pas de double comptage).
 - **Scheduler inactif** : faute de superviseur externe, ce même middleware vérifie au plus
   toutes les 5 minutes (après l'envoi de la réponse) `SchedulerHeartbeat::isStale()` et
-  envoie l'alerte `scheduler_stale`. Pas d'alerte si aucun battement n'a jamais été
-  enregistré hors production (installation de dev sans cron).
+  envoie l'alerte `scheduler_stale`. Sans aucun battement (installation neuve, `cache:clear`
+  / `optimize:clear` après un déploiement), le cron dispose de `MONITORING_HEARTBEAT_MAX_AGE`
+  minutes à partir du premier constat avant l'alerte et le 503 de `/up` : pas de fausse
+  alerte au déploiement. Hors production, jamais d'alerte sans battement (dev sans cron).
 - **Alerte de test** : `php artisan monitoring:test-alert` envoie une alerte `[TEST]` pour
   chaque règle de la section 7 (liste dans `MonitoringTestAlertCommand::RULES`) en ignorant
   le throttle ; `php artisan monitoring:test-alert mail_failure` pour une seule règle.
@@ -536,12 +563,12 @@ niveau `critical`, canal `app`.
 
 | Règle | Signification | Vérifier | Corriger |
 |-------|---------------|----------|----------|
-| `error_spike` | Au moins `ALERT_ERROR_SPIKE_THRESHOLD` erreurs serveur (exceptions reportées, 5xx explicites, échecs de `guardAction`) en `ALERT_ERROR_SPIKE_WINDOW` min. | `last_exception` / `last_error` / `last_status` dans l'alerte ; page Journaux, niveau `error`, dernière heure ; `laravel.log`. Grouper par `route` et `exception_class`. | Cause commune la plus probable : base indisponible (`/up` → `database`), disque plein, déploiement partiel (`composer install`, `migrate --force`). Sinon corriger le bug de la route en cause. |
+| `error_spike` | Au moins `ALERT_ERROR_SPIKE_THRESHOLD` erreurs serveur (exceptions reportées, 5xx explicites, échecs interceptés par les `catch` des contrôleurs et `guardAction`) en `ALERT_ERROR_SPIKE_WINDOW` min. | `last_exception` / `last_status` / `request_id` dans l'alerte (jamais le message) ; rechercher le `request_id` dans la page Journaux ; page Journaux, niveau `error`, dernière heure ; `laravel.log`. Grouper par `route` et `exception_class`. | Cause commune la plus probable : base indisponible (`/up` → `database`), disque plein, déploiement partiel (`composer install`, `migrate --force`). Sinon corriger le bug de la route en cause. |
 | `job_failed` | Un job est en échec définitif (après `--tries=3`) et a rejoint `failed_jobs`. | `queue.job.failed` dans `queue-*.log` (`job`, `uuid`, exception) ; `php artisan queue:failed`. Pour un mailable : *Emails échoués*. | Corriger la cause, puis `php artisan queue:retry <uuid>` (ou `all`) ; `queue:forget <uuid>` si le job est obsolète. `chmod -R a+rwX storage bootstrap/cache` après. |
 | `scheduled_task_failed` | Une tâche planifiée s'est terminée avec un code ≠ 0. | `schedule.task.failed` dans `queue-*.log` (`task`, `exit_code`, fin de `output`) ; `command.failed` juste avant ; `storage/logs/schedule-*.log`. | Relancer la commande à la main en SSH (ex. `php artisan meals:close`) pour voir l'erreur, corriger, puis `chmod`. |
-| `scheduler_stale` | Pas de battement de `schedule:run` depuis plus de `MONITORING_HEARTBEAT_MAX_AGE` min : **ni file d'attente, ni tâches planifiées**. | `/up` → `checks.scheduler.last_beat` ; Manager OVH → *Tâches automatisées (CRON)* (tâche active, dernière exécution) ; `php artisan schedule:list`. | Réactiver ou recréer le cron (`koinonia/artisan schedule:run`, chaque minute, même version PHP). Après un `cache:clear`, le battement est effacé : l'alerte disparaît à la minute suivante si le cron tourne. Vérifier que web et cron partagent le cache (`CACHE_DRIVER=file`). |
+| `scheduler_stale` | Pas de battement de `schedule:run` depuis plus de `MONITORING_HEARTBEAT_MAX_AGE` min : **ni file d'attente, ni tâches planifiées**. | `/up` → `checks.scheduler.last_beat` ; Manager OVH → *Tâches automatisées (CRON)* (tâche active, dernière exécution) ; `php artisan schedule:list`. | Réactiver ou recréer le cron (`koinonia/artisan schedule:run`, chaque minute, même version PHP). Après un `cache:clear`, le battement est effacé mais l'alerte n'est envoyée qu'après `MONITORING_HEARTBEAT_MAX_AGE` minutes sans nouveau battement : si elle arrive, le cron ne tourne vraiment pas. Vérifier que web et cron partagent le cache (`CACHE_DRIVER=file`). |
 | `mail_failure` | Au moins `ALERT_MAIL_FAILURE_THRESHOLD` envois en échec en `ALERT_MAIL_FAILURE_WINDOW` min. | `mail.send.failed` dans `mail-*.log` (`exception_class`, `error`) ; *Emails échoués*. | SMTP : identifiants `MAIL_*`, mot de passe d'application expiré, quota du fournisseur, port bloqué. Une fois réparé, bouton **Renvoyer** sur chaque entrée. Note : si le SMTP est en panne, l'e-mail d'alerte lui-même échoue (`alert.mail.failed` dans `mail-*.log`) : surveiller aussi le log. |
-| `broadcast_failure` | Au moins `ALERT_BROADCAST_FAILURE_THRESHOLD` diffusions temps réel en échec en `ALERT_BROADCAST_FAILURE_WINDOW` min. Les actions aboutissent, seul le temps réel est dégradé. | `broadcast.failed` dans `app-*.log` (`event`, `error`) ; tableau de bord Pusher (quota, application désactivée) ; `client.broadcast.connection_lost` côté navigateur. | Vérifier `PUSHER_*` et `BROADCAST_DRIVER=pusher` ; si la clé a changé, rebuild `public/build` (`VITE_PUSHER_*`). Le polling `/api/v1` assure le service en attendant. |
+| `broadcast_failure` | Au moins `ALERT_BROADCAST_FAILURE_THRESHOLD` diffusions temps réel en échec en `ALERT_BROADCAST_FAILURE_WINDOW` min. Les actions aboutissent, seul le temps réel est dégradé. | `broadcast.failed` dans `app-*.log` (`event`, `error`, `job_uuid` pour un échec dans le worker) ; tableau de bord Pusher (quota, application désactivée) ; `client.broadcast.connection_lost` côté navigateur. | Vérifier `PUSHER_*` et `BROADCAST_DRIVER=pusher` ; la clé publique est lue à l'exécution (`<meta name="pusher-key">` rendue depuis `PUSHER_APP_KEY`) : pas de rebuild de `public/build` nécessaire. Le polling `/api/v1` assure le service en attendant. |
 | `auth_lockout` | Au moins `ALERT_AUTH_LOCKOUT_THRESHOLD` blocages de connexion (5 échecs e-mail+IP) en `ALERT_AUTH_LOCKOUT_WINDOW` min : tentative de force brute probable. | `auth.lockout` / `auth.login.failed` dans `security-*.log` : `ip`, `email` masqué, `reason`. | Une seule IP : la bloquer (`.htaccess` `Require not ip …`). Un seul compte visé : prévenir le membre, réinitialiser son mot de passe. Faux positif (membre qui a oublié son mot de passe) : rien à faire. |
 | `menu_rotation_failure` | Le calcul de la semaine de menu affichée a échoué ; la semaine enregistrée reste affichée (au plus une alerte par 30 min). | `menu.rotation.failed` dans `app-*.log` (`step`, exception) ; `menu.rotation.*` en warning juste avant. | *Gestion Menu* (`/week-menu/admin/edit`) : vérifier le cycle (semaines actives, ordre, semaine d'ancrage), réenregistrer l'ordre ou désactiver puis réactiver la rotation. |
 | `meal_generation_failure` | `meals:generate` (dimanche 00:00) n'a pas pu créer le repas d'au moins une date. | `meal.generate.failed` / `.incomplete` dans `app-*.log` (`failed_dates`). | Corriger la cause (base, données), puis relancer `php artisan meals:generate 4` (les dates existantes sont ignorées) ou créer le repas à la main dans *Repas*. |

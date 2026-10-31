@@ -6,7 +6,7 @@
     "isEntry": true
   },
   "resources/js/app.js": {
-    "file": "assets/app-CF7lOWJ8.js",
+    "file": "assets/app-C5mkOpjr.js",
     "name": "app",
     "src": "resources/js/app.js",
     "isEntry": true,
@@ -15,7 +15,7 @@
     ]
   },
   "resources/js/error-reporting.js": {
-    "file": "assets/error-reporting-RcaTKiQD.js",
+    "file": "assets/error-reporting-B8tIQYBh.js",
     "name": "error-reporting",
     "src": "resources/js/error-reporting.js",
     "isEntry": true

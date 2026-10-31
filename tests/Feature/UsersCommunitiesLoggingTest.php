@@ -12,6 +12,7 @@ use App\Models\VehicleSetting;
 use App\Models\VehicleType;
 use App\Services\QRCodeService;
 use Illuminate\Database\Events\QueryExecuted;
+use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
@@ -104,7 +105,13 @@ class UsersCommunitiesLoggingTest extends TestCase
 
     public function test_user_store_failure_is_logged_and_flashed_without_password(): void
     {
-        User::creating(fn () => throw new RuntimeException('db down'));
+        // Vraie erreur SQL : le message de Laravel contient les valeurs liées (e-mail, hash).
+        User::creating(fn () => throw new QueryException(
+            'mysql',
+            'insert into users (email, password) values (?, ?)',
+            ['jean.dupont@example.test', '$2y$10$abcdefghijklmnopqrstuuABCDEFGHIJKLMNOPQRSTUVWXYZ01234'],
+            new \PDOException('SQLSTATE[22001]: String data, right truncated'),
+        ));
 
         $this->actingAs($this->admin)
             ->from(route('users.create'))
@@ -121,8 +128,14 @@ class UsersCommunitiesLoggingTest extends TestCase
 
         $context = $this->assertLogged($this->appLog, 'user.store.failed', Level::Error);
         $this->assertSame('j***@example.test', $context['email']);
-        $this->assertSame(RuntimeException::class, $context['exception_class']);
-        $this->assertStringNotContainsString('Secret123!', json_encode($this->appLog->getRecords()));
+        $this->assertSame(QueryException::class, $context['exception_class']);
+        $dump = json_encode(array_map(
+            fn ($r) => [$r->message, $r->context, $r->context['exception'] ?? null ? $r->context['exception']->getMessage() : null],
+            $this->appLog->getRecords(),
+        ));
+        $this->assertStringNotContainsString('Secret123!', $dump);
+        $this->assertStringNotContainsString('jean.dupont@example.test', $dump);
+        $this->assertStringNotContainsString('$2y$10$', $dump);
     }
 
     public function test_user_creation_and_role_change_are_audited(): void

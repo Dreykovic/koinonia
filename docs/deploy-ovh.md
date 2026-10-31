@@ -73,7 +73,7 @@ LOG_CHANNEL=stack
 LOG_STACK=daily
 LOG_FORMATTER=Monolog\Formatter\JsonFormatter
 LOG_DAILY_DAYS=30
-LOG_LEVEL=info                   # info : garde les événements métier et l'audit ; warning pour réduire
+LOG_LEVEL=info                   # info : garde les événements métier et l'audit ; warning pour réduire (security et audit restent à info)
 
 # Alertes locales : ligne critical + e-mail aux admins via MAIL_*
 ALERT_ENABLED=true
@@ -92,7 +92,8 @@ ALERT_QUEUE_FAILURE=true
 # Seuils de surveillance
 MONITORING_SLOW_QUERY_MS=500
 MONITORING_SLOW_REQUEST_MS=2000
-MONITORING_HEARTBEAT_MAX_AGE=5   # minutes sans schedule:run avant l'alerte scheduler_stale
+MONITORING_HEARTBEAT_MAX_AGE=5   # minutes sans schedule:run avant scheduler_stale ; > intervalle du cron (2 × intervalle + 1, ex. 121 pour un cron horaire)
+MONITORING_HEALTH_TOKEN=         # optionnel : /up?token=... ajoute volumes de file et dernier battement
 
 DB_CONNECTION=mysql
 DB_HOST=NOM-BASE.mysql.db
@@ -136,7 +137,7 @@ Notes sur les e-mails :
 - Le serveur SMTP d'OVH (`ssl0.ovh.net`, port 465, SSL) n'est utilisable que si des boîtes e-mail existent (MX Plan, Email Pro).
 - Avec Gmail, il faut un **mot de passe d'application** (validation en deux étapes requise), et les messages envoyés « depuis » une adresse Gmail par un autre serveur finissent souvent en spam. Un expéditeur sur votre propre domaine est préférable.
 
-> `VITE_PUSHER_*` est intégré au bundle au moment du build. Si la clé Pusher de production diffère de celle utilisée à la compilation, relancer `npm run build` en local avec la bonne valeur, committer `public/build` et redéployer.
+> La clé publique Pusher est lue à l'exécution : le layout rend `<meta name="pusher-key">` / `<meta name="pusher-cluster">` depuis `PUSHER_APP_KEY` / `PUSHER_APP_CLUSTER` quand `BROADCAST_DRIVER=pusher`. Le bundle commité dans `public/build` fonctionne donc quel que soit le `.env` de la machine de build ; `VITE_PUSHER_*` ne sert plus que de repli en développement. Changer de clé Pusher ne demande pas de rebuild.
 
 Puis :
 
@@ -199,15 +200,15 @@ Manager OVH → *Hébergement* → *Tâches automatisées (CRON)* → créer :
 | Version PHP | 8.2 (ou la version du site) |
 | Fréquence | **toutes les minutes** |
 
-Si la fréquence minimale de l'offre est supérieure à 1 minute, les e-mails en file seront envoyés avec ce retard. Sinon, passer `QUEUE_CONNECTION=sync` (envoi immédiat, plus lent pour l'utilisateur).
+Si la fréquence minimale de l'offre est supérieure à 1 minute, les e-mails en file seront envoyés avec ce retard. Sinon, passer `QUEUE_CONNECTION=sync` (envoi immédiat, plus lent pour l'utilisateur). Dans ce cas, **augmenter aussi `MONITORING_HEARTBEAT_MAX_AGE`** au-delà de l'intervalle du cron avec une marge (2 × intervalle + 1 : 11 pour un cron toutes les 5 minutes, 121 pour un cron horaire) ; sinon `/up` répond 503 et l'alerte `scheduler_stale` part entre deux passages.
 
 Vérification par SSH : `php artisan schedule:list`.
 
-**Ce cron est aussi le battement de cœur de la supervision.** La tâche `monitoring:heartbeat` enregistre chaque minute un battement dans le cache ; sans battement depuis `MONITORING_HEARTBEAT_MAX_AGE` minutes, l'application envoie l'alerte `scheduler_stale` (vérifiée au plus toutes les 5 minutes lors d'une requête web) et `/up` répond 503. Le cron et le site doivent donc partager le même cache : garder `CACHE_DRIVER=file`. Après un `php artisan cache:clear`, le battement est effacé jusqu'à la minute suivante.
+**Ce cron est aussi le battement de cœur de la supervision.** La tâche `monitoring:heartbeat` enregistre chaque minute un battement dans le cache ; sans battement depuis `MONITORING_HEARTBEAT_MAX_AGE` minutes, l'application envoie l'alerte `scheduler_stale` (vérifiée au plus toutes les 5 minutes lors d'une requête web) et `/up` répond 503. Le cron et le site doivent donc partager le même cache : garder `CACHE_DRIVER=file`. Après un `php artisan cache:clear` / `optimize:clear`, le battement est effacé jusqu'à la minute suivante ; aucune alerte n'est envoyée pendant ce délai (le cron a `MONITORING_HEARTBEAT_MAX_AGE` minutes pour battre à nouveau).
 
 ## 6 bis. Journaux, alertes et supervision
 
-**Permissions de `storage/logs`.** Les fichiers `app-AAAA-MM-JJ.log`, `security-*`, `mail-*`, `queue-*`, `audit-*` et `laravel-*` sont créés par le premier processus qui écrit ce jour-là : le site (utilisateur principal) ou le cron / une commande SSH (utilisateur secondaire). Un fichier créé par l'un peut être illisible ou non inscriptible pour l'autre : c'est la cause classique d'une **500 sans aucune ligne de log**. Après toute commande `artisan` lancée en SSH :
+**Permissions de `storage/logs`.** Les fichiers `app-AAAA-MM-JJ.log`, `security-*`, `mail-*`, `queue-*`, `audit-*` et `laravel-*` sont créés par le premier processus qui écrit ce jour-là : le site (utilisateur principal) ou le cron / une commande SSH (utilisateur secondaire). Un fichier créé par l'un et non inscriptible pour l'autre est la cause classique d'une **500 sans aucune ligne de log**. Les canaux de log et le cache fichier créent désormais leurs fichiers en `0666`, et en production l'application fixe `umask(0000)` (`AppServiceProvider`) pour que les dossiers de cache créés par le cron restent inscriptibles par le site : les fichiers créés sans surveillance (cron de minuit, worker) ne bloquent plus l'autre utilisateur. Le `chmod` manuel reste un filet de sécurité (fichiers créés avant cette version, `bootstrap/cache`) après toute commande `artisan` lancée en SSH :
 
 ```bash
 chmod -R a+rwX storage bootstrap/cache
@@ -215,10 +216,11 @@ chmod -R a+rwX storage bootstrap/cache
 
 Ne jamais lancer `config:cache` en SSH : le chemin de `storage/logs` mis en cache serait celui de l'utilisateur SSH (voir les pièges en tête de document).
 
-**Health check `GET /up`** (public, sans session) : JSON `{"status": "ok|degraded", "checks": {...}}` avec `database`, `cache`, `queue` (`pending`, `failed`), `storage` et `scheduler` (`last_beat`). Code **200** si tout est `ok`, **503** sinon. Utilisable par un moniteur de disponibilité ; aucun message d'erreur dans la réponse, le détail est dans `app-*.log` (`health.check.failed`).
+**Health check `GET /up`** (public, sans session, 30 requêtes / minute / IP) : JSON `{"status": "ok|degraded", "checks": {...}}` avec le `status` de `database`, `cache`, `queue`, `storage` et `scheduler`. Code **200** si tout est `ok`, **503** sinon. Utilisable par un moniteur de disponibilité (sondage toutes les 30 s ou plus) ; un 503 de `/up` ne déclenche pas `error_spike`. Le détail (`pending` / `failed` de la file, `last_beat` du scheduler) n'apparaît qu'avec `?token=` égal à `MONITORING_HEALTH_TOKEN`. Aucun message d'erreur dans la réponse, le détail est dans `app-*.log` (`health.check.failed`, au plus une ligne par vérification toutes les 5 minutes).
 
 ```bash
 curl -s https://NOUVEAU/up | python3 -m json.tool
+curl -s "https://NOUVEAU/up?token=$MONITORING_HEALTH_TOKEN" | python3 -m json.tool   # avec le détail
 ```
 
 **Alerte de test** après chaque déploiement ou changement de SMTP / destinataires :

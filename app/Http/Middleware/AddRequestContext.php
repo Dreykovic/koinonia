@@ -2,11 +2,14 @@
 
 namespace App\Http\Middleware;
 
+use App\Support\SafeLog;
 use Closure;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Symfony\Component\HttpFoundation\Response;
+use Throwable;
 
 /**
  * Attache un contexte commun (request_id, user, route…) à tous les logs d'une requête
@@ -21,6 +24,16 @@ class AddRequestContext
     public function handle(Request $request, Closure $next): Response
     {
         $requestId = self::ensureRequestId($request);
+
+        // Première lecture de l'utilisateur (session => base) : si la base est en panne,
+        // on journalise sans user_id plutôt que d'échouer ici ; l'erreur réelle sera
+        // levée et reportée par la suite de la requête.
+        try {
+            $request->user();
+        } catch (Throwable $e) {
+            // context() ne lit que l'utilisateur déjà chargé : la requête continue sans user_id.
+            SafeLog::failure('request.context.user_unavailable', $e, ['request_id' => $requestId]);
+        }
 
         Log::shareContext(self::context($request) + [
             'method' => $request->method(),
@@ -38,11 +51,15 @@ class AddRequestContext
      * Contexte de la requête (id, route, utilisateur). Réutilisé par le handler d'exceptions
      * pour les erreurs levées avant ce middleware (404, maintenance…).
      *
+     * Ne déclenche jamais de requête : seul un utilisateur déjà chargé par le guard est lu
+     * (un report d'exception pendant une panne de base ne doit pas échouer à son tour).
+     *
      * @return array<string, mixed>
      */
     public static function context(Request $request): array
     {
-        $user = $request->user();
+        $guard = Auth::guard();
+        $user = $guard->hasUser() ? $guard->user() : null;
 
         return array_filter([
             'request_id' => $request->headers->get(self::HEADER),

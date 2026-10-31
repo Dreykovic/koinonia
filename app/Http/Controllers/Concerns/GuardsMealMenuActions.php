@@ -3,8 +3,7 @@
 namespace App\Http\Controllers\Concerns;
 
 use App\Http\Middleware\AddRequestContext;
-use App\Services\AlertService;
-use App\Support\SafeLog;
+use App\Support\ErrorSpike;
 use App\Traits\LogsErrors;
 use Closure;
 use Illuminate\Auth\Access\AuthorizationException;
@@ -79,21 +78,8 @@ trait GuardsMealMenuActions
     {
         $this->logError("{$event}.failed", $e, $context);
 
-        if (! $countSpike) {
-            return;
-        }
-
-        try {
-            app(AlertService::class)->hit(
-                'error_spike',
-                'Pic d\'erreurs serveur (5xx).',
-                ['last_exception' => get_class($e), 'last_error' => $e->getMessage()],
-                (int) config('monitoring.error_spike.threshold', 10),
-                (int) config('monitoring.error_spike.window_minutes', 5),
-            );
-        } catch (Throwable $alertFailure) {
-            // L'alerte ne doit jamais masquer la reponse a l'utilisateur.
-            SafeLog::failure('alert.dispatch.failed', $alertFailure, ['rule' => 'error_spike']);
+        if ($countSpike) {
+            ErrorSpike::count($e);
         }
     }
 

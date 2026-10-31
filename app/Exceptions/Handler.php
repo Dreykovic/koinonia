@@ -3,8 +3,7 @@
 namespace App\Exceptions;
 
 use App\Http\Middleware\AddRequestContext;
-use App\Services\AlertService;
-use App\Support\SafeLog;
+use App\Support\ErrorSpike;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
@@ -74,16 +73,27 @@ class Handler extends ExceptionHandler
      * Contexte ajouté à chaque exception loguée : request_id, route et utilisateur,
      * y compris pour les erreurs levées avant le middleware (404, maintenance…).
      *
+     * Ne lève jamais d'exception et ne déclenche aucune requête : si la base est en panne,
+     * relire l'utilisateur ferait échouer le report lui-même et l'erreur d'origine serait
+     * perdue. On ne lit donc que l'utilisateur déjà chargé (le contexte partagé par
+     * AddRequestContext porte déjà user_id quand le middleware a pu le résoudre).
+     *
      * @return array<string, mixed>
      */
     protected function context(): array
     {
-        $request = request();
+        try {
+            $request = app()->bound('request') ? request() : null;
 
-        return array_merge(
-            parent::context(),
-            $request ? ['request_id' => AddRequestContext::ensureRequestId($request)] + AddRequestContext::context($request) : [],
-        );
+            if (! $request) {
+                return [];
+            }
+
+            return ['request_id' => AddRequestContext::ensureRequestId($request)] + AddRequestContext::context($request);
+        } catch (Throwable) {
+            // Contexte indisponible (conteneur en cours d'arrêt…) : on reporte sans lui.
+            return [];
+        }
     }
 
     /**
@@ -103,18 +113,7 @@ class Handler extends ExceptionHandler
     {
         // Toute exception reportée (hors bruit ci-dessus) compte pour l'alerte de pic d'erreurs 5xx.
         $this->reportable(function (Throwable $e) {
-            try {
-                app(AlertService::class)->hit(
-                    'error_spike',
-                    'Pic d\'erreurs serveur (5xx).',
-                    ['last_exception' => get_class($e), 'last_error' => $e->getMessage()],
-                    (int) config('monitoring.error_spike.threshold', 10),
-                    (int) config('monitoring.error_spike.window_minutes', 5),
-                );
-            } catch (Throwable $alertFailure) {
-                // L'alerte ne doit jamais empêcher le report de l'exception d'origine.
-                SafeLog::failure('alert.dispatch.failed', $alertFailure, ['rule' => 'error_spike']);
-            }
+            ErrorSpike::count($e);
         });
     }
 

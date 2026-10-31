@@ -3,6 +3,7 @@
 namespace App\Traits;
 
 use App\Services\AlertService;
+use App\Support\LogMask;
 use Illuminate\Support\Facades\Log;
 use Throwable;
 
@@ -10,6 +11,10 @@ use Throwable;
  * Diffusion temps réel (Pusher/Echo) qui ne casse jamais l'action métier :
  * un échec est journalisé (warning, canal `app`) et compté pour l'alerte
  * `broadcast_failure` ; l'interface retombe sur le polling de /api/v1.
+ *
+ * Les événements ShouldBroadcast sont mis en file : ici on ne voit que l'échec de la
+ * mise en file ; l'appel Pusher qui échoue dans le worker est compté par
+ * QueueMonitoringServiceProvider (même clé broadcast.failed, même règle).
  */
 trait BroadcastsSafely
 {
@@ -36,13 +41,13 @@ trait BroadcastsSafely
             Log::channel('app')->warning('broadcast.failed', $context + [
                 'event' => get_class($event),
                 'exception_class' => get_class($e),
-                'error' => $e->getMessage(),
+                'error' => LogMask::exceptionMessage($e),
             ]);
 
             app(AlertService::class)->hit(
                 'broadcast_failure',
                 'Échecs répétés de diffusion temps réel (broadcast).',
-                ['event' => get_class($event), 'error' => $e->getMessage()],
+                ['event' => get_class($event), 'exception_class' => get_class($e)],
                 (int) config('monitoring.broadcast_failure.threshold', 5),
                 (int) config('monitoring.broadcast_failure.window_minutes', 10),
             );

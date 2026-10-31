@@ -21,7 +21,7 @@ class SafeLog
     {
         $context += [
             'exception_class' => get_class($e),
-            'error' => $e->getMessage(),
+            'error' => LogMask::exceptionMessage($e),
             'location' => $e->getFile().':'.$e->getLine(),
         ];
 

@@ -247,7 +247,7 @@ class MealInscriptionController extends Controller
         try {
             $fresh = $meal->fresh() ?? $meal;
         } catch (Throwable $e) {
-            $this->logError('meal.inscription.refresh.failed', $e, ['meal_id' => $meal->id, 'action' => $action]);
+            $this->logHandledError('meal.inscription.refresh.failed', $e, ['meal_id' => $meal->id, 'action' => $action]);
             $fresh = $meal;
         }
 

@@ -33,7 +33,7 @@ class RepairLocationController extends Controller
         try {
             $location = RepairLocation::create($validated);
         } catch (Throwable $e) {
-            $this->logError('repair_location.store.failed', $e);
+            $this->logHandledError('repair_location.store.failed', $e);
 
             return back()->withInput()->with('error', 'Le lieu n\'a pas pu etre ajoute. Reessayez.');
         }
@@ -56,7 +56,7 @@ class RepairLocationController extends Controller
         try {
             $repairLocation->update($validated);
         } catch (Throwable $e) {
-            $this->logError('repair_location.update.failed', $e, $this->locationContext($repairLocation));
+            $this->logHandledError('repair_location.update.failed', $e, $this->locationContext($repairLocation));
 
             return back()->withInput()->with('error', 'Le lieu n\'a pas pu etre mis a jour. Reessayez.');
         }
@@ -89,7 +89,7 @@ class RepairLocationController extends Controller
         try {
             $repairLocation->delete();
         } catch (Throwable $e) {
-            $this->logError('repair_location.delete.failed', $e, $context);
+            $this->logHandledError('repair_location.delete.failed', $e, $context);
 
             return back()->with('error', 'Le lieu n\'a pas pu etre supprime. Reessayez.');
         }

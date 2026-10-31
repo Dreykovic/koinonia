@@ -170,6 +170,7 @@ return [
         App\Providers\EventServiceProvider::class,
         App\Providers\RouteServiceProvider::class,
         App\Providers\QueueMonitoringServiceProvider::class,
+        App\Providers\ObservabilityServiceProvider::class,
     ])->toArray(),
 
     /*

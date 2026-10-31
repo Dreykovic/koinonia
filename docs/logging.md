@@ -393,3 +393,30 @@ Tout est écrit dans le canal `queue`.
 - Nouvelle tâche planifiée : la déclarer dans `App\Console\Kernel::schedule()` **avant** la boucle `ScheduleMonitor::watch()`.
 - La sortie des tâches est capturée dans `storage/logs/schedule-<hash>.log` (écrasée à chaque exécution).
 - Heartbeat : la closure `monitoring:heartbeat` appelle `SchedulerHeartbeat::beat()` chaque minute.
+
+## 9. Observabilité (health check, lenteurs, N+1)
+
+- **`GET /up`** (route `health`, sans authentification ni session) : JSON
+  `{"status": "ok|degraded", "checks": {"database", "cache", "queue", "storage", "scheduler"}}`,
+  **200** si tout est `ok`, **503** sinon. `queue` donne `pending` / `failed` (tables `jobs`
+  et `failed_jobs`), `scheduler` donne `last_beat`. Aucun message d'exception dans la
+  réponse : le détail est journalisé (`health.check.failed`, canal `app`).
+- **Requêtes SQL lentes** (`App\Providers\ObservabilityServiceProvider`) : `db.query.slow`
+  en `warning` au-delà de `MONITORING_SLOW_QUERY_MS` (SQL avec placeholders, sans valeurs
+  liées ; seuil négatif = désactivé).
+- **N+1** : hors production, `Model::preventLazyLoading()` est actif mais une violation est
+  journalisée (`db.lazy_loading`, modèle, relation, `location` dans l'application) au lieu
+  de lever une exception ; une ligne par modèle + relation et par processus. Rien en production.
+- **Temps de réponse** (`App\Http\Middleware\LogRequestDuration`, juste après
+  `AddRequestContext` dans les groupes `web` et `api`) : `http.request.slow` en `warning`
+  au-delà de `MONITORING_SLOW_REQUEST_MS`, avec `duration_ms` et `status`. Les réponses 5xx
+  renvoyées sans exception reportée comptent pour `error_spike` (les exceptions reportées
+  sont déjà comptées par le handler : pas de double comptage).
+- **Scheduler inactif** : faute de superviseur externe, ce même middleware vérifie au plus
+  toutes les 5 minutes (après l'envoi de la réponse) `SchedulerHeartbeat::isStale()` et
+  envoie l'alerte `scheduler_stale`. Pas d'alerte si aucun battement n'a jamais été
+  enregistré hors production (installation de dev sans cron).
+- **Alerte de test** : `php artisan monitoring:test-alert` envoie une alerte `[TEST]` pour
+  chaque règle (`error_spike`, `job_failed`, `scheduled_task_failed`, `scheduler_stale`,
+  `mail_failure`, `broadcast_failure`) en ignorant le throttle ;
+  `php artisan monitoring:test-alert mail_failure` pour une seule règle.

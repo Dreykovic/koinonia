@@ -543,14 +543,16 @@ function confirmCancel() {
 
 // Real-time updates for meal registrations
 @if($upcomingMeal)
-if (typeof Echo !== 'undefined') {
+// app.js est un module (différé) : Echo n'existe qu'une fois le DOM analysé.
+document.addEventListener('DOMContentLoaded', () => {
+    if (typeof Echo === 'undefined') return;
     Echo.channel('meal.{{ $upcomingMeal->id }}')
         .listen('MealInscriptionChanged', (e) => {
             console.log('MealInscriptionChanged:', e);
             // Reload page to show updated data
             location.reload();
         });
-}
+});
 @endif
 </script>
 @endpush

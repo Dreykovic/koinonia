@@ -2,6 +2,7 @@
 
 namespace App\Mail;
 
+use App\Mail\Concerns\RecordsDeliveryFailure;
 use App\Models\CommunityRequest;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -12,7 +13,7 @@ use Illuminate\Queue\SerializesModels;
 
 class CommunityRequestStatusChangedMail extends Mailable implements ShouldQueue
 {
-    use Queueable, SerializesModels;
+    use Queueable, RecordsDeliveryFailure, SerializesModels;
 
     /**
      * Create a new message instance.
@@ -20,7 +21,8 @@ class CommunityRequestStatusChangedMail extends Mailable implements ShouldQueue
     public function __construct(
         public CommunityRequest $communityRequest,
         public string $oldStatus
-    ) {}
+    ) {
+    }
 
     /**
      * Get the message envelope.
@@ -28,6 +30,7 @@ class CommunityRequestStatusChangedMail extends Mailable implements ShouldQueue
     public function envelope(): Envelope
     {
         $statusLabel = $this->communityRequest->status_label;
+
         return new Envelope(
             subject: "[ITCJ] Votre demande est maintenant : {$statusLabel}",
         );

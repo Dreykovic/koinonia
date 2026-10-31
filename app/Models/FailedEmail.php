@@ -14,14 +14,34 @@ class FailedEmail extends Model
         'error_message',
         'related_model_type',
         'related_model_id',
+        'source',
+        'request_id',
+        'attempts',
+        'last_attempt_at',
+        'payload',
         'is_resolved',
         'resolved_at',
     ];
 
+    /**
+     * Le payload (mailable sérialisé et chiffré) ne sort jamais du modèle.
+     */
+    protected $hidden = ['payload'];
+
     protected $casts = [
         'is_resolved' => 'boolean',
         'resolved_at' => 'datetime',
+        'last_attempt_at' => 'datetime',
+        'attempts' => 'integer',
     ];
+
+    /**
+     * Le mailable a-t-il été conservé pour pouvoir être renvoyé ?
+     */
+    public function canBeRetried(): bool
+    {
+        return ! empty($this->payload);
+    }
 
     /**
      * Scope pour les emails non résolus.
@@ -56,6 +76,7 @@ class FailedEmail extends Model
     public function getMailableNameAttribute(): string
     {
         $className = class_basename($this->mailable_class);
+
         return preg_replace('/([a-z])([A-Z])/', '$1 $2', $className);
     }
 
@@ -67,9 +88,7 @@ class FailedEmail extends Model
         if ($this->related_model_type && $this->related_model_id) {
             return $this->related_model_type::find($this->related_model_id);
         }
+
         return null;
     }
 }
-
-
-

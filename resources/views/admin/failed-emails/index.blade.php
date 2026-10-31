@@ -158,6 +158,9 @@
         @if(session('success'))
             <div class="alert alert-success mb-5">{{ session('success') }}</div>
         @endif
+        @if(session('error'))
+            <div class="alert alert-danger mb-5">{{ session('error') }}</div>
+        @endif
 
         <!-- Status Filters -->
         <div class="status-filters">
@@ -214,6 +217,12 @@
                             <span class="text-danger fs-8" title="{{ $email->error_message }}">
                                 {{ Str::limit($email->error_message, 80) }}
                             </span>
+                            <span class="text-muted d-block fs-9">
+                                #{{ $email->id }} · {{ $email->attempts ?? 1 }} tentative(s)
+                                @if($email->request_id)
+                                    · <span title="Identifiant à rechercher dans storage/logs">req {{ Str::limit($email->request_id, 8, '') }}</span>
+                                @endif
+                            </span>
                         </td>
                         <td>
                             @if($email->is_resolved)
@@ -224,6 +233,14 @@
                         </td>
                         <td class="text-end">
                             <div class="d-flex justify-content-end gap-2">
+                                @if(!$email->is_resolved && $email->canBeRetried())
+                                    <form action="{{ route('admin.failed-emails.retry', $email) }}" method="POST" class="d-inline">
+                                        @csrf
+                                        <button type="submit" class="btn btn-icon btn-sm btn-light-primary" title="Renvoyer">
+                                            <i class="ki-duotone ki-arrows-circle fs-4"><i class="path1"></i><i class="path2"></i></i>
+                                        </button>
+                                    </form>
+                                @endif
                                 @if(!$email->is_resolved)
                                     <form action="{{ route('admin.failed-emails.resolve', $email) }}" method="POST" class="d-inline">
                                         @csrf
@@ -279,6 +296,15 @@
                         {{ Str::limit($email->error_message, 150) }}
                     </div>
                     <div class="fe-mobile-actions">
+                        @if(!$email->is_resolved && $email->canBeRetried())
+                            <form action="{{ route('admin.failed-emails.retry', $email) }}" method="POST">
+                                @csrf
+                                <button type="submit" class="btn btn-sm btn-light-primary">
+                                    <i class="ki-duotone ki-arrows-circle fs-5"><i class="path1"></i><i class="path2"></i></i>
+                                    Renvoyer
+                                </button>
+                            </form>
+                        @endif
                         @if(!$email->is_resolved)
                             <form action="{{ route('admin.failed-emails.resolve', $email) }}" method="POST">
                                 @csrf

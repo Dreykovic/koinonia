@@ -10,6 +10,7 @@ use App\Http\Controllers\CommunityRequestController;
 use App\Http\Controllers\CommunityRequestFormController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\GuideController;
+use App\Http\Controllers\HealthController;
 use App\Http\Controllers\MealController;
 use App\Http\Controllers\MealInscriptionController;
 use App\Http\Controllers\ProfileController;
@@ -28,6 +29,17 @@ use Illuminate\Support\Facades\Route;
 | Web Routes
 |--------------------------------------------------------------------------
 */
+
+// Health check public (supervision) : pas d'authentification ni de session.
+Route::get('up', HealthController::class)
+    ->withoutMiddleware([
+        \App\Http\Middleware\EncryptCookies::class,
+        \Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse::class,
+        \Illuminate\Session\Middleware\StartSession::class,
+        \Illuminate\View\Middleware\ShareErrorsFromSession::class,
+        \App\Http\Middleware\VerifyCsrfToken::class,
+    ])
+    ->name('health');
 
 // Guest routes (non-authenticated)
 Route::middleware('guest')->group(function () {

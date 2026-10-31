@@ -2,6 +2,7 @@
 
 namespace App\Mail;
 
+use App\Mail\Concerns\RecordsDeliveryFailure;
 use App\Models\AccountRequest;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -12,14 +13,15 @@ use Illuminate\Queue\SerializesModels;
 
 class NewAccountRequestMail extends Mailable implements ShouldQueue
 {
-    use Queueable, SerializesModels;
+    use Queueable, RecordsDeliveryFailure, SerializesModels;
 
     /**
      * Create a new message instance.
      */
     public function __construct(
         public AccountRequest $accountRequest
-    ) {}
+    ) {
+    }
 
     /**
      * Get the message envelope.
@@ -27,7 +29,7 @@ class NewAccountRequestMail extends Mailable implements ShouldQueue
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: '[ITCJ] Nouvelle demande de compte - ' . $this->accountRequest->name,
+            subject: '[ITCJ] Nouvelle demande de compte - '.$this->accountRequest->name,
         );
     }
 
@@ -49,5 +51,3 @@ class NewAccountRequestMail extends Mailable implements ShouldQueue
         return [];
     }
 }
-
-

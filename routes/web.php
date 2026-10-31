@@ -188,6 +188,7 @@ Route::middleware('auth')->group(function () {
         Route::prefix('admin/failed-emails')->name('admin.failed-emails.')->group(function () {
             Route::get('/', [FailedEmailController::class, 'index'])->name('index');
             Route::post('/{failedEmail}/resolve', [FailedEmailController::class, 'resolve'])->name('resolve');
+            Route::post('/{failedEmail}/retry', [FailedEmailController::class, 'retry'])->name('retry');
             Route::delete('/{failedEmail}', [FailedEmailController::class, 'destroy'])->name('destroy');
         });
 

@@ -217,6 +217,38 @@ Diagnostic : `grep '"reservation.conflict"' storage/logs/app-*.log` pour les cr�
 disputés, `grep broadcast.failed` si le planning ne se met plus à jour en temps réel
 (le polling `/api/v1` prend le relais).
 
+## 9. Emails (issue #28)
+
+Tout envoi passe par `App\Traits\SafeMailSender` (`sendMailSafely`, `sendMailAfterResponse`,
+`sendMailSafelyToMany`). Un échec ne casse jamais la requête et laisse **toujours** :
+
+1. une entrée `failed_emails`, visible dans *Administration > Emails échoués*
+   (`admin.failed-emails.*`) avec son numéro `#id`, le nombre de tentatives et le request_id ;
+2. une ligne `error` `mail.send.failed` dans `mail-*.log` avec `failed_email_id` (le même
+   `#id`), `mailable`, `recipient` (masqué), `attempt`, `source`, `related_model`,
+   `exception_class`, `error` ;
+3. une occurrence du compteur d'alerte `mail_failure` (section 7).
+
+| `source` | Cas |
+|----------|-----|
+| `sync` | Envoi direct (`$immediate = true`, `sendMailAfterResponse`) ou échec de mise en file. |
+| `queue` | Mailable `ShouldQueue` en échec définitif dans le worker (après `--tries=3`) : `failed()` du trait `App\Mail\Concerns\RecordsDeliveryFailure`. Le log porte `origin_request_id`, la requête qui a demandé l'envoi. |
+
+Corréler : `grep '"failed_email_id":42' storage/logs/mail-*.log`, ou rechercher le
+`request_id` de l'entrée dans tous les logs.
+
+Autres événements du canal `mail` : `mail.sent` / `mail.queued` (`info`),
+`mail.batch.partial_failure` (`warning`), `mail.retry.succeeded` (`info`),
+`mail.retry.failed` (`error`, compté dans `mail_failure`), `mail.retry.unavailable`
+(`warning`, entrée sans contenu conservé), `mail.failed_email.store_failed` (la base
+est indisponible : le log reste la seule trace).
+
+Le bouton **Renvoyer** rejoue le mailable conservé (colonne `payload`, sérialisée et
+**chiffrée** avec `APP_KEY` car elle peut contenir un mot de passe temporaire) en envoi
+immédiat ; succès ou échec incrémentent `attempts`. Les actions de l'administrateur sont
+tracées dans `audit` (`admin.failed_email.retried|resolved|deleted`). Un nouveau mailable
+doit utiliser le trait `RecordsDeliveryFailure` pour que ses échecs en file soient tracés.
+
 <!-- Runbook d'erreurs (diagnostic par symptôme) : à compléter (issue #32). -->
 
 ## 9. Sécurité et authentification (canal `security`)

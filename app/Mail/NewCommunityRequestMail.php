@@ -2,6 +2,7 @@
 
 namespace App\Mail;
 
+use App\Mail\Concerns\RecordsDeliveryFailure;
 use App\Models\CommunityRequest;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -12,14 +13,15 @@ use Illuminate\Queue\SerializesModels;
 
 class NewCommunityRequestMail extends Mailable implements ShouldQueue
 {
-    use Queueable, SerializesModels;
+    use Queueable, RecordsDeliveryFailure, SerializesModels;
 
     /**
      * Create a new message instance.
      */
     public function __construct(
         public CommunityRequest $communityRequest
-    ) {}
+    ) {
+    }
 
     /**
      * Get the message envelope.
@@ -27,6 +29,7 @@ class NewCommunityRequestMail extends Mailable implements ShouldQueue
     public function envelope(): Envelope
     {
         $type = $this->communityRequest->isRepair() ? 'Reparation' : 'Achat';
+
         return new Envelope(
             subject: "[ITCJ] Nouvelle demande - {$type}",
         );

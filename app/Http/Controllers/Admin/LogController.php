@@ -123,6 +123,7 @@ class LogController extends Controller
         try {
             $entry = $this->reader->find($data['channel'], $data['date'] ?? null, (int) $data['offset']);
         } catch (InvalidArgumentException) {
+            // Fichier ou position invalide : tracé ci-dessous (found: false) puis 404.
             $entry = null;
         }
 

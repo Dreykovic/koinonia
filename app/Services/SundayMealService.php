@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\SundayMeal;
+use App\Support\SafeLog;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Log;
 use Throwable;
@@ -136,8 +137,9 @@ class SundayMealService
                     'La génération automatique des repas du dimanche a échoué pour au moins une date.',
                     $summary + ['failed_dates' => implode(', ', $failedDates)],
                 );
-            } catch (Throwable) {
+            } catch (Throwable $e) {
                 // L'echec est deja journalise ci-dessus ; l'alerte ne doit pas faire planter la commande.
+                SafeLog::failure('alert.dispatch.failed', $e, ['rule' => 'meal_generation_failure']);
             }
         } else {
             Log::channel('app')->info('meal.generate.completed', $summary);

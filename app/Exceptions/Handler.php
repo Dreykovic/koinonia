@@ -4,6 +4,7 @@ namespace App\Exceptions;
 
 use App\Http\Middleware\AddRequestContext;
 use App\Services\AlertService;
+use App\Support\SafeLog;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
@@ -110,8 +111,9 @@ class Handler extends ExceptionHandler
                     (int) config('monitoring.error_spike.threshold', 10),
                     (int) config('monitoring.error_spike.window_minutes', 5),
                 );
-            } catch (Throwable) {
+            } catch (Throwable $alertFailure) {
                 // L'alerte ne doit jamais empêcher le report de l'exception d'origine.
+                SafeLog::failure('alert.dispatch.failed', $alertFailure, ['rule' => 'error_spike']);
             }
         });
     }

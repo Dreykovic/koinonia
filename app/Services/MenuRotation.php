@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\MenuSetting;
 use App\Models\MenuWeek;
+use App\Support\SafeLog;
 use Carbon\Carbon;
 use Carbon\CarbonInterface;
 use Illuminate\Support\Collection;
@@ -276,8 +277,9 @@ class MenuRotation
                 1,
                 self::FAILURE_ALERT_WINDOW_MINUTES,
             );
-        } catch (Throwable) {
+        } catch (Throwable $alertFailure) {
             // Jamais d'exception depuis le calcul de la semaine affichee.
+            SafeLog::failure('alert.dispatch.failed', $alertFailure, ['rule' => 'menu_rotation_failure']);
         }
     }
 
@@ -288,8 +290,10 @@ class MenuRotation
     {
         try {
             $first = Cache::add('menu-rotation:warned:'.$event, true, now()->addMinutes(self::REPEATED_WARNING_MINUTES));
-        } catch (Throwable) {
+        } catch (Throwable $e) {
+            // Cache indisponible : on ecrit le warning (sans limitation) en signalant la panne.
             $first = true;
+            $context['throttle_unavailable'] = get_class($e).': '.$e->getMessage();
         }
 
         if ($first) {

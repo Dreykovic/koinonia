@@ -543,6 +543,7 @@ class LogReader
         try {
             return Carbon::parse($value)->setTimezone(config('app.timezone'));
         } catch (Throwable) {
+            // Date illisible dans une ligne de log ou un filtre : donnée invalide, pas une erreur applicative.
             return null;
         }
     }

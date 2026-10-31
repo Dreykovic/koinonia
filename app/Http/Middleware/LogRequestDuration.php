@@ -3,6 +3,7 @@
 namespace App\Http\Middleware;
 
 use App\Services\AlertService;
+use App\Support\SafeLog;
 use App\Support\SchedulerHeartbeat;
 use Closure;
 use Illuminate\Contracts\Debug\ExceptionHandler;
@@ -36,8 +37,9 @@ class LogRequestDuration
         try {
             $this->logIfSlow($response, (microtime(true) - $start) * 1000);
             $this->countServerError($response);
-        } catch (Throwable) {
+        } catch (Throwable $e) {
             // La mesure ne doit jamais casser la réponse.
+            SafeLog::failure('monitoring.request_metrics.failed', $e);
         }
 
         return $response;

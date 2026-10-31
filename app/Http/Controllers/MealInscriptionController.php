@@ -8,6 +8,7 @@ use App\Models\MealInscription;
 use App\Models\SundayMeal;
 use App\Traits\BroadcastsSafely;
 use Illuminate\Http\Request;
+use Throwable;
 
 class MealInscriptionController extends Controller
 {
@@ -243,7 +244,12 @@ class MealInscriptionController extends Controller
     private function broadcastChange(SundayMeal $meal, string $action): void
     {
         // L'inscription est deja enregistree : un rechargement en echec ne doit pas la faire paraitre ratee.
-        $fresh = rescue(fn () => $meal->fresh(), null, false) ?? $meal;
+        try {
+            $fresh = $meal->fresh() ?? $meal;
+        } catch (Throwable $e) {
+            $this->logError('meal.inscription.refresh.failed', $e, ['meal_id' => $meal->id, 'action' => $action]);
+            $fresh = $meal;
+        }
 
         $this->broadcastSafely(
             new MealInscriptionChanged($fresh, $action),

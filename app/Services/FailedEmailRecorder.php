@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Http\Middleware\AddRequestContext;
 use App\Models\FailedEmail;
 use App\Support\LogMask;
+use App\Support\SafeLog;
 use Illuminate\Contracts\Mail\Mailable as MailableContract;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\Log;
@@ -200,7 +201,10 @@ class FailedEmailRecorder
             }
 
             return $mailable->subject ?? null;
-        } catch (Throwable) {
+        } catch (Throwable $e) {
+            // L'échec d'envoi est enregistré quand même, sans sujet.
+            SafeLog::failure('mail.failed_email.subject_unavailable', $e, ['mailable' => get_class($mailable)], 'mail');
+
             return null;
         }
     }
@@ -221,8 +225,10 @@ class FailedEmailRecorder
             }
 
             return Crypt::encryptString(serialize($copy));
-        } catch (Throwable) {
+        } catch (Throwable $e) {
             // Mailable non sérialisable (closure…) : l'entrée reste consultable, sans renvoi.
+            SafeLog::failure('mail.failed_email.payload_unavailable', $e, ['mailable' => get_class($mailable)], 'mail');
+
             return null;
         }
     }

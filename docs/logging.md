@@ -165,4 +165,31 @@ Seuils de lenteur : `MONITORING_SLOW_QUERY_MS` (500 ms), `MONITORING_SLOW_REQUES
 | `App\Support\SchedulerHeartbeat` | `beat()` (à appeler par le scheduler), `lastBeat()`, `isStale()`. Stocké dans le cache par défaut : le cron et le web doivent partager le même store (`CACHE_DRIVER=file` sur OVH). |
 | `App\Support\LogMask` | `email()` : masque une adresse avant de la journaliser. |
 
+## 9. Véhicules, réservations et lieux de réparation
+
+`VehicleReservationController`, `VehicleController`, `RepairLocationController` (issue #26).
+Contexte d'une réservation : `reservation_id`, `vehicle_id`, `owner_id` (titulaire ; l'acteur
+est le `user_id` partagé), `date`, `start_time`, `end_time`, `status`. Jamais `destination`
+ni `notes` (texte libre) : seuls les **noms** des champs modifiés sont journalisés (`fields`).
+
+| Événement | Canal | Niveau | Quand |
+|-----------|-------|--------|-------|
+| `reservation.created` / `.updated` / `.cancelled` | `app` | info | Création, modification, annulation (`by_admin`). |
+| `reservation.conflict` | `app` | warning | Créneau indisponible. `action` (store/update), `reason` : `overlap`, `vehicle_unavailable`, `concurrent_insert` (409, index unique). |
+| `reservation.cancel.refused` | `app` | warning | Réservation terminée ou déjà rejetée/annulée. |
+| `reservation.access.denied` | `security` | warning | Ni titulaire ni admin (`action` : show, edit, update, cancel, approve, reject, store). |
+| `reservation.approved` / `.rejected` | `audit` | info | Décision d'un admin (`previous_status`). |
+| `reservation.store.failed` / `.update.failed` | `app` | error | Erreur SQL inattendue, puis l'exception est relancée (page 500 + `error_spike`). |
+| `broadcast.failed` | `app` | warning | Diffusion `ReservationCreated/Updated/Cancelled` en échec (`event`) ; l'action aboutit quand même, l'alerte `broadcast_failure` surveille la fréquence. |
+| `vehicle.created` / `.updated` / `.deleted` / `.availability.toggled` | `audit` | info | Gestion du parc par un admin. |
+| `vehicle.delete.refused` | `app` | warning | Réservations à venir (`future_reservations`). |
+| `vehicle.*.failed` | `app` | error | Échec d'écriture ; l'utilisateur est renvoyé au formulaire avec un message. |
+| `repair_location.created` / `.updated` / `.deleted` | `audit` | info | Gestion des lieux de réparation. |
+| `repair_location.delete.refused` | `app` | warning | Demandes liées (`linked_requests`). |
+| `repair_location.*.failed` | `app` | error | Échec d'écriture, retour au formulaire avec un message. |
+
+Diagnostic : `grep '"reservation.conflict"' storage/logs/app-*.log` pour les créneaux
+disputés, `grep broadcast.failed` si le planning ne se met plus à jour en temps réel
+(le polling `/api/v1` prend le relais).
+
 <!-- Runbook d'erreurs (diagnostic par symptôme) : à compléter (issue #32). -->

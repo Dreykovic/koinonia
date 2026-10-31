@@ -8,13 +8,16 @@ use App\Events\ReservationUpdated;
 use App\Models\Vehicle;
 use App\Models\VehicleReservation;
 use App\Models\VehicleSetting;
+use App\Traits\BroadcastsSafely;
+use App\Traits\LogsErrors;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
-use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 
 class VehicleReservationController extends Controller
 {
+    use BroadcastsSafely, LogsErrors;
+
     /**
      * Show the vehicle planning page.
      */
@@ -141,20 +144,35 @@ class VehicleReservationController extends Controller
 
         $user = auth()->user();
 
+        // Creneau demande, pour les logs de conflit et d'erreur
+        $slot = [
+            'vehicle_id' => (int) $validated['vehicle_id'],
+            'date' => $validated['reservation_date'],
+            'start_time' => $validated['start_time'],
+            'end_time' => $validated['end_time'],
+        ];
+
         try {
-            return DB::transaction(function () use ($validated, $user) {
+            return DB::transaction(function () use ($validated, $user, $slot) {
                 // Lock the vehicle row to prevent concurrent reservations
                 $vehicle = Vehicle::lockForUpdate()->with('type')->findOrFail($validated['vehicle_id']);
 
                 // Check access
-                if (!$user->canAccessVehicle($vehicle)) {
+                if (! $user->canAccessVehicle($vehicle)) {
+                    $this->logAccessDenied('store', $slot + ['vehicle_type' => $vehicle->type?->name]);
+
                     return response()->json([
                         'message' => 'Vous n\'avez pas acces a ce vehicule.',
                     ], 403);
                 }
 
                 // Check availability (now protected by lock)
-                if (!$vehicle->isAvailableAt($validated['reservation_date'], $validated['start_time'], $validated['end_time'])) {
+                if (! $vehicle->isAvailableAt($validated['reservation_date'], $validated['start_time'], $validated['end_time'])) {
+                    $this->logWarning('reservation.conflict', [
+                        'action' => 'store',
+                        'reason' => $vehicle->is_available ? 'overlap' : 'vehicle_unavailable',
+                    ] + $slot);
+
                     return response()->json([
                         'message' => 'Ce creneau n\'est pas disponible.',
                     ], 422);
@@ -171,12 +189,11 @@ class VehicleReservationController extends Controller
                     'status' => 'approved', // Auto-approved for simplicity
                 ]);
 
-                // Broadcast to other users
-                try {
-                    broadcast(new ReservationCreated($reservation->load('vehicle', 'user')))->toOthers();
-                } catch (\Throwable $e) {
-                    \Log::warning('Broadcast ReservationCreated failed: ' . $e->getMessage());
-                }
+                $context = $this->reservationContext($reservation);
+                $this->logInfo('reservation.created', $context);
+
+                // Diffusion aux autres utilisateurs : un echec n'annule pas la reservation
+                $this->broadcastSafely(new ReservationCreated($reservation->load('vehicle', 'user')), $context, true);
 
                 return response()->json([
                     'message' => 'Reservation creee avec succes.',
@@ -184,12 +201,17 @@ class VehicleReservationController extends Controller
                 ], 201);
             });
         } catch (QueryException $e) {
-            // Handle unique constraint violation (PostgreSQL: 23505, MySQL: 23000)
-            if (in_array($e->getCode(), ['23505', '23000'])) {
+            if ($this->isUniqueViolation($e)) {
+                $this->logWarning('reservation.conflict', ['action' => 'store', 'reason' => 'concurrent_insert'] + $slot);
+
                 return response()->json([
                     'message' => 'Ce creneau vient d\'etre reserve par un autre utilisateur.',
                 ], 409);
             }
+
+            // Contexte metier ici ; le handler reporte aussi l'exception (alerte error_spike)
+            $this->logError('reservation.store.failed', $e, $slot);
+
             throw $e;
         }
     }
@@ -204,7 +226,9 @@ class VehicleReservationController extends Controller
         $user = auth()->user();
 
         // Check ownership or admin
-        if ($reservation->user_id !== $user->id && !$user->isAdmin()) {
+        if ($reservation->user_id !== $user->id && ! $user->isAdmin()) {
+            $this->logAccessDenied('update', $this->reservationContext($reservation));
+
             return response()->json([
                 'message' => 'Vous n\'etes pas autorise a modifier cette reservation.',
             ], 403);
@@ -227,12 +251,19 @@ class VehicleReservationController extends Controller
                     $startTime = $validated['start_time'] ?? $reservation->start_time;
                     $endTime = $validated['end_time'] ?? $reservation->end_time;
 
-                    if (!$vehicle->isAvailableAt(
+                    if (! $vehicle->isAvailableAt(
                         $reservation->reservation_date->format('Y-m-d'),
                         $startTime,
                         $endTime,
                         $reservation->id
                     )) {
+                        $this->logWarning('reservation.conflict', [
+                            'action' => 'update',
+                            'reason' => $vehicle->is_available ? 'overlap' : 'vehicle_unavailable',
+                            'requested_start_time' => $startTime,
+                            'requested_end_time' => $endTime,
+                        ] + $this->reservationContext($reservation));
+
                         return response()->json([
                             'message' => 'Ce creneau n\'est pas disponible.',
                         ], 422);
@@ -241,11 +272,7 @@ class VehicleReservationController extends Controller
                     $reservation->update($validated);
 
                     $freshReservation = $reservation->fresh()->load('vehicle', 'user');
-                    try {
-                        broadcast(new ReservationUpdated($freshReservation))->toOthers();
-                    } catch (\Throwable $e) {
-                        \Log::warning('Broadcast ReservationUpdated failed: ' . $e->getMessage());
-                    }
+                    $this->reservationUpdated($freshReservation, $validated);
 
                     return response()->json([
                         'message' => 'Reservation mise a jour avec succes.',
@@ -253,11 +280,19 @@ class VehicleReservationController extends Controller
                     ]);
                 });
             } catch (QueryException $e) {
-                if (in_array($e->getCode(), ['23505', '23000'])) {
+                if ($this->isUniqueViolation($e)) {
+                    $this->logWarning('reservation.conflict', [
+                        'action' => 'update',
+                        'reason' => 'concurrent_insert',
+                    ] + $this->reservationContext($reservation));
+
                     return response()->json([
                         'message' => 'Ce creneau vient d\'etre reserve par un autre utilisateur.',
                     ], 409);
                 }
+
+                $this->logError('reservation.update.failed', $e, $this->reservationContext($reservation));
+
                 throw $e;
             }
         }
@@ -266,11 +301,7 @@ class VehicleReservationController extends Controller
         $reservation->update($validated);
 
         $freshReservation = $reservation->fresh()->load('vehicle', 'user');
-        try {
-            broadcast(new ReservationUpdated($freshReservation))->toOthers();
-        } catch (\Throwable $e) {
-            \Log::warning('Broadcast ReservationUpdated failed: ' . $e->getMessage());
-        }
+        $this->reservationUpdated($freshReservation, $validated);
 
         return response()->json([
             'message' => 'Reservation mise a jour avec succes.',
@@ -287,33 +318,39 @@ class VehicleReservationController extends Controller
         $user = auth()->user();
 
         // Check ownership or admin
-        if ($reservation->user_id !== $user->id && !$user->isAdmin()) {
+        if ($reservation->user_id !== $user->id && ! $user->isAdmin()) {
+            $this->logAccessDenied('cancel', $this->reservationContext($reservation));
+
             if ($request->expectsJson()) {
                 return response()->json([
                     'message' => 'Vous n\'etes pas autorise a annuler cette reservation.',
                 ], 403);
             }
+
             return back()->with('error', 'Vous n\'etes pas autorise a annuler cette reservation.');
         }
 
         // Check if can be cancelled
-        if (!$reservation->canBeCancelled()) {
+        if (! $reservation->canBeCancelled()) {
+            $this->logWarning('reservation.cancel.refused', $this->reservationContext($reservation));
+
             if ($request->expectsJson()) {
                 return response()->json([
                     'message' => 'Cette reservation ne peut plus etre annulee.',
                 ], 422);
             }
+
             return back()->with('error', 'Cette reservation ne peut plus etre annulee.');
         }
 
+        $context = $this->reservationContext($reservation);
+
         // Broadcast before updating status (we need the original data)
-        try {
-            broadcast(new ReservationCancelled($reservation))->toOthers();
-        } catch (\Throwable $e) {
-            \Log::warning('Broadcast ReservationCancelled failed: ' . $e->getMessage());
-        }
+        $this->broadcastSafely(new ReservationCancelled($reservation), $context, true);
 
         $reservation->delete();
+
+        $this->logInfo('reservation.cancelled', $context + ['by_admin' => $reservation->user_id !== $user->id]);
 
         if ($request->expectsJson()) {
             return response()->json([
@@ -339,9 +376,9 @@ class VehicleReservationController extends Controller
             $search = $request->search;
             $query->where(function ($q) use ($search) {
                 $q->where('destination', 'like', "%{$search}%")
-                  ->orWhereHas('vehicle', function ($vq) use ($search) {
-                      $vq->where('name', 'like', "%{$search}%");
-                  });
+                    ->orWhereHas('vehicle', function ($vq) use ($search) {
+                        $vq->where('name', 'like', "%{$search}%");
+                    });
             });
         }
 
@@ -364,29 +401,29 @@ class VehicleReservationController extends Controller
         switch ($dateFilter) {
             case 'today':
                 $query->whereDate('reservation_date', $today)
-                      ->whereIn('status', ['pending', 'approved']);
+                    ->whereIn('status', ['pending', 'approved']);
                 break;
             case 'tomorrow':
                 $query->whereDate('reservation_date', $tomorrow)
-                      ->whereIn('status', ['pending', 'approved']);
+                    ->whereIn('status', ['pending', 'approved']);
                 break;
             case 'week':
                 $query->whereDate('reservation_date', '>=', $today)
-                      ->whereDate('reservation_date', '<=', $endOfWeek)
-                      ->whereIn('status', ['pending', 'approved']);
+                    ->whereDate('reservation_date', '<=', $endOfWeek)
+                    ->whereIn('status', ['pending', 'approved']);
                 break;
             case 'upcoming':
                 $query->whereDate('reservation_date', '>=', $today)
-                      ->whereIn('status', ['pending', 'approved']);
+                    ->whereIn('status', ['pending', 'approved']);
                 break;
             case 'past':
                 // Archives: show all past + cancelled
                 $query->where(function ($q) use ($today) {
                     $q->whereDate('reservation_date', '<', $today)
-                      ->orWhere('status', 'cancelled');
+                        ->orWhere('status', 'cancelled');
                 });
                 break;
-            // 'all' = no date filter, show everything
+                // 'all' = no date filter, show everything
         }
 
         // Order: upcoming dates first for non-past, past dates most recent first
@@ -422,7 +459,8 @@ class VehicleReservationController extends Controller
     {
         $user = auth()->user();
 
-        if ($reservation->user_id !== $user->id && !$user->isAdmin()) {
+        if ($reservation->user_id !== $user->id && ! $user->isAdmin()) {
+            $this->logAccessDenied('show', $this->reservationContext($reservation));
             abort(403);
         }
 
@@ -438,7 +476,8 @@ class VehicleReservationController extends Controller
     {
         $user = auth()->user();
 
-        if ($reservation->user_id !== $user->id && !$user->isAdmin()) {
+        if ($reservation->user_id !== $user->id && ! $user->isAdmin()) {
+            $this->logAccessDenied('edit', $this->reservationContext($reservation));
             abort(403);
         }
 
@@ -451,14 +490,19 @@ class VehicleReservationController extends Controller
      */
     public function approve(VehicleReservation $reservation)
     {
-        if (!auth()->user()->isAdmin()) {
+        if (! auth()->user()->isAdmin()) {
+            $this->logAccessDenied('approve', $this->reservationContext($reservation));
             abort(403);
         }
+
+        $previousStatus = $reservation->status;
 
         $reservation->update([
             'status' => 'approved',
             'approved_by' => auth()->id(),
         ]);
+
+        $this->logInfo('reservation.approved', $this->reservationContext($reservation) + ['previous_status' => $previousStatus], 'audit');
 
         return back()->with('success', 'Reservation approuvee avec succes.');
     }
@@ -468,14 +512,19 @@ class VehicleReservationController extends Controller
      */
     public function reject(VehicleReservation $reservation)
     {
-        if (!auth()->user()->isAdmin()) {
+        if (! auth()->user()->isAdmin()) {
+            $this->logAccessDenied('reject', $this->reservationContext($reservation));
             abort(403);
         }
+
+        $previousStatus = $reservation->status;
 
         $reservation->update([
             'status' => 'rejected',
             'approved_by' => auth()->id(),
         ]);
+
+        $this->logInfo('reservation.rejected', $this->reservationContext($reservation) + ['previous_status' => $previousStatus], 'audit');
 
         return back()->with('success', 'Reservation rejetee.');
     }
@@ -503,21 +552,51 @@ class VehicleReservationController extends Controller
     {
         return $this->destroy($request, $id);
     }
+
+    /**
+     * Contexte metier d'une reservation pour les logs. L'utilisateur courant (user_id) est
+     * deja partage par AddRequestContext : le titulaire est donc journalise sous owner_id.
+     * Jamais la destination ni les notes (texte libre).
+     */
+    private function reservationContext(VehicleReservation $reservation): array
+    {
+        return [
+            'reservation_id' => $reservation->id,
+            'vehicle_id' => $reservation->vehicle_id,
+            'owner_id' => $reservation->user_id,
+            'date' => $reservation->reservation_date?->format('Y-m-d'),
+            'start_time' => $reservation->start_time,
+            'end_time' => $reservation->end_time,
+            'status' => $reservation->status,
+        ];
+    }
+
+    /**
+     * Refus d'acces a une reservation (ni titulaire ni admin) : canal security.
+     */
+    private function logAccessDenied(string $action, array $context): void
+    {
+        $this->logWarning('reservation.access.denied', ['action' => $action] + $context, 'security');
+    }
+
+    /**
+     * Violation de l'index unique (MySQL 23000, PostgreSQL 23505) : un autre utilisateur
+     * a reserve le meme creneau entre la verification et l'insertion.
+     */
+    private function isUniqueViolation(QueryException $e): bool
+    {
+        return in_array($e->getCode(), ['23505', '23000']);
+    }
+
+    /**
+     * Journalise une modification (noms des champs modifies seulement, jamais leur contenu)
+     * puis la diffuse aux autres utilisateurs.
+     */
+    private function reservationUpdated(VehicleReservation $reservation, array $validated): void
+    {
+        $context = $this->reservationContext($reservation);
+
+        $this->logInfo('reservation.updated', $context + ['fields' => array_keys($validated)]);
+        $this->broadcastSafely(new ReservationUpdated($reservation), $context, true);
+    }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

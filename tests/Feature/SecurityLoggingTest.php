@@ -324,4 +324,15 @@ class SecurityLoggingTest extends TestCase
         $this->assertSame('o***@example.test', $record->context['old_email']);
         $this->assertSame('n***@example.test', $record->context['new_email']);
     }
+
+    public function test_profile_page_shows_the_authenticated_user(): void
+    {
+        $this->user(attributes: ['name' => 'Premier Utilisateur']);
+        $me = $this->user(attributes: ['name' => 'Moi Connecte']);
+
+        $this->actingAs($me)->get(route('profile.show'))
+            ->assertOk()
+            ->assertSee('Moi Connecte')
+            ->assertDontSee('Premier Utilisateur');
+    }
 }

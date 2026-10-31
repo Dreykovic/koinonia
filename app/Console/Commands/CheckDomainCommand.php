@@ -2,15 +2,23 @@
 
 namespace App\Console\Commands;
 
+use App\Console\Concerns\MonitorsExecution;
 use Illuminate\Console\Command;
 
 class CheckDomainCommand extends Command
 {
+    use MonitorsExecution;
+
     protected $signature = 'domain:check';
 
     protected $description = 'Verify domain-related configuration (APP_URL, cookies, proxies) after a domain change';
 
     public function handle(): int
+    {
+        return $this->monitored(fn () => $this->check());
+    }
+
+    private function check(): int
     {
         $url = (string) config('app.url');
         $parts = parse_url($url) ?: [];
@@ -32,7 +40,7 @@ class CheckDomainCommand extends Command
         }
 
         $sessionDomain = config('session.domain');
-        if ($sessionDomain && $host && !str_ends_with($host, ltrim($sessionDomain, '.'))) {
+        if ($sessionDomain && $host && ! str_ends_with($host, ltrim($sessionDomain, '.'))) {
             $problems[] = "SESSION_DOMAIN ({$sessionDomain}) ne correspond pas a l'hote de APP_URL ({$host}) : les sessions seront perdues.";
         }
 
@@ -44,12 +52,12 @@ class CheckDomainCommand extends Command
             $warnings[] = 'SESSION_SECURE_COOKIE n\'est pas defini : recommande a true en https.';
         }
 
-        if (!env('TRUSTED_PROXIES')) {
+        if (! env('TRUSTED_PROXIES')) {
             $warnings[] = 'TRUSTED_PROXIES non defini : a renseigner si le site est derriere un proxy/CDN (sinon le https peut ne pas etre detecte).';
         }
 
         $stateful = (array) config('sanctum.stateful');
-        if ($host && !collect($stateful)->contains(fn ($d) => str_starts_with($d, $host))) {
+        if ($host && ! collect($stateful)->contains(fn ($d) => str_starts_with($d, $host))) {
             $warnings[] = "SANCTUM_STATEFUL_DOMAINS ne contient pas {$host} (utile seulement si l'API est utilisee en SPA).";
         }
 
@@ -64,15 +72,17 @@ class CheckDomainCommand extends Command
         ]);
 
         foreach ($problems as $p) {
-            $this->error('✘ ' . $p);
+            $this->error('✘ '.$p);
         }
         foreach ($warnings as $w) {
-            $this->warn('! ' . $w);
+            $this->warn('! '.$w);
         }
 
-        if (!$problems && !$warnings) {
+        if (! $problems && ! $warnings) {
             $this->info('Configuration de domaine coherente.');
         }
+
+        $this->metrics = ['problems' => count($problems), 'warnings' => count($warnings)];
 
         return $problems ? self::FAILURE : self::SUCCESS;
     }

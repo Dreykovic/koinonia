@@ -16,7 +16,7 @@ use Throwable;
  * puis un e-mail immédiat aux administrateurs, limité à un envoi par règle et par
  * période (config monitoring.alerts.throttle_minutes).
  *
- * Usage : app(AlertService::class)->send('queue_failure', 'Un job a échoué', [...]);
+ * Usage : app(AlertService::class)->send('job_failed', 'Un job a échoué', [...]);
  *         app(AlertService::class)->hit('mail_failure', 'Échecs SMTP répétés', [...], 3, 15);
  */
 class AlertService

@@ -22,6 +22,9 @@ class MonitoringTestAlertCommand extends Command
         'scheduler_stale' => 'Planificateur (schedule:run) inactif',
         'mail_failure' => 'Échecs répétés d\'envoi d\'e-mails',
         'broadcast_failure' => 'Échecs répétés de diffusion temps réel',
+        'auth_lockout' => 'Blocages de connexion répétés',
+        'menu_rotation_failure' => 'Échec de la rotation des menus',
+        'meal_generation_failure' => 'Échec de la génération des repas du dimanche',
     ];
 
     protected $signature = 'monitoring:test-alert {rule? : Règle à tester (toutes si absent)}';

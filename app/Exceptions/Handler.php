@@ -236,7 +236,7 @@ class Handler extends ExceptionHandler
 
         Log::channel('security')->notice($event, array_filter(AddRequestContext::context($request) + [
             'method' => $request->method(),
-            'url' => $request->fullUrl(),
+            'url' => AddRequestContext::safeUrl($request),
             'ip' => $request->ip(),
             'retry_after' => $e instanceof ThrottleRequestsException ? ($e->getHeaders()['Retry-After'] ?? null) : null,
         ], fn ($value) => $value !== null));

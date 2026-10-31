@@ -37,6 +37,8 @@ Choisir le canal explicitement : `Log::channel('app')->warning(...)` ou via le t
 Le middleware `App\Http\Middleware\AddRequestContext` ajoute automatiquement à **tous**
 les logs d'une requête : `request_id`, `user_id`, `roles`, `route`, `method`, `url`, `ip`.
 Le même contexte est ajouté aux exceptions reportées par le handler (plus `exception_class`).
+L'`url` est journalisée sans query string et avec le token de `reset-password/{token}`
+masqué (`AddRequestContext::safeUrl()`) : ni token, ni signature, ni e-mail en clair.
 
 - Ne pas répéter ces champs dans les appels : ne passer que le contexte métier
   (`reservation_id`, `vehicle_id`, `date`…).
@@ -125,7 +127,7 @@ Le service `App\Services\AlertService` :
 use App\Services\AlertService;
 
 // Alerte directe (ex. job en échec, scheduler inactif)
-app(AlertService::class)->send('queue_failure', 'Un job a échoué.', ['job' => $name]);
+app(AlertService::class)->send('job_failed', 'Un job a échoué.', ['job' => $name]);
 
 // Alerte sur seuil : envoyée quand N occurrences arrivent dans la fenêtre
 app(AlertService::class)->hit(
@@ -147,11 +149,17 @@ Règles et réglages (`config/monitoring.php`, variables dans `.env.example`) :
 
 | Règle | Déclencheur | Réglage |
 |-------|-------------|---------|
-| `error_spike` | Exceptions reportées (5xx), branché dans `Handler::register()` | `ALERT_ERROR_SPIKE_THRESHOLD` / `_WINDOW` (10 en 5 min) |
+| `error_spike` | Exceptions reportées (5xx) via `Handler::register()`, 5xx explicites via `LogRequestDuration`, échecs interceptés par `GuardsMealMenuActions::guardAction()` | `ALERT_ERROR_SPIKE_THRESHOLD` / `_WINDOW` (10 en 5 min) |
 | `mail_failure` | Échecs d'envoi d'e-mails | `ALERT_MAIL_FAILURE_THRESHOLD` / `_WINDOW` (3 en 15 min) |
 | `broadcast_failure` | Échecs de `broadcastSafely()` | `ALERT_BROADCAST_FAILURE_THRESHOLD` / `_WINDOW` (5 en 10 min) |
-| `queue_failure` | Job en échec | `ALERT_QUEUE_FAILURE` |
-| `scheduler_stale` | `SchedulerHeartbeat::isStale()` | `MONITORING_HEARTBEAT_MAX_AGE` (5 min) |
+| `job_failed` | Job en échec définitif (`QueueMonitoringServiceProvider`) | `ALERT_QUEUE_FAILURE` (true/false) |
+| `scheduled_task_failed` | Tâche planifiée en échec (`ScheduleMonitor`, hook `onFailure`) | aucun (à chaque échec) |
+| `scheduler_stale` | `SchedulerHeartbeat::isStale()`, vérifié par `LogRequestDuration` (toutes les 5 min) | `MONITORING_HEARTBEAT_MAX_AGE` (5 min) |
+| `auth_lockout` | Blocages de connexion (`LogAuthenticationEvents`) | `ALERT_AUTH_LOCKOUT_THRESHOLD` / `_WINDOW` (10 en 15 min) |
+| `menu_rotation_failure` | Calcul de rotation des menus en échec (`MenuRotation`) | constante (1 en 30 min) |
+| `meal_generation_failure` | `meals:generate` en échec pour au moins une date | aucun (à chaque échec) |
+
+Toutes ces règles se testent avec `php artisan monitoring:test-alert [règle]`.
 
 Seuils de lenteur : `MONITORING_SLOW_QUERY_MS` (500 ms), `MONITORING_SLOW_REQUEST_MS` (2000 ms).
 
@@ -165,7 +173,43 @@ Seuils de lenteur : `MONITORING_SLOW_QUERY_MS` (500 ms), `MONITORING_SLOW_REQUES
 | `App\Support\SchedulerHeartbeat` | `beat()` (à appeler par le scheduler), `lastBeat()`, `isStale()`. Stocké dans le cache par défaut : le cron et le web doivent partager le même store (`CACHE_DRIVER=file` sur OVH). |
 | `App\Support\LogMask` | `email()` : masque une adresse avant de la journaliser. |
 
-## 9. Utilisateurs, communautés et demandes (issue #24)
+## 9. Sécurité et authentification (canal `security`)
+
+Événements tracés (issue #23). Utilisateur, rôles, route et IP viennent du contexte
+partagé ; les e-mails sont toujours masqués, jamais de mot de passe ni de token.
+
+| Événement | Niveau | Source | Contexte métier |
+|-----------|--------|--------|-----------------|
+| `auth.login.succeeded` | info | `LogAuthenticationEvents` (Login) | `user_id`, `remember` |
+| `auth.login.failed` | warning | Failed / `AuthController` | `reason` (`invalid_credentials`, `unknown_account`, `inactive_account`), `email` masqué |
+| `auth.lockout` | warning | Lockout (5 échecs e-mail+IP en 60 s) | `email` masqué ; alerte `auth_lockout` si répété |
+| `auth.logout` | info | Logout | `user_id` |
+| `auth.password.reset_link.sent` / `.failed` | info / warning | `AuthController` | `email` masqué, `status` (`passwords.user`, `passwords.throttled`) |
+| `auth.password.reset_form` | info | `AuthController` (lien ouvert) | `email` masqué ; l'`url` partagée n'a ni token ni query string |
+| `auth.password.reset` / `.reset.failed` | info / warning | PasswordReset / `AuthController` | `user_id` ou `status` (`passwords.token`…) |
+| `auth.unauthenticated` | info | `Authenticate`, `CheckRole` | `middleware`, `guards` ou `required_roles` |
+| `auth.access.denied` | warning | `CheckRole` (403) | `required_roles` |
+| `auth.access.granted` | debug | `CheckRole` | `required_roles` |
+| `account_request.submitted` / `.submit.invalid` | info / notice | `AccountRequestController` | `account_request_id`, `email` masqué / `fields` en erreur |
+| `account_request.approved` / `.rejected` | info | `AccountRequestController` | `account_request_id`, `created_user_id`, `has_notes` (jamais le contenu des notes ni le mot de passe temporaire) |
+| `account_request.approve.skipped` / `.reject.skipped` | warning | `AccountRequestController` | `reason` (`already_processed`, `email_taken`) |
+| `profile.email.changed` | info | `ProfileController` | `old_email`, `new_email` masqués |
+| `profile.password.changed` / `.change_failed` | info / warning | `ProfileController` | `reason` (`wrong_current_password`, `invalid_new_password`) |
+
+Les affichages de formulaires publics (`auth.login.form`, `auth.password.forgot_form`,
+`account_request.form`, `account_request.success_page`) sont tracés en `debug`.
+
+Alerte `auth_lockout` : `monitoring.auth_lockout.threshold` / `window_minutes`
+(défaut : 10 blocages en 15 min).
+
+Recherches utiles :
+
+```bash
+grep '"auth.login.failed"' storage/logs/security-*.log | grep -c invalid_credentials
+grep 'auth.access.denied' storage/logs/security-$(date +%F).log
+```
+
+## 10. Utilisateurs, communautés et demandes (issue #24)
 
 Contrôleurs : `UserController`, `CommunityController`, `CommunityRequestController`,
 `CommunityRequestFormController`, `UserProfileVehicleTypeController`,
@@ -190,7 +234,36 @@ Contrôleurs : `UserController`, `CommunityController`, `CommunityRequestControl
 - Jamais journalisés : e-mails des demandeurs et membres (seulement masqués en cas
   d'échec de création), descriptions des demandes, notes admin, URL/contenu du QR code.
 
-## 9. Véhicules, réservations et lieux de réparation
+## 11. Repas et menus (#25)
+
+Toutes les actions des groupes `meals.*` et `week-menus.*` passent par le trait
+`App\Http\Controllers\Concerns\GuardsMealMenuActions` :
+
+- **écriture** (`guardAction`) : une exception inattendue est loguée en `error`
+  (`<événement>.failed`, ex. `meal.store.failed`, `meal.inscription.store.failed`,
+  `menu.rotation.toggle.failed`), comptée pour `error_spike`, et l'utilisateur revient sur
+  le formulaire avec un message et la référence `(ref. <8 premiers caractères du request_id>)` ;
+- **lecture** (`guardPage`) : même log (`meal.page.index.failed`, `menu.page.edit.failed`…)
+  puis page/JSON 500 avec le request_id ;
+- validation, 403, 404 et `abort()` ne sont jamais interceptés.
+
+| Événement | Niveau | Canal | Quand |
+|-----------|--------|-------|-------|
+| `meal.created` / `meal.updated` / `meal.deleted` / `meal.toggled` | info | audit | Actions admin sur un repas (`fields` modifiés, nombre d'inscrits supprimés). |
+| `meal.capacity.below_inscriptions` | warning | app | Capacité réduite sous le nombre de personnes inscrites. |
+| `meal.inscription.created` / `.updated` / `.cancelled` | info | app | Inscriptions (nombre de places et d'invités, jamais leurs noms). |
+| `meal.inscription.refused` | info | app | `reason` : `closed`, `already_registered`, `not_enough_places`, `not_registered`. |
+| `broadcast.failed` | warning | app | Échec de `MealInscriptionChanged` (contexte `meal_id`, `action`), l'inscription est conservée. |
+| `meal.close.completed` / `meal.close.missing` / `meal.close.failed` | info / warning / error | app | `meals:close` ; `missing` = aucun repas demain. Un échec fait échouer la commande. |
+| `meal.generate.created` / `.completed` / `.failed` / `.incomplete` / `.invalid_count` | info / error / warning | app | `meals:generate` ; une date en échec n'arrête pas les suivantes et déclenche l'alerte `meal_generation_failure`. |
+| `menu.week.*` (`created`, `updated`, `duplicated`, `moved`, `deleted`, `activated`, `dishes_updated`), `menu.cycle.reordered`, `menu.rotation.enabled` / `.disabled` | info | audit | Actions admin sur le cycle. |
+| `menu.week.missing`, `menu.week.requested_missing`, `menu.week.source_missing`, `menu.week.without_slots`, `menu.week.foreign_dishes_ignored`, `menu.reference.missing` | warning | app | Semaine manquante ou données de menu incohérentes. |
+| `menu.cycle.reorder_mismatch` | warning | app | Ordre reçu incohérent avec le cycle (contexte `order` et `cycle`). |
+| `menu.rotation.anchor_lost` | warning | app | Ancre sortie du cycle : la rotation repart de la première semaine. |
+| `menu.rotation.anchor_in_future` / `menu.rotation.empty_cycle` | warning | app | Cycle incohérent ; écrit au plus une fois par heure (calculé à chaque affichage). |
+| `menu.rotation.failed` | error | app | Calcul de rotation en échec (`step`) : la semaine enregistrée reste affichée, alerte `menu_rotation_failure` (au plus une par 30 min). |
+
+## 12. Véhicules, réservations et lieux de réparation
 
 `VehicleReservationController`, `VehicleController`, `RepairLocationController` (issue #26).
 Contexte d'une réservation : `reservation_id`, `vehicle_id`, `owner_id` (titulaire ; l'acteur
@@ -217,7 +290,26 @@ Diagnostic : `grep '"reservation.conflict"' storage/logs/app-*.log` pour les cr�
 disputés, `grep broadcast.failed` si le planning ne se met plus à jour en temps réel
 (le polling `/api/v1` prend le relais).
 
-## 9. Emails (issue #28)
+## 13. Bulletin, dashboard, guide, nouveautés et QR codes (#27)
+
+- **Dashboard** : chaque widget (repas, réservations, demandes, statistiques, bulletin,
+  anniversaires, menu du jour) est chargé séparément. Un échec écrit
+  `dashboard.widget.failed` (`widget`) puis `dashboard.degraded` (`failed_widgets`) ; la page
+  s'affiche avec une valeur vide et un avertissement (`<x-degraded-notice>`).
+- **Bulletin** : chaque écriture échouée écrit `bulletin.<action>.failed` dans `app`
+  (`store`, `update`, `destroy`, `publish`, `service.*`, `activity.*`, `reflection.*`) avec
+  les identifiants seulement (jamais titres ni textes), puis renvoie au formulaire avec la saisie.
+  Création, publication/dépublication et suppression d'une édition sont tracées dans `audit`
+  (`bulletin.created`, `bulletin.published`, `bulletin.unpublished`, `bulletin.deleted`).
+  Lecture : `bulletin.current.failed` (page affichée sans bulletin), `bulletin.index.failed`,
+  `bulletin.show.failed`, `bulletin.edit.failed`.
+- **Services** : `BirthdayService` renvoie une collection vide (`birthday.week.failed`) ;
+  `QRCodeService` journalise `qrcode.generate.failed` avec `size`, `mode` et `payload_length`
+  (jamais l'URL encodée).
+- **Guide / nouveautés** : `guide.load.failed` (guide vide + avertissement),
+  `whats_new.seen.failed` (500 JSON avec `request_id`, ou retour avec message).
+
+## 14. Emails (issue #28)
 
 Tout envoi passe par `App\Traits\SafeMailSender` (`sendMailSafely`, `sendMailAfterResponse`,
 `sendMailSafelyToMany`). Un échec ne casse jamais la requête et laisse **toujours** :
@@ -249,7 +341,27 @@ immédiat ; succès ou échec incrémentent `attempts`. Les actions de l'adminis
 tracées dans `audit` (`admin.failed_email.retried|resolved|deleted`). Un nouveau mailable
 doit utiliser le trait `RecordsDeliveryFailure` pour que ses échecs en file soient tracés.
 
-## 9. Erreurs front-end (JavaScript)
+## 15. File d'attente, commandes et scheduler (#29)
+
+Tout est écrit dans le canal `queue`.
+
+| Événement | Niveau | Source |
+|-----------|--------|--------|
+| `queue.job.failed` | error | Job définitivement en échec (= ligne dans `failed_jobs`), via `Queue::failing` dans `App\Providers\QueueMonitoringServiceProvider`. Contexte : `job`, `job_id`, `uuid`, `connection`, `queue`, `attempts`, `max_tries`, exception. Jamais le payload. Alerte `job_failed` (désactivable par `ALERT_QUEUE_FAILURE=false`). |
+| `queue.job.exception` | warning | Tentative en échec qui sera retentée. |
+| `queue.job.timed_out` | warning | Job interrompu par `--timeout`. |
+| `queue.worker.stopped` | warning | Worker arrêté avec un statut non nul (mémoire, timeout). |
+| `queue.failed_jobs.pending` | warning | `monitoring:failed-jobs` (tous les jours à 07:00) : jobs restant dans `failed_jobs` (`total`, `last_24h`), à traiter par `queue:retry` / `queue:forget`. |
+| `command.started` / `command.finished` | info (warning si code ≠ 0) | Commandes Artisan de l'application (trait `App\Console\Concerns\MonitorsExecution`) : `command`, `arguments`, `exit_code`, `duration_ms`, `metrics` (compteurs métier). |
+| `command.failed` | error | Exception dans une commande : log avec l'exception, la commande retourne `1`. |
+| `schedule.task.failed` | error | Tâche planifiée terminée avec un code ≠ 0 (hook `onFailure` posé sur **toutes** les tâches par `App\Console\Scheduling\ScheduleMonitor`) : `task`, `exit_code`, `expression`, fin de la sortie (`output`, 2000 caractères). Alerte `scheduled_task_failed`. |
+
+- Nouvelle commande : `use MonitorsExecution;` puis `return $this->monitored(function () { $this->metrics = [...]; return self::SUCCESS; });`.
+- Nouvelle tâche planifiée : la déclarer dans `App\Console\Kernel::schedule()` **avant** la boucle `ScheduleMonitor::watch()`.
+- La sortie des tâches est capturée dans `storage/logs/schedule-<hash>.log` (écrasée à chaque exécution).
+- Heartbeat : la closure `monitoring:heartbeat` appelle `SchedulerHeartbeat::beat()` chaque minute.
+
+## 16. Erreurs front-end (JavaScript)
 
 Le navigateur remonte ses erreurs à `POST /log/client` (route `log.client`,
 `App\Http\Controllers\ClientErrorController`), journalisées dans `app` :
@@ -288,113 +400,7 @@ réponse 5xx, pour retrouver l'exception serveur), `state`, `app_version` (serve
 
 Retrouver les erreurs d'un utilisateur : `grep '"user_id":42' storage/logs/app-*.log | grep client.`
 
-<!-- Runbook d'erreurs (diagnostic par symptôme) : à compléter (issue #32). -->
-
-## 9. Sécurité et authentification (canal `security`)
-
-Événements tracés (issue #23). Utilisateur, rôles, route et IP viennent du contexte
-partagé ; les e-mails sont toujours masqués, jamais de mot de passe ni de token.
-
-| Événement | Niveau | Source | Contexte métier |
-|-----------|--------|--------|-----------------|
-| `auth.login.succeeded` | info | `LogAuthenticationEvents` (Login) | `user_id`, `remember` |
-| `auth.login.failed` | warning | Failed / `AuthController` | `reason` (`invalid_credentials`, `unknown_account`, `inactive_account`), `email` masqué |
-| `auth.lockout` | warning | Lockout (5 échecs e-mail+IP en 60 s) | `email` masqué ; alerte `auth_lockout` si répété |
-| `auth.logout` | info | Logout | `user_id` |
-| `auth.password.reset_link.sent` / `.failed` | info / warning | `AuthController` | `email` masqué, `status` (`passwords.user`, `passwords.throttled`) |
-| `auth.password.reset_form` | info | `AuthController` (lien ouvert) | `email` masqué ; l'`url` partagée est masquée (token) |
-| `auth.password.reset` / `.reset.failed` | info / warning | PasswordReset / `AuthController` | `user_id` ou `status` (`passwords.token`…) |
-| `auth.unauthenticated` | info | `Authenticate`, `CheckRole` | `middleware`, `guards` ou `required_roles` |
-| `auth.access.denied` | warning | `CheckRole` (403) | `required_roles` |
-| `auth.access.granted` | debug | `CheckRole` | `required_roles` |
-| `account_request.submitted` / `.submit.invalid` | info / notice | `AccountRequestController` | `account_request_id`, `email` masqué / `fields` en erreur |
-| `account_request.approved` / `.rejected` | info | `AccountRequestController` | `account_request_id`, `created_user_id`, `has_notes` (jamais le contenu des notes ni le mot de passe temporaire) |
-| `account_request.approve.skipped` / `.reject.skipped` | warning | `AccountRequestController` | `reason` (`already_processed`, `email_taken`) |
-| `profile.email.changed` | info | `ProfileController` | `old_email`, `new_email` masqués |
-| `profile.password.changed` / `.change_failed` | info / warning | `ProfileController` | `reason` (`wrong_current_password`, `invalid_new_password`) |
-
-Les affichages de formulaires publics (`auth.login.form`, `auth.password.forgot_form`,
-`account_request.form`, `account_request.success_page`) sont tracés en `debug`.
-
-Alerte `auth_lockout` : `monitoring.auth_lockout.threshold` / `window_minutes`
-(défaut : 10 blocages en 15 min).
-
-Recherches utiles :
-
-```bash
-grep '"auth.login.failed"' storage/logs/security-*.log | grep -c invalid_credentials
-grep 'auth.access.denied' storage/logs/security-$(date +%F).log
-```
-
-## Repas et menus (#25)
-
-Toutes les actions des groupes `meals.*` et `week-menus.*` passent par le trait
-`App\Http\Controllers\Concerns\GuardsMealMenuActions` :
-
-- **écriture** (`guardAction`) : une exception inattendue est loguée en `error`
-  (`<événement>.failed`, ex. `meal.store.failed`, `meal.inscription.store.failed`,
-  `menu.rotation.toggle.failed`), comptée pour `error_spike`, et l'utilisateur revient sur
-  le formulaire avec un message et la référence `(ref. <8 premiers caractères du request_id>)` ;
-- **lecture** (`guardPage`) : même log (`meal.page.index.failed`, `menu.page.edit.failed`…)
-  puis page/JSON 500 avec le request_id ;
-- validation, 403, 404 et `abort()` ne sont jamais interceptés.
-
-| Événement | Niveau | Canal | Quand |
-|-----------|--------|-------|-------|
-| `meal.created` / `meal.updated` / `meal.deleted` / `meal.toggled` | info | audit | Actions admin sur un repas (`fields` modifiés, nombre d'inscrits supprimés). |
-| `meal.capacity.below_inscriptions` | warning | app | Capacité réduite sous le nombre de personnes inscrites. |
-| `meal.inscription.created` / `.updated` / `.cancelled` | info | app | Inscriptions (nombre de places et d'invités, jamais leurs noms). |
-| `meal.inscription.refused` | info | app | `reason` : `closed`, `already_registered`, `not_enough_places`, `not_registered`. |
-| `broadcast.failed` | warning | app | Échec de `MealInscriptionChanged` (contexte `meal_id`, `action`), l'inscription est conservée. |
-| `meal.close.completed` / `meal.close.missing` / `meal.close.failed` | info / warning / error | app | `meals:close` ; `missing` = aucun repas demain. Un échec fait échouer la commande. |
-| `meal.generate.created` / `.completed` / `.failed` / `.incomplete` / `.invalid_count` | info / error / warning | app | `meals:generate` ; une date en échec n'arrête pas les suivantes et déclenche l'alerte `meal_generation_failure`. |
-| `menu.week.*` (`created`, `updated`, `duplicated`, `moved`, `deleted`, `activated`, `dishes_updated`), `menu.cycle.reordered`, `menu.rotation.enabled` / `.disabled` | info | audit | Actions admin sur le cycle. |
-| `menu.week.missing`, `menu.week.requested_missing`, `menu.week.source_missing`, `menu.week.without_slots`, `menu.week.foreign_dishes_ignored`, `menu.reference.missing` | warning | app | Semaine manquante ou données de menu incohérentes. |
-| `menu.cycle.reorder_mismatch` | warning | app | Ordre reçu incohérent avec le cycle (contexte `order` et `cycle`). |
-| `menu.rotation.anchor_lost` | warning | app | Ancre sortie du cycle : la rotation repart de la première semaine. |
-| `menu.rotation.anchor_in_future` / `menu.rotation.empty_cycle` | warning | app | Cycle incohérent ; écrit au plus une fois par heure (calculé à chaque affichage). |
-| `menu.rotation.failed` | error | app | Calcul de rotation en échec (`step`) : la semaine enregistrée reste affichée, alerte `menu_rotation_failure` (au plus une par 30 min). |
-
-## Bulletin, dashboard, guide, nouveautés et QR codes (#27)
-
-- **Dashboard** : chaque widget (repas, réservations, demandes, statistiques, bulletin,
-  anniversaires, menu du jour) est chargé séparément. Un échec écrit
-  `dashboard.widget.failed` (`widget`) puis `dashboard.degraded` (`failed_widgets`) ; la page
-  s'affiche avec une valeur vide et un avertissement (`<x-degraded-notice>`).
-- **Bulletin** : chaque écriture échouée écrit `bulletin.<action>.failed` dans `app`
-  (`store`, `update`, `destroy`, `publish`, `service.*`, `activity.*`, `reflection.*`) avec
-  les identifiants seulement (jamais titres ni textes), puis renvoie au formulaire avec la saisie.
-  Création, publication/dépublication et suppression d'une édition sont tracées dans `audit`
-  (`bulletin.created`, `bulletin.published`, `bulletin.unpublished`, `bulletin.deleted`).
-  Lecture : `bulletin.current.failed` (page affichée sans bulletin), `bulletin.index.failed`,
-  `bulletin.show.failed`, `bulletin.edit.failed`.
-- **Services** : `BirthdayService` renvoie une collection vide (`birthday.week.failed`) ;
-  `QRCodeService` journalise `qrcode.generate.failed` avec `size`, `mode` et `payload_length`
-  (jamais l'URL encodée).
-- **Guide / nouveautés** : `guide.load.failed` (guide vide + avertissement),
-  `whats_new.seen.failed` (500 JSON avec `request_id`, ou retour avec message).
-
-## 9. File d'attente, commandes et scheduler (#29)
-
-Tout est écrit dans le canal `queue`.
-
-| Événement | Niveau | Source |
-|-----------|--------|--------|
-| `queue.job.failed` | error | Job définitivement en échec (= ligne dans `failed_jobs`), via `Queue::failing` dans `App\Providers\QueueMonitoringServiceProvider`. Contexte : `job`, `job_id`, `uuid`, `connection`, `queue`, `attempts`, `max_tries`, exception. Jamais le payload. Alerte `job_failed` (désactivable par `ALERT_QUEUE_FAILURE=false`). |
-| `queue.job.exception` | warning | Tentative en échec qui sera retentée. |
-| `queue.job.timed_out` | warning | Job interrompu par `--timeout`. |
-| `queue.worker.stopped` | warning | Worker arrêté avec un statut non nul (mémoire, timeout). |
-| `queue.failed_jobs.pending` | warning | `monitoring:failed-jobs` (tous les jours à 07:00) : jobs restant dans `failed_jobs` (`total`, `last_24h`), à traiter par `queue:retry` / `queue:forget`. |
-| `command.started` / `command.finished` | info (warning si code ≠ 0) | Commandes Artisan de l'application (trait `App\Console\Concerns\MonitorsExecution`) : `command`, `arguments`, `exit_code`, `duration_ms`, `metrics` (compteurs métier). |
-| `command.failed` | error | Exception dans une commande : log avec l'exception, la commande retourne `1`. |
-| `schedule.task.failed` | error | Tâche planifiée terminée avec un code ≠ 0 (hook `onFailure` posé sur **toutes** les tâches par `App\Console\Scheduling\ScheduleMonitor`) : `task`, `exit_code`, `expression`, fin de la sortie (`output`, 2000 caractères). Alerte `scheduled_task_failed`. |
-
-- Nouvelle commande : `use MonitorsExecution;` puis `return $this->monitored(function () { $this->metrics = [...]; return self::SUCCESS; });`.
-- Nouvelle tâche planifiée : la déclarer dans `App\Console\Kernel::schedule()` **avant** la boucle `ScheduleMonitor::watch()`.
-- La sortie des tâches est capturée dans `storage/logs/schedule-<hash>.log` (écrasée à chaque exécution).
-- Heartbeat : la closure `monitoring:heartbeat` appelle `SchedulerHeartbeat::beat()` chaque minute.
-
-## 9. Observabilité (health check, lenteurs, N+1)
+## 17. Observabilité (health check, lenteurs, N+1)
 
 - **`GET /up`** (route `health`, sans authentification ni session) : JSON
   `{"status": "ok|degraded", "checks": {"database", "cache", "queue", "storage", "scheduler"}}`,
@@ -420,3 +426,5 @@ Tout est écrit dans le canal `queue`.
   chaque règle (`error_spike`, `job_failed`, `scheduled_task_failed`, `scheduler_stale`,
   `mail_failure`, `broadcast_failure`) en ignorant le throttle ;
   `php artisan monitoring:test-alert mail_failure` pour une seule règle.
+
+<!-- Runbook d'erreurs (diagnostic par symptôme) : à compléter (issue #32). -->

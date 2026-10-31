@@ -56,7 +56,9 @@ trait GuardsMealMenuActions
             return $action();
         } catch (Throwable $e) {
             $this->rethrowIfExpected($e);
-            $this->reportGuardedFailure($event, $e, $context);
+            // Pas de comptage error_spike ici : la reponse 500 est deja comptee par
+            // LogRequestDuration (HttpException non reportee).
+            $this->reportGuardedFailure($event, $e, $context, countSpike: false);
 
             throw new HttpException(500, '', $e);
         }
@@ -72,9 +74,13 @@ trait GuardsMealMenuActions
         }
     }
 
-    private function reportGuardedFailure(string $event, Throwable $e, array $context): void
+    private function reportGuardedFailure(string $event, Throwable $e, array $context, bool $countSpike = true): void
     {
         $this->logError("{$event}.failed", $e, $context);
+
+        if (! $countSpike) {
+            return;
+        }
 
         try {
             app(AlertService::class)->hit(

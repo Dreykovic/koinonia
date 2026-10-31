@@ -163,10 +163,6 @@ class AuthController extends Controller
      */
     public function showResetForm(Request $request, string $token)
     {
-        // L'URL partagée par AddRequestContext contient le token et l'e-mail : on la masque
-        // pour tous les logs de cette requête.
-        Log::shareContext(['url' => route('password.reset', ['token' => '***'])]);
-
         // Ouverture d'un lien de réinitialisation : jamais le token.
         Log::channel('security')->info('auth.password.reset_form', [
             'email' => LogMask::email($request->query('email')),

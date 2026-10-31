@@ -24,7 +24,7 @@ class AddRequestContext
 
         Log::shareContext(self::context($request) + [
             'method' => $request->method(),
-            'url' => $request->fullUrl(),
+            'url' => self::safeUrl($request),
             'ip' => $request->ip(),
         ]);
 
@@ -50,6 +50,15 @@ class AddRequestContext
             'user_id' => $user?->getAuthIdentifier(),
             'roles' => $user?->roles ?? null,
         ], fn ($value) => $value !== null && $value !== []);
+    }
+
+    /**
+     * URL journalisable : sans query string (tokens, signatures, e-mails) et avec le
+     * token de réinitialisation de mot de passe masqué dans le chemin.
+     */
+    public static function safeUrl(Request $request): string
+    {
+        return (string) preg_replace('#/reset-password/[^/?]+#', '/reset-password/***', $request->url());
     }
 
     /**

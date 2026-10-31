@@ -48,7 +48,13 @@ return [
         'window_minutes' => (int) env('ALERT_BROADCAST_FAILURE_WINDOW', 10),
     ],
 
-    // Alerte à chaque job en échec (throttlée par règle comme les autres).
+    // Blocages de connexion (5 échecs e-mail+IP) : alerte si `threshold` blocages en `window_minutes`.
+    'auth_lockout' => [
+        'threshold' => (int) env('ALERT_AUTH_LOCKOUT_THRESHOLD', 10),
+        'window_minutes' => (int) env('ALERT_AUTH_LOCKOUT_WINDOW', 15),
+    ],
+
+    // Règle `job_failed` : alerte à chaque job en échec (throttlée par règle comme les autres).
     'queue_failure' => [
         'enabled' => (bool) env('ALERT_QUEUE_FAILURE', true),
     ],

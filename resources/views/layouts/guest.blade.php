@@ -5,6 +5,8 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <meta name="csrf-token" content="{{ csrf_token() }}">
+    <meta name="app-version" content="{{ \App\Support\AppVersion::current() }}">
+    <meta name="client-log-url" content="{{ route('log.client', [], false) }}">
     <link rel="shortcut icon" href="{{ asset('assets/media/logos/favicon.ico') }}">
 
     <!-- Fonts -->
@@ -13,6 +15,9 @@
     <!-- Global Stylesheets -->
     <link href="{{ asset('assets/plugins/global/plugins.bundle.css') }}" rel="stylesheet" type="text/css">
     <link href="{{ asset('assets/css/style.bundle.css') }}" rel="stylesheet" type="text/css">
+
+    <!-- Capture des erreurs JS (remontées à /log/client) -->
+    @vite(['resources/js/error-reporting.js'])
 </head>
 
 <body id="kt_body" class="app-blank">

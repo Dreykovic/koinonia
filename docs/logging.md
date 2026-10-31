@@ -165,4 +165,43 @@ Seuils de lenteur : `MONITORING_SLOW_QUERY_MS` (500 ms), `MONITORING_SLOW_REQUES
 | `App\Support\SchedulerHeartbeat` | `beat()` (à appeler par le scheduler), `lastBeat()`, `isStale()`. Stocké dans le cache par défaut : le cron et le web doivent partager le même store (`CACHE_DRIVER=file` sur OVH). |
 | `App\Support\LogMask` | `email()` : masque une adresse avant de la journaliser. |
 
+## 9. Erreurs front-end (JavaScript)
+
+Le navigateur remonte ses erreurs à `POST /log/client` (route `log.client`,
+`App\Http\Controllers\ClientErrorController`), journalisées dans `app` :
+
+| Événement | Niveau | Origine |
+|-----------|--------|---------|
+| `client.js.error` | `error` | `window.onerror` (exception non gérée) |
+| `client.js.unhandled_rejection` | `error` | promesse rejetée sans `catch` |
+| `client.network.failed` | `warning` | échec réseau (status 0) ou 5xx d'un appel fetch / Axios / jQuery |
+| `client.broadcast.connection_lost` | `warning` | connexion Pusher `unavailable`, `failed`, `disconnected` ou `error` |
+
+Contexte : `error`, `source`, `line`, `col`, `stack` (tableau de lignes), `page_url`,
+`http_method`, `http_status`, `request_url`, `failed_request_id` (request_id de la
+réponse 5xx, pour retrouver l'exception serveur), `state`, `app_version` (serveur),
+`client_version` (meta de la page : différente si l'onglet date d'avant un déploiement),
+`user_agent`, plus le contexte partagé (`user_id`, `roles`…).
+
+- **Code** : `resources/js/monitoring/` (chargé en premier par `app.js` ; `error-reporting.js`
+  seul sur `layouts/guest`). Version exposée par `<meta name="app-version">`
+  (`App\Support\AppVersion` : `config('app.version')` sinon la dernière version de `ReleaseNotes`).
+- **Anti-flood** : côté client, une même erreur une seule fois par page, 5 envois/minute et
+  20 par page ; côté serveur `throttle:20,1`, CSRF, validation stricte (422 sans log), champs
+  tronqués, mis sur une ligne (pas d'injection de fausses lignes) et expurgés (token de
+  `reset-password/…`, paramètres `token`/`signature`/`password`/`email`…, e-mails masqués).
+- **Non remontés** : réponses 4xx (validation, 419, 429 : attendues), requêtes annulées,
+  échecs hors ligne, `Script error.` opaque, scripts d'extensions, boucle ResizeObserver.
+- **Source maps** : désactivées (`vite.config.js`). Sans outil externe pour les recevoir,
+  `hidden` les publierait quand même dans `public/build` (servi et commité). Les stacks
+  pointent donc vers le code minifié ; `client_version` + `page_url` situent la release.
+- **Affichage des erreurs** : `window.AppErrors.message(xhr|error, fallback)` donne le message
+  français (avec `réf. <request_id>` pour un 5xx) et `AppErrors.show(message)` l'affiche
+  via `Toast` (layout app) ou SweetAlert (pages autonomes), texte échappé.
+- **Temps réel** : en cas de coupure, notice discrète après 3 s ; Pusher retente et se
+  réabonne seul ; au retour, l'événement `window` `broadcast:reconnected` permet de
+  recharger les données (utilisé par le planning véhicules).
+
+Retrouver les erreurs d'un utilisateur : `grep '"user_id":42' storage/logs/app-*.log | grep client.`
+
 <!-- Runbook d'erreurs (diagnostic par symptôme) : à compléter (issue #32). -->

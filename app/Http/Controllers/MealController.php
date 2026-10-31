@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Controllers\Concerns\GuardsMealMenuActions;
 use App\Models\MealInscription;
 use App\Models\SundayMeal;
 use Carbon\Carbon;
@@ -9,36 +10,40 @@ use Illuminate\Http\Request;
 
 class MealController extends Controller
 {
+    use GuardsMealMenuActions;
+
     /**
      * Display the meals page for members with upcoming meal widget.
      */
     public function index()
     {
-        $user = auth()->user();
+        return $this->guardPage('meal.page.index', [], function () {
+            $user = auth()->user();
 
-        // Get upcoming meal (next one with open registrations or the next Sunday)
-        $upcomingMeal = SundayMeal::upcoming()->first();
+            // Get upcoming meal (next one with open registrations or the next Sunday)
+            $upcomingMeal = SundayMeal::upcoming()->first();
 
-        // Get user's inscription for the upcoming meal
-        $userInscription = null;
-        if ($upcomingMeal) {
-            $userInscription = MealInscription::where('sunday_meal_id', $upcomingMeal->id)
+            // Get user's inscription for the upcoming meal
+            $userInscription = null;
+            if ($upcomingMeal) {
+                $userInscription = MealInscription::where('sunday_meal_id', $upcomingMeal->id)
+                    ->where('user_id', $user->id)
+                    ->whereNull('cancelled_at')
+                    ->first();
+            }
+
+            // Get user's past reservations
+            $pastInscriptions = MealInscription::with('sundayMeal')
                 ->where('user_id', $user->id)
-                ->whereNull('cancelled_at')
-                ->first();
-        }
+                ->whereHas('sundayMeal', function ($q) {
+                    $q->where('meal_date', '<', now()->toDateString());
+                })
+                ->orderByDesc('registered_at')
+                ->limit(10)
+                ->get();
 
-        // Get user's past reservations
-        $pastInscriptions = MealInscription::with('sundayMeal')
-            ->where('user_id', $user->id)
-            ->whereHas('sundayMeal', function ($q) {
-                $q->where('meal_date', '<', now()->toDateString());
-            })
-            ->orderByDesc('registered_at')
-            ->limit(10)
-            ->get();
-
-        return view('meals.index', compact('upcomingMeal', 'userInscription', 'pastInscriptions'));
+            return view('meals.index', compact('upcomingMeal', 'userInscription', 'pastInscriptions'));
+        });
     }
 
     /**
@@ -49,10 +54,11 @@ class MealController extends Controller
         $user = auth()->user();
 
         // Check if can register
-        if (!$meal->canRegister()) {
+        if (! $meal->canRegister()) {
             if ($meal->isFull()) {
                 return back()->with('error', 'Ce repas est complet.');
             }
+
             return back()->with('error', 'Les inscriptions pour ce repas sont fermees.');
         }
 
@@ -91,7 +97,7 @@ class MealController extends Controller
         $user = auth()->user();
 
         // Check if can cancel
-        if (!$meal->canCancel()) {
+        if (! $meal->canCancel()) {
             return back()->with('error', 'Le delai d\'annulation est depasse.');
         }
 
@@ -100,7 +106,7 @@ class MealController extends Controller
             ->whereNull('cancelled_at')
             ->first();
 
-        if (!$inscription) {
+        if (! $inscription) {
             return back()->with('error', 'Vous n\'avez pas de reservation pour ce repas.');
         }
 
@@ -114,23 +120,25 @@ class MealController extends Controller
      */
     public function show(SundayMeal $meal)
     {
-        $user = auth()->user();
+        return $this->guardPage('meal.page.show', ['meal_id' => $meal->id], function () use ($meal) {
+            $user = auth()->user();
 
-        $userInscription = MealInscription::where('sunday_meal_id', $meal->id)
-            ->where('user_id', $user->id)
-            ->whereNull('cancelled_at')
-            ->first();
+            $userInscription = MealInscription::where('sunday_meal_id', $meal->id)
+                ->where('user_id', $user->id)
+                ->whereNull('cancelled_at')
+                ->first();
 
-        // For admin, load all inscriptions
-        $inscriptions = null;
-        if ($user->isAdmin()) {
-            $inscriptions = $meal->activeInscriptions()
-                ->with('user')
-                ->orderBy('registered_at')
-                ->get();
-        }
+            // For admin, load all inscriptions
+            $inscriptions = null;
+            if ($user->isAdmin()) {
+                $inscriptions = $meal->activeInscriptions()
+                    ->with('user')
+                    ->orderBy('registered_at')
+                    ->get();
+            }
 
-        return view('meals.show', compact('meal', 'userInscription', 'inscriptions'));
+            return view('meals.show', compact('meal', 'userInscription', 'inscriptions'));
+        });
     }
 
     // =============== ADMIN METHODS ===============
@@ -140,57 +148,61 @@ class MealController extends Controller
      */
     public function adminIndex(Request $request)
     {
-        $statusFilter = $request->get('status', '');
-        $periodFilter = $request->get('period', '');
+        $statusFilter = (string) $request->get('status', '');
+        $periodFilter = (string) $request->get('period', '');
 
-        $query = SundayMeal::withCount(['activeInscriptions']);
+        $context = ['status_filter' => $statusFilter, 'period_filter' => $periodFilter];
 
-        // Period filter
-        if ($periodFilter === 'upcoming') {
-            $query->where('meal_date', '>=', now()->toDateString());
-        } elseif ($periodFilter === 'past') {
-            $query->where('meal_date', '<', now()->toDateString());
-        }
+        return $this->guardPage('meal.page.admin_index', $context, function () use ($statusFilter, $periodFilter) {
+            $query = SundayMeal::withCount(['activeInscriptions']);
 
-        // Status filter
-        if ($statusFilter === 'open') {
-            $query->where('is_open', true)
-                  ->where('meal_date', '>=', now()->toDateString());
-        } elseif ($statusFilter === 'closed') {
-            $query->where('is_open', false);
-        }
-
-        $hasFilters = $statusFilter || $periodFilter;
-
-        if ($hasFilters) {
-            $meals = $query->orderBy('meal_date', 'desc')->get();
-
-            // "full" filter must be done in PHP since confirmed_count is an accessor
-            if ($statusFilter === 'full') {
-                $meals = $meals->filter(fn($m) => $m->isFull());
+            // Period filter
+            if ($periodFilter === 'upcoming') {
+                $query->where('meal_date', '>=', now()->toDateString());
+            } elseif ($periodFilter === 'past') {
+                $query->where('meal_date', '<', now()->toDateString());
             }
 
-            return view('meals.admin.index', [
-                'upcomingMeals' => $periodFilter !== 'past' ? $meals->filter(fn($m) => $m->meal_date >= now()->startOfDay()) : collect(),
-                'pastMeals' => $periodFilter !== 'upcoming' ? $meals->filter(fn($m) => $m->meal_date < now()->startOfDay()) : collect(),
-                'statusFilter' => $statusFilter,
-                'periodFilter' => $periodFilter,
+            // Status filter
+            if ($statusFilter === 'open') {
+                $query->where('is_open', true)
+                    ->where('meal_date', '>=', now()->toDateString());
+            } elseif ($statusFilter === 'closed') {
+                $query->where('is_open', false);
+            }
+
+            $hasFilters = $statusFilter || $periodFilter;
+
+            if ($hasFilters) {
+                $meals = $query->orderBy('meal_date', 'desc')->get();
+
+                // "full" filter must be done in PHP since confirmed_count is an accessor
+                if ($statusFilter === 'full') {
+                    $meals = $meals->filter(fn ($m) => $m->isFull());
+                }
+
+                return view('meals.admin.index', [
+                    'upcomingMeals' => $periodFilter !== 'past' ? $meals->filter(fn ($m) => $m->meal_date >= now()->startOfDay()) : collect(),
+                    'pastMeals' => $periodFilter !== 'upcoming' ? $meals->filter(fn ($m) => $m->meal_date < now()->startOfDay()) : collect(),
+                    'statusFilter' => $statusFilter,
+                    'periodFilter' => $periodFilter,
+                ]);
+            }
+
+            $upcomingMeals = SundayMeal::upcoming()
+                ->withCount(['activeInscriptions'])
+                ->get();
+
+            $pastMeals = SundayMeal::past()
+                ->withCount(['activeInscriptions'])
+                ->limit(20)
+                ->get();
+
+            return view('meals.admin.index', compact('upcomingMeals', 'pastMeals') + [
+                'statusFilter' => '',
+                'periodFilter' => '',
             ]);
-        }
-
-        $upcomingMeals = SundayMeal::upcoming()
-            ->withCount(['activeInscriptions'])
-            ->get();
-
-        $pastMeals = SundayMeal::past()
-            ->withCount(['activeInscriptions'])
-            ->limit(20)
-            ->get();
-
-        return view('meals.admin.index', compact('upcomingMeals', 'pastMeals') + [
-            'statusFilter' => '',
-            'periodFilter' => '',
-        ]);
+        });
     }
 
     /**
@@ -198,17 +210,19 @@ class MealController extends Controller
      */
     public function create()
     {
-        // Suggest next Sunday
-        $nextSunday = Carbon::now()->next(Carbon::SUNDAY);
+        return $this->guardPage('meal.page.create', [], function () {
+            // Suggest next Sunday
+            $nextSunday = Carbon::now()->next(Carbon::SUNDAY);
 
-        // Check if a meal already exists for this Sunday
-        while (SundayMeal::where('meal_date', $nextSunday->toDateString())->exists()) {
-            $nextSunday = $nextSunday->addWeek();
-        }
+            // Check if a meal already exists for this Sunday
+            while (SundayMeal::where('meal_date', $nextSunday->toDateString())->exists()) {
+                $nextSunday = $nextSunday->addWeek();
+            }
 
-        $suggestedDeadline = $nextSunday->copy()->subDay()->setTime(18, 0);
+            $suggestedDeadline = $nextSunday->copy()->subDay()->setTime(18, 0);
 
-        return view('meals.admin.create', compact('nextSunday', 'suggestedDeadline'));
+            return view('meals.admin.create', compact('nextSunday', 'suggestedDeadline'));
+        });
     }
 
     /**
@@ -233,10 +247,19 @@ class MealController extends Controller
         $validated['allow_multiple_places'] = $request->boolean('allow_multiple_places');
         $validated['allow_guests'] = $request->boolean('allow_guests');
 
-        SundayMeal::create($validated);
+        return $this->guardAction('meal.store', ['meal_date' => $validated['meal_date']], function () use ($validated) {
+            $meal = SundayMeal::create($validated);
 
-        return redirect()->route('meals.admin.index')
-            ->with('success', 'Le repas a ete cree avec succes.');
+            $this->logInfo('meal.created', [
+                'meal_id' => $meal->id,
+                'meal_date' => $meal->meal_date?->toDateString(),
+                'max_capacity' => $meal->max_capacity,
+                'is_open' => $meal->is_open,
+            ], 'audit');
+
+            return redirect()->route('meals.admin.index')
+                ->with('success', 'Le repas a ete cree avec succes.');
+        }, 'Le repas n\'a pas pu etre cree. Reessayez dans quelques instants.');
     }
 
     /**
@@ -244,7 +267,7 @@ class MealController extends Controller
      */
     public function edit(SundayMeal $meal)
     {
-        return view('meals.admin.edit', compact('meal'));
+        return $this->guardPage('meal.page.edit', ['meal_id' => $meal->id], fn () => view('meals.admin.edit', compact('meal')));
     }
 
     /**
@@ -253,7 +276,7 @@ class MealController extends Controller
     public function update(Request $request, SundayMeal $meal)
     {
         $validated = $request->validate([
-            'meal_date' => 'required|date|unique:sunday_meals,meal_date,' . $meal->id,
+            'meal_date' => 'required|date|unique:sunday_meals,meal_date,'.$meal->id,
             'max_capacity' => 'required|integer|min:1|max:100',
             'registration_deadline' => 'required|date',
             'cancellation_deadline' => 'required|date',
@@ -269,10 +292,27 @@ class MealController extends Controller
         $validated['allow_multiple_places'] = $request->boolean('allow_multiple_places');
         $validated['allow_guests'] = $request->boolean('allow_guests');
 
-        $meal->update($validated);
+        return $this->guardAction('meal.update', ['meal_id' => $meal->id], function () use ($meal, $validated) {
+            $meal->update($validated);
 
-        return redirect()->route('meals.admin.index')
-            ->with('success', 'Le repas a ete modifie avec succes.');
+            $changed = array_keys(array_diff_key($meal->getChanges(), ['updated_at' => true]));
+
+            if ($changed !== []) {
+                $this->logInfo('meal.updated', ['meal_id' => $meal->id, 'fields' => $changed], 'audit');
+            }
+
+            // Capacite reduite sous le nombre d'inscrits : le repas apparait complet, a signaler.
+            if (in_array('max_capacity', $changed, true) && ($total = $meal->totalPersons()) > $meal->max_capacity) {
+                $this->logWarning('meal.capacity.below_inscriptions', [
+                    'meal_id' => $meal->id,
+                    'max_capacity' => $meal->max_capacity,
+                    'total_persons' => $total,
+                ]);
+            }
+
+            return redirect()->route('meals.admin.index')
+                ->with('success', 'Le repas a ete modifie avec succes.');
+        }, 'Le repas n\'a pas pu etre modifie. Reessayez dans quelques instants.');
     }
 
     /**
@@ -280,10 +320,18 @@ class MealController extends Controller
      */
     public function destroy(SundayMeal $meal)
     {
-        $meal->delete();
+        $context = ['meal_id' => $meal->id, 'meal_date' => $meal->meal_date?->toDateString()];
 
-        return redirect()->route('meals.admin.index')
-            ->with('success', 'Le repas a ete supprime.');
+        return $this->guardAction('meal.destroy', $context, function () use ($meal, $context) {
+            $activeInscriptions = $meal->activeInscriptions()->count();
+
+            $meal->delete();
+
+            $this->logInfo('meal.deleted', $context + ['active_inscriptions' => $activeInscriptions], 'audit');
+
+            return redirect()->route('meals.admin.index')
+                ->with('success', 'Le repas a ete supprime.');
+        }, 'Le repas n\'a pas pu etre supprime. Reessayez dans quelques instants.');
     }
 
     /**
@@ -291,11 +339,15 @@ class MealController extends Controller
      */
     public function toggleOpen(SundayMeal $meal)
     {
-        $meal->update(['is_open' => !$meal->is_open]);
+        return $this->guardAction('meal.toggle', ['meal_id' => $meal->id], function () use ($meal) {
+            $meal->update(['is_open' => ! $meal->is_open]);
 
-        $status = $meal->is_open ? 'ouvertes' : 'fermees';
+            $this->logInfo('meal.toggled', ['meal_id' => $meal->id, 'is_open' => $meal->is_open], 'audit');
 
-        return back()->with('success', "Les inscriptions sont maintenant {$status}.");
+            $status = $meal->is_open ? 'ouvertes' : 'fermees';
+
+            return back()->with('success', "Les inscriptions sont maintenant {$status}.");
+        }, 'Le statut des inscriptions n\'a pas pu etre modifie. Reessayez dans quelques instants.');
     }
 
     /**
@@ -303,12 +355,14 @@ class MealController extends Controller
      */
     public function adminShow(SundayMeal $meal)
     {
-        $meal->load(['inscriptions.user']);
+        return $this->guardPage('meal.page.admin_show', ['meal_id' => $meal->id], function () use ($meal) {
+            $meal->load(['inscriptions.user']);
 
-        $activeInscriptions = $meal->inscriptions->whereNull('cancelled_at')->sortBy('registered_at');
-        $cancelledInscriptions = $meal->inscriptions->whereNotNull('cancelled_at')->sortByDesc('cancelled_at');
+            $activeInscriptions = $meal->inscriptions->whereNull('cancelled_at')->sortBy('registered_at');
+            $cancelledInscriptions = $meal->inscriptions->whereNotNull('cancelled_at')->sortByDesc('cancelled_at');
 
-        return view('meals.admin.show', compact('meal', 'activeInscriptions', 'cancelledInscriptions'));
+            return view('meals.admin.show', compact('meal', 'activeInscriptions', 'cancelledInscriptions'));
+        });
     }
 
     /**
@@ -316,39 +370,41 @@ class MealController extends Controller
      */
     public function widgetData()
     {
-        $user = auth()->user();
-        $meal = SundayMeal::upcoming()->first();
+        return $this->guardPage('meal.widget', [], function () {
+            $user = auth()->user();
+            $meal = SundayMeal::upcoming()->first();
 
-        if (!$meal) {
-            return response()->json(['meal' => null]);
-        }
+            if (! $meal) {
+                return response()->json(['meal' => null]);
+            }
 
-        $inscription = MealInscription::where('sunday_meal_id', $meal->id)
-            ->where('user_id', $user->id)
-            ->whereNull('cancelled_at')
-            ->first();
+            $inscription = MealInscription::where('sunday_meal_id', $meal->id)
+                ->where('user_id', $user->id)
+                ->whereNull('cancelled_at')
+                ->first();
 
-        return response()->json([
-            'meal' => [
-                'id' => $meal->id,
-                'date' => $meal->short_date,
-                'full_date' => $meal->formatted_date,
-                'confirmed' => $meal->confirmed_count,
-                'total' => $meal->max_capacity,
-                'remaining' => $meal->remaining_places,
-                'status' => $meal->status,
-                'status_label' => $meal->status_label,
-                'can_register' => $meal->canRegister(),
-                'can_cancel' => $meal->canCancel(),
-                'is_full' => $meal->isFull(),
-                'is_deadline_passed' => $meal->isRegistrationClosed(),
-            ],
-            'is_registered' => $inscription !== null,
-            'routes' => [
-                'register' => route('meals.register', $meal),
-                'unregister' => route('meals.unregister', $meal),
-            ],
-        ]);
+            return response()->json([
+                'meal' => [
+                    'id' => $meal->id,
+                    'date' => $meal->short_date,
+                    'full_date' => $meal->formatted_date,
+                    'confirmed' => $meal->confirmed_count,
+                    'total' => $meal->max_capacity,
+                    'remaining' => $meal->remaining_places,
+                    'status' => $meal->status,
+                    'status_label' => $meal->status_label,
+                    'can_register' => $meal->canRegister(),
+                    'can_cancel' => $meal->canCancel(),
+                    'is_full' => $meal->isFull(),
+                    'is_deadline_passed' => $meal->isRegistrationClosed(),
+                ],
+                'is_registered' => $inscription !== null,
+                'routes' => [
+                    'register' => route('meals.register', $meal),
+                    'unregister' => route('meals.unregister', $meal),
+                ],
+            ]);
+        });
     }
 
     /**
@@ -357,12 +413,12 @@ class MealController extends Controller
     public static function getUpcomingMealWidget()
     {
         $user = auth()->user();
-        if (!$user) {
+        if (! $user) {
             return null;
         }
 
         $meal = SundayMeal::upcoming()->first();
-        if (!$meal) {
+        if (! $meal) {
             return null;
         }
 
@@ -377,18 +433,3 @@ class MealController extends Controller
         ];
     }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

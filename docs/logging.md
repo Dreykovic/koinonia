@@ -166,3 +166,39 @@ Seuils de lenteur : `MONITORING_SLOW_QUERY_MS` (500 ms), `MONITORING_SLOW_REQUES
 | `App\Support\LogMask` | `email()` : masque une adresse avant de la journaliser. |
 
 <!-- Runbook d'erreurs (diagnostic par symptôme) : à compléter (issue #32). -->
+
+## 9. Sécurité et authentification (canal `security`)
+
+Événements tracés (issue #23). Utilisateur, rôles, route et IP viennent du contexte
+partagé ; les e-mails sont toujours masqués, jamais de mot de passe ni de token.
+
+| Événement | Niveau | Source | Contexte métier |
+|-----------|--------|--------|-----------------|
+| `auth.login.succeeded` | info | `LogAuthenticationEvents` (Login) | `user_id`, `remember` |
+| `auth.login.failed` | warning | Failed / `AuthController` | `reason` (`invalid_credentials`, `unknown_account`, `inactive_account`), `email` masqué |
+| `auth.lockout` | warning | Lockout (5 échecs e-mail+IP en 60 s) | `email` masqué ; alerte `auth_lockout` si répété |
+| `auth.logout` | info | Logout | `user_id` |
+| `auth.password.reset_link.sent` / `.failed` | info / warning | `AuthController` | `email` masqué, `status` (`passwords.user`, `passwords.throttled`) |
+| `auth.password.reset_form` | info | `AuthController` (lien ouvert) | `email` masqué ; l'`url` partagée est masquée (token) |
+| `auth.password.reset` / `.reset.failed` | info / warning | PasswordReset / `AuthController` | `user_id` ou `status` (`passwords.token`…) |
+| `auth.unauthenticated` | info | `Authenticate`, `CheckRole` | `middleware`, `guards` ou `required_roles` |
+| `auth.access.denied` | warning | `CheckRole` (403) | `required_roles` |
+| `auth.access.granted` | debug | `CheckRole` | `required_roles` |
+| `account_request.submitted` / `.submit.invalid` | info / notice | `AccountRequestController` | `account_request_id`, `email` masqué / `fields` en erreur |
+| `account_request.approved` / `.rejected` | info | `AccountRequestController` | `account_request_id`, `created_user_id`, `has_notes` (jamais le contenu des notes ni le mot de passe temporaire) |
+| `account_request.approve.skipped` / `.reject.skipped` | warning | `AccountRequestController` | `reason` (`already_processed`, `email_taken`) |
+| `profile.email.changed` | info | `ProfileController` | `old_email`, `new_email` masqués |
+| `profile.password.changed` / `.change_failed` | info / warning | `ProfileController` | `reason` (`wrong_current_password`, `invalid_new_password`) |
+
+Les affichages de formulaires publics (`auth.login.form`, `auth.password.forgot_form`,
+`account_request.form`, `account_request.success_page`) sont tracés en `debug`.
+
+Alerte `auth_lockout` : `monitoring.auth_lockout.threshold` / `window_minutes`
+(défaut : 10 blocages en 15 min).
+
+Recherches utiles :
+
+```bash
+grep '"auth.login.failed"' storage/logs/security-*.log | grep -c invalid_credentials
+grep 'auth.access.denied' storage/logs/security-$(date +%F).log
+```

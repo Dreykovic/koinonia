@@ -166,3 +166,32 @@ Seuils de lenteur : `MONITORING_SLOW_QUERY_MS` (500 ms), `MONITORING_SLOW_REQUES
 | `App\Support\LogMask` | `email()` : masque une adresse avant de la journaliser. |
 
 <!-- Runbook d'erreurs (diagnostic par symptôme) : à compléter (issue #32). -->
+
+## Repas et menus (#25)
+
+Toutes les actions des groupes `meals.*` et `week-menus.*` passent par le trait
+`App\Http\Controllers\Concerns\GuardsMealMenuActions` :
+
+- **écriture** (`guardAction`) : une exception inattendue est loguée en `error`
+  (`<événement>.failed`, ex. `meal.store.failed`, `meal.inscription.store.failed`,
+  `menu.rotation.toggle.failed`), comptée pour `error_spike`, et l'utilisateur revient sur
+  le formulaire avec un message et la référence `(ref. <8 premiers caractères du request_id>)` ;
+- **lecture** (`guardPage`) : même log (`meal.page.index.failed`, `menu.page.edit.failed`…)
+  puis page/JSON 500 avec le request_id ;
+- validation, 403, 404 et `abort()` ne sont jamais interceptés.
+
+| Événement | Niveau | Canal | Quand |
+|-----------|--------|-------|-------|
+| `meal.created` / `meal.updated` / `meal.deleted` / `meal.toggled` | info | audit | Actions admin sur un repas (`fields` modifiés, nombre d'inscrits supprimés). |
+| `meal.capacity.below_inscriptions` | warning | app | Capacité réduite sous le nombre de personnes inscrites. |
+| `meal.inscription.created` / `.updated` / `.cancelled` | info | app | Inscriptions (nombre de places et d'invités, jamais leurs noms). |
+| `meal.inscription.refused` | info | app | `reason` : `closed`, `already_registered`, `not_enough_places`, `not_registered`. |
+| `broadcast.failed` | warning | app | Échec de `MealInscriptionChanged` (contexte `meal_id`, `action`), l'inscription est conservée. |
+| `meal.close.completed` / `meal.close.missing` / `meal.close.failed` | info / warning / error | app | `meals:close` ; `missing` = aucun repas demain. Un échec fait échouer la commande. |
+| `meal.generate.created` / `.completed` / `.failed` / `.incomplete` / `.invalid_count` | info / error / warning | app | `meals:generate` ; une date en échec n'arrête pas les suivantes et déclenche l'alerte `meal_generation_failure`. |
+| `menu.week.*` (`created`, `updated`, `duplicated`, `moved`, `deleted`, `activated`, `dishes_updated`), `menu.cycle.reordered`, `menu.rotation.enabled` / `.disabled` | info | audit | Actions admin sur le cycle. |
+| `menu.week.missing`, `menu.week.requested_missing`, `menu.week.source_missing`, `menu.week.without_slots`, `menu.week.foreign_dishes_ignored`, `menu.reference.missing` | warning | app | Semaine manquante ou données de menu incohérentes. |
+| `menu.cycle.reorder_mismatch` | warning | app | Ordre reçu incohérent avec le cycle (contexte `order` et `cycle`). |
+| `menu.rotation.anchor_lost` | warning | app | Ancre sortie du cycle : la rotation repart de la première semaine. |
+| `menu.rotation.anchor_in_future` / `menu.rotation.empty_cycle` | warning | app | Cycle incohérent ; écrit au plus une fois par heure (calculé à chaque affichage). |
+| `menu.rotation.failed` | error | app | Calcul de rotation en échec (`step`) : la semaine enregistrée reste affichée, alerte `menu_rotation_failure` (au plus une par 30 min). |

@@ -2,6 +2,7 @@
 
 namespace Database\Factories;
 
+use App\Enums\PlatformRole;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
@@ -29,16 +30,11 @@ class UserFactory extends Factory
             'password' => static::$password ??= Hash::make('password'),
             'remember_token' => Str::random(10),
 
-            // mes attributs
-            'first_name' => $this->faker->firstName(),
-            'last_name' => $this->faker->lastName(),
-            'sexe' => $this->faker->randomElement(['Féminin', 'Masculin']),
-            'date_naissance' => $this->faker->date(),
-            'nom_pere' => $this->faker->firstNameMale(),
-            'nom_mere' => $this->faker->firstNameFemale(),
-            // 'adresse' => $this->faker->city(),
-
-            'contact' => $this->faker->phoneNumber(),
+            'name' => $this->faker->name(),
+            'roles' => [PlatformRole::MEMBRE],
+            'phone' => $this->faker->phoneNumber(),
+            'birthday' => $this->faker->date(),
+            'is_active' => true,
         ];
     }
 
@@ -52,4 +48,3 @@ class UserFactory extends Factory
         ]);
     }
 }
-

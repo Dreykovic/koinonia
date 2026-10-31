@@ -52,6 +52,7 @@ Community management web application built with Laravel, designed to centralize 
 - **Community requests**: repairs and purchases with QR code generation
 - **Guide**: help module and internal documentation
 - **Email notifications**: safe sending with failure logging (`failed_emails` table)
+- **Logging & monitoring**: local structured logs per channel (app, security, mail, queue, audit) with a request id, admin log viewer, `/up` health check and e-mail alerts to admins, no external service (see [docs/logging.md](docs/logging.md))
 
 ### Installation
 
@@ -102,6 +103,7 @@ npm run dev
 
 # Run tests
 php artisan test
+# (CI: .github/workflows/tests.yml runs the suite on MySQL 8 for every PR)
 
 # Format code
 ./vendor/bin/pint
@@ -199,6 +201,7 @@ Application web de gestion communautaire construite avec Laravel, permettant de 
 - **Demandes communautaires** : reparations et achats avec generation de QR codes
 - **Guide** : module d'aide et documentation interne
 - **Notifications email** : envoi securise avec log des echecs (table `failed_emails`)
+- **Journaux et supervision** : logs structures et locaux par canal (app, security, mail, queue, audit) avec request id, consultation par les admins, health check `/up` et alertes e-mail aux administrateurs, sans service externe (voir [docs/logging.md](docs/logging.md))
 
 ### Installation
 
@@ -249,6 +252,7 @@ npm run dev
 
 # Lancer les tests
 php artisan test
+# (CI : .github/workflows/tests.yml lance la suite sur MySQL 8 a chaque PR)
 
 # Formatter le code
 ./vendor/bin/pint

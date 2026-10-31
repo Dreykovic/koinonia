@@ -5,6 +5,13 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <meta name="csrf-token" content="{{ csrf_token() }}">
+    <meta name="app-version" content="{{ \App\Support\AppVersion::current() }}">
+    <meta name="client-log-url" content="{{ route('log.client', [], false) }}">
+    {{-- Clé publique Pusher lue à l'exécution : le bundle commité ne dépend pas du .env du build. --}}
+    @if (config('broadcasting.default') === 'pusher' && config('broadcasting.connections.pusher.key'))
+    <meta name="pusher-key" content="{{ config('broadcasting.connections.pusher.key') }}">
+    <meta name="pusher-cluster" content="{{ config('broadcasting.connections.pusher.options.cluster') ?: 'mt1' }}">
+    @endif
     <link rel="shortcut icon" href="{{ asset('assets/media/logos/favicon.ico') }}">
 
     <!-- Fonts - Combinaison élégante -->

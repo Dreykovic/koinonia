@@ -2,6 +2,7 @@
 
 namespace App\Mail;
 
+use App\Mail\Concerns\RecordsDeliveryFailure;
 use App\Models\User;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -12,7 +13,7 @@ use Illuminate\Queue\SerializesModels;
 
 class AccountApprovedMail extends Mailable implements ShouldQueue
 {
-    use Queueable, SerializesModels;
+    use Queueable, RecordsDeliveryFailure, SerializesModels;
 
     /**
      * Create a new message instance.
@@ -20,7 +21,8 @@ class AccountApprovedMail extends Mailable implements ShouldQueue
     public function __construct(
         public User $user,
         public string $temporaryPassword
-    ) {}
+    ) {
+    }
 
     /**
      * Get the message envelope.
@@ -50,9 +52,3 @@ class AccountApprovedMail extends Mailable implements ShouldQueue
         return [];
     }
 }
-
-
-
-
-
-

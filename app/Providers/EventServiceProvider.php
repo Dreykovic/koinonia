@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use App\Listeners\LogAuthenticationEvents;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Auth\Listeners\SendEmailVerificationNotification;
 use Illuminate\Foundation\Support\Providers\EventServiceProvider as ServiceProvider;
@@ -21,6 +22,15 @@ class EventServiceProvider extends ServiceProvider
     ];
 
     /**
+     * Abonnés : journalisation des événements d'authentification (canal security).
+     *
+     * @var array<int, class-string>
+     */
+    protected $subscribe = [
+        LogAuthenticationEvents::class,
+    ];
+
+    /**
      * Register any events for your application.
      */
     public function boot(): void
@@ -36,9 +46,3 @@ class EventServiceProvider extends ServiceProvider
         return false;
     }
 }
-
-
-
-
-
-

@@ -2,33 +2,18 @@
 
 namespace Tests\Feature;
 
-// use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 class ExampleTest extends TestCase
 {
     /**
-     * A basic test example.
+     * L'accueil est réservé aux membres : un visiteur est redirigé vers la connexion,
+     * et la page de connexion répond.
      */
-    public function test_the_application_returns_a_successful_response(): void
+    public function test_guests_are_redirected_to_the_login_page(): void
     {
-        $response = $this->get('/');
+        $this->get('/')->assertRedirect(route('login'));
 
-        $response->assertStatus(200);
+        $this->get(route('login'))->assertOk();
     }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

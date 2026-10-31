@@ -3,24 +3,26 @@
 use App\Enums\PlatformRole;
 use App\Http\Controllers\AccountRequestController;
 use App\Http\Controllers\Admin\FailedEmailController;
+use App\Http\Controllers\Admin\LogController;
 use App\Http\Controllers\Admin\VehicleSettingController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\BulletinController;
+use App\Http\Controllers\CommunityController;
 use App\Http\Controllers\CommunityRequestController;
 use App\Http\Controllers\CommunityRequestFormController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\GuideController;
+use App\Http\Controllers\HealthController;
 use App\Http\Controllers\MealController;
 use App\Http\Controllers\MealInscriptionController;
+use App\Http\Controllers\MenuWeekController;
 use App\Http\Controllers\ProfileController;
-use App\Http\Controllers\CommunityController;
 use App\Http\Controllers\RepairLocationController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\UserProfileVehicleTypeController;
 use App\Http\Controllers\VehicleController;
-use App\Http\Controllers\WeekMenuController;
-use App\Http\Controllers\MenuWeekController;
 use App\Http\Controllers\VehicleReservationController;
+use App\Http\Controllers\WeekMenuController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -28,6 +30,18 @@ use Illuminate\Support\Facades\Route;
 | Web Routes
 |--------------------------------------------------------------------------
 */
+
+// Health check public (supervision) : pas d'authentification ni de session.
+Route::get('up', HealthController::class)
+    ->middleware('throttle:30,1')
+    ->withoutMiddleware([
+        \App\Http\Middleware\EncryptCookies::class,
+        \Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse::class,
+        \Illuminate\Session\Middleware\StartSession::class,
+        \Illuminate\View\Middleware\ShareErrorsFromSession::class,
+        \App\Http\Middleware\VerifyCsrfToken::class,
+    ])
+    ->name('health');
 
 // Guest routes (non-authenticated)
 Route::middleware('guest')->group(function () {
@@ -43,6 +57,11 @@ Route::middleware('guest')->group(function () {
     Route::post('demande-compte', [AccountRequestController::class, 'store'])->name('account-request.store');
     Route::get('demande-compte/confirmation', [AccountRequestController::class, 'success'])->name('account-request.success');
 });
+
+// Erreurs JavaScript remontées par le navigateur (invités et membres), voir resources/js/monitoring
+Route::post('log/client', [\App\Http\Controllers\ClientErrorController::class, 'store'])
+    ->middleware('throttle:20,1')
+    ->name('log.client');
 
 // Authenticated routes
 Route::middleware('auth')->group(function () {
@@ -148,7 +167,6 @@ Route::middleware('auth')->group(function () {
         Route::post('users/{user}/toggle-active', [UserController::class, 'toggleActive'])->name('users.toggle-active');
     });
 
-
     // Profile
     Route::get('profile', [ProfileController::class, 'show'])->name('profile.show');
     Route::get('profile/edit', [ProfileController::class, 'edit'])->name('profile.edit');
@@ -188,7 +206,17 @@ Route::middleware('auth')->group(function () {
         Route::prefix('admin/failed-emails')->name('admin.failed-emails.')->group(function () {
             Route::get('/', [FailedEmailController::class, 'index'])->name('index');
             Route::post('/{failedEmail}/resolve', [FailedEmailController::class, 'resolve'])->name('resolve');
+            Route::post('/{failedEmail}/retry', [FailedEmailController::class, 'retry'])->name('retry');
             Route::delete('/{failedEmail}', [FailedEmailController::class, 'destroy'])->name('destroy');
+        });
+
+        // Journaux (lecture seule)
+        Route::prefix('admin/logs')->name('admin.logs.')->group(function () {
+            Route::get('/', [LogController::class, 'index'])->name('index');
+            Route::get('/entry', [LogController::class, 'show'])->name('show');
+            Route::get('/request/{requestId}', [LogController::class, 'request'])
+                ->where('requestId', '[A-Za-z0-9\-]{8,64}')
+                ->name('request');
         });
 
         // Vehicle Settings Management
@@ -209,8 +237,6 @@ Route::middleware('auth')->group(function () {
         Route::get('/confirmation', [CommunityRequestFormController::class, 'success'])->name('success');
         Route::get('/qr-download', [CommunityRequestFormController::class, 'downloadQR'])->name('qr-download');
     });
-
-
 
     // Week menu - Member routes
     Route::prefix('week-menu')->name('week-menus.')->group(function () {
@@ -254,41 +280,18 @@ Route::middleware('auth')->group(function () {
         });
     });
 
-
     // uSER pROFILE & vehicle type
     Route::middleware(['role:admin'])->group(function () {
         Route::prefix('user-profile-vehicle-types')->name('user-profile-vehicle-types.')->group(function () {
-        Route::get('/', [UserProfileVehicleTypeController::class, 'index'])
-            ->name('index');
-        Route::post('/', [UserProfileVehicleTypeController::class, 'store'])
-            ->name('store');
-        Route::put('/{userProfile}/{vehicleType}', [UserProfileVehicleTypeController::class, 'update'])
-            ->name('update');
-        Route::delete('/{userProfile}/{vehicleType}', [UserProfileVehicleTypeController::class, 'destroy'])
-            ->name('destroy');
+            Route::get('/', [UserProfileVehicleTypeController::class, 'index'])
+                ->name('index');
+            Route::post('/', [UserProfileVehicleTypeController::class, 'store'])
+                ->name('store');
+            Route::put('/{userProfile}/{vehicleType}', [UserProfileVehicleTypeController::class, 'update'])
+                ->name('update');
+            Route::delete('/{userProfile}/{vehicleType}', [UserProfileVehicleTypeController::class, 'destroy'])
+                ->name('destroy');
         });
-
 
     });
 });
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

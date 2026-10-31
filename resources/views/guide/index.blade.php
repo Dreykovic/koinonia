@@ -246,6 +246,7 @@
 
 @section('content')
 <div class="container-fluid">
+    <x-degraded-notice :message="$degradedNotice ?? null" />
 
     {{-- Search bar --}}
     <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between mb-5 gap-3">

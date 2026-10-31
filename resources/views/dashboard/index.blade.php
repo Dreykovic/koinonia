@@ -764,6 +764,8 @@
 @endpush
 
 @section('content')
+<x-degraded-notice :message="$degradedNotice ?? null" />
+
 <!-- ==================== SECTION 1: WELCOME + ACTIONS RAPIDES ==================== -->
 <section class="welcome-section" aria-labelledby="welcome-heading">
     <div class="row align-items-center">
@@ -837,7 +839,6 @@
 
 @if($upcomingMeal)
     @php
-        $userInscription = $upcomingMeal->inscriptions()->where('user_id', auth()->id())->whereNull('cancelled_at')->first();
         $pct = $upcomingMeal->max_capacity > 0 ? ($upcomingMeal->confirmed_count / $upcomingMeal->max_capacity) * 100 : 0;
         $progressColor = $pct > 90 ? '#ef4444' : ($pct > 70 ? '#D4A84B' : '#5D8A66');
     @endphp

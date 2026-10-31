@@ -15,8 +15,8 @@ class WhatsNewTest extends TestCase
     private function user(string $role, ?string $seen = null): User
     {
         return User::create([
-            'name' => 'Test ' . $role,
-            'email' => $role . '-' . uniqid() . '@example.test',
+            'name' => 'Test '.$role,
+            'email' => $role.'-'.uniqid().'@example.test',
             'password' => 'password',
             'roles' => [$role],
             'whats_new_seen_version' => $seen,
@@ -38,8 +38,20 @@ class WhatsNewTest extends TestCase
         $this->actingAs($this->user(PlatformRole::ADMIN))
             ->get(route('dashboard'))
             ->assertOk()
-            ->assertSee('Rotation automatique')
-            ->assertSee('Cycle des menus');
+            ->assertSee('Journaux consultables');
+    }
+
+    public function test_admin_only_release_does_not_hide_previous_release_from_members(): void
+    {
+        $member = $this->user(PlatformRole::MEMBRE, '2026.10.26');
+
+        $this->assertNull(ReleaseNotes::pendingFor($member));
+
+        $this->actingAs($this->user(PlatformRole::MEMBRE))
+            ->get(route('dashboard'))
+            ->assertOk()
+            ->assertSee('Le menu du jour en tete de page')
+            ->assertDontSee('Journaux consultables');
     }
 
     public function test_whats_new_is_shown_only_once(): void

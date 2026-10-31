@@ -53,6 +53,8 @@ return [
             'driver' => 'file',
             'path' => storage_path('framework/cache/data'),
             'lock_path' => storage_path('framework/cache/data'),
+            // Partagé par le site et le cron (deux utilisateurs sur l'hébergement mutualisé).
+            'permission' => 0666,
         ],
 
         'memcached' => [
@@ -109,11 +111,3 @@ return [
     'prefix' => env('CACHE_PREFIX', Str::slug(env('APP_NAME', 'laravel'), '_').'_cache_'),
 
 ];
-
-
-
-
-
-
-
-

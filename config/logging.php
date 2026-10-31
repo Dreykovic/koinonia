@@ -1,18 +1,29 @@
 <?php
 
+use App\Logging\MaskSensitiveData;
 use Monolog\Handler\NullHandler;
 use Monolog\Handler\StreamHandler;
 use Monolog\Handler\SyslogUdpHandler;
 use Monolog\Processor\PsrLogMessageProcessor;
 
-// Canal quotidien partagé : même rétention, même niveau et même formateur
-// (LOG_FORMATTER=Monolog\Formatter\JsonFormatter en production).
+// Formateur commun (LOG_FORMATTER=Monolog\Formatter\JsonFormatter en production).
+// JsonFormatter et LineFormatter omettent la stack trace par défaut : on la garde.
+$formatter = env('LOG_FORMATTER') ?: null;
+$formatterWith = $formatter ? ['includeStacktraces' => true] : [];
+
+// Canal quotidien partagé : même rétention, même niveau et même formateur.
+// permission 0666 : sur l'hébergement mutualisé, le site et le cron (utilisateur SSH)
+// écrivent dans les mêmes fichiers ; celui qui crée le fichier du jour ne doit pas
+// bloquer l'autre (sinon chaque log lève une exception et la page part en 500).
 $dailyChannel = fn (string $file, ?string $level = null) => [
     'driver' => 'daily',
     'path' => storage_path("logs/{$file}.log"),
     'level' => $level ?? env('LOG_LEVEL', 'debug'),
     'days' => (int) env('LOG_DAILY_DAYS', 30),
-    'formatter' => env('LOG_FORMATTER') ?: null,
+    'formatter' => $formatter,
+    'formatter_with' => $formatterWith,
+    'permission' => 0666,
+    'tap' => [MaskSensitiveData::class],
     'replace_placeholders' => true,
 ];
 
@@ -72,7 +83,9 @@ return [
 
         // Canaux thématiques : chaque domaine a son fichier, filtrable par request_id.
         'app' => $dailyChannel('app'),
-        'security' => $dailyChannel('security'),
+        // Jamais plus strict que info : chaque accès invité / role:* doit laisser une trace (#23),
+        // même avec LOG_LEVEL=warning.
+        'security' => $dailyChannel('security', env('LOG_LEVEL', 'debug') === 'debug' ? 'debug' : 'info'),
         'mail' => $dailyChannel('mail'),
         'queue' => $dailyChannel('queue'),
         'audit' => $dailyChannel('audit', 'info'),
@@ -81,6 +94,8 @@ return [
             'driver' => 'single',
             'path' => storage_path('logs/laravel.log'),
             'level' => env('LOG_LEVEL', 'debug'),
+            'permission' => 0666,
+            'tap' => [MaskSensitiveData::class],
             'replace_placeholders' => true,
         ],
 
@@ -89,7 +104,10 @@ return [
             'path' => storage_path('logs/laravel.log'),
             'level' => env('LOG_LEVEL', 'debug'),
             'days' => (int) env('LOG_DAILY_DAYS', 30),
-            'formatter' => env('LOG_FORMATTER') ?: null,
+            'formatter' => $formatter,
+            'formatter_with' => $formatterWith,
+            'permission' => 0666,
+            'tap' => [MaskSensitiveData::class],
             'replace_placeholders' => true,
         ],
 
@@ -149,7 +167,3 @@ return [
     ],
 
 ];
-
-
-
-

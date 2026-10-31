@@ -3,6 +3,7 @@
 use App\Enums\PlatformRole;
 use App\Http\Controllers\AccountRequestController;
 use App\Http\Controllers\Admin\FailedEmailController;
+use App\Http\Controllers\Admin\LogController;
 use App\Http\Controllers\Admin\VehicleSettingController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\BulletinController;
@@ -207,6 +208,15 @@ Route::middleware('auth')->group(function () {
             Route::post('/{failedEmail}/resolve', [FailedEmailController::class, 'resolve'])->name('resolve');
             Route::post('/{failedEmail}/retry', [FailedEmailController::class, 'retry'])->name('retry');
             Route::delete('/{failedEmail}', [FailedEmailController::class, 'destroy'])->name('destroy');
+        });
+
+        // Journaux (lecture seule)
+        Route::prefix('admin/logs')->name('admin.logs.')->group(function () {
+            Route::get('/', [LogController::class, 'index'])->name('index');
+            Route::get('/entry', [LogController::class, 'show'])->name('show');
+            Route::get('/request/{requestId}', [LogController::class, 'request'])
+                ->where('requestId', '[A-Za-z0-9\-]{8,64}')
+                ->name('request');
         });
 
         // Vehicle Settings Management

@@ -428,3 +428,36 @@ Retrouver les erreurs d'un utilisateur : `grep '"user_id":42' storage/logs/app-*
   `php artisan monitoring:test-alert mail_failure` pour une seule règle.
 
 <!-- Runbook d'erreurs (diagnostic par symptôme) : à compléter (issue #32). -->
+
+## 17. Consultation des journaux (#35)
+
+Page *Administration > Journaux* (`admin.logs.index`, rôle `admin`, lecture seule) :
+`App\Http\Controllers\Admin\LogController` + `App\Services\LogReader`.
+
+- **Fichiers lus** : `app`, `security`, `mail`, `queue`, `audit` (`<canal>-AAAA-MM-JJ.log`) et
+  `laravel` (`laravel.log` ou `laravel-AAAA-MM-JJ.log`). Le nom est reconstruit à partir d'un
+  canal et d'une date validés, vérifié par `LogReader::FILE_PATTERN` puis confiné au répertoire
+  (`realpath`, pas de lien symbolique vers l'extérieur). Les autres fichiers (`schedule-*.log`…)
+  ne sont jamais lus.
+- **Lecture en flux** : ligne par ligne (`fgets`), une entrée multi-lignes (stack trace) est
+  regroupée jusqu'au début de l'entrée suivante. Formats ligne (`[date] env.LEVEL: message
+  {context} {extra}`) et JSON (`LOG_FORMATTER`), éventuellement mélangés dans un même fichier.
+- **Pagination** (50 par page, plus récentes d'abord) : seuls les fichiers de la plage de dates
+  sont ouverts (date du nom, ou date de modification pour `laravel.log`) ; un tas borné à
+  `page × 50` garde la position (fichier, offset) des entrées les plus récentes, puis les
+  entrées de la page sont relues par `fseek`. 200 pages au plus : affiner les filtres au-delà.
+- **Filtres** : plage date/heure (24 dernières heures par défaut, sans limite quand un
+  request_id est saisi), niveau minimum, canal, utilisateur (id, e-mail exact ou nom partiel),
+  route (sous-chaîne), texte libre (sur la ligne brute), request_id (complet ou 8 premiers
+  caractères, ex. la référence `ref. abcd1234` d'un message flash). Le request_id correspond
+  aussi à `origin_request_id` (job en file) et `failed_request_id` (erreur front-end).
+- **Requête** (`admin.logs.request`) : toutes les lignes d'un request_id, tous canaux, dans
+  l'ordre chronologique (fichiers de la veille au lendemain quand la date est connue).
+- **Détail** (`admin.logs.show`, `channel` + `date` + `offset`) : contexte complet en JSON
+  indenté, exception et stack trace repliable.
+- **Audit** : chaque consultation écrit `admin.logs.viewed` (`filters`, e-mail masqué,
+  `page`, `results`), `admin.logs.entry_viewed` ou `admin.logs.request_viewed`
+  (`searched_request_id`) ; des filtres invalides écrivent `admin.logs.invalid_filters` (warning).
+
+Pour retrouver l'erreur d'un utilisateur : coller la référence de la page 500 dans le filtre
+*Request id*, ou filtrer par utilisateur et heure approximative avec le niveau `error`.

@@ -365,6 +365,19 @@
                             @endif
                         </a>
                     </li>
+
+                    <li class="menu-item mb-1" role="none">
+                        <a class="menu-link py-3 {{ request()->routeIs('admin.logs.*') ? 'active' : '' }}"
+                           href="{{ route('admin.logs.index') }}"
+                           role="menuitem"
+                           aria-current="{{ request()->routeIs('admin.logs.*') ? 'page' : 'false' }}"
+                           data-tooltip="Consulter les journaux de l'application">
+                            <span class="menu-icon" aria-hidden="true">
+                                <i class="ki-duotone ki-document fs-2"><i class="path1"></i><i class="path2"></i></i>
+                            </span>
+                            <span class="menu-title">Journaux</span>
+                        </a>
+                    </li>
                 </ul>
                 @endif
 

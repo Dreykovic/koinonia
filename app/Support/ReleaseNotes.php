@@ -17,6 +17,27 @@ class ReleaseNotes
 {
     private const RELEASES = [
         [
+            'version' => '2026.10.31',
+            'title' => 'Suivi des erreurs et journaux',
+            'intro' => 'De nouveaux outils pour comprendre ce qui s\'est passe en cas de probleme.',
+            'items' => [
+                [
+                    'icon' => 'ki-document',
+                    'paths' => 2,
+                    'title' => 'Journaux consultables',
+                    'text' => 'La nouvelle page « Journaux » (menu Administration) affiche les logs de l\'application sans acces au serveur : filtres par date et heure, niveau, canal, utilisateur, route, texte libre et request id. Un clic sur un request id montre toute la requete, et chaque entree detaille son contexte et sa stack trace. Lecture seule, chaque consultation est tracee.',
+                    'roles' => [PlatformRole::ADMIN],
+                ],
+                [
+                    'icon' => 'ki-information-5',
+                    'paths' => 3,
+                    'title' => 'Pages d\'erreur en francais',
+                    'text' => 'Les pages d\'erreur (403, 404, session expiree, 500…) sont claires et en francais. La page 500 affiche une reference : collez-la dans le filtre « Request id » des journaux pour retrouver l\'erreur en quelques secondes.',
+                    'roles' => [PlatformRole::ADMIN],
+                ],
+            ],
+        ],
+        [
             'version' => '2026.10.26',
             'title' => 'Le menu de la semaine fait peau neuve',
             'intro' => 'Voici ce qui change pour vous depuis la derniere mise a jour.',
@@ -77,7 +98,7 @@ class ReleaseNotes
      */
     public static function pendingFor(?User $user): ?array
     {
-        if (!$user) {
+        if (! $user) {
             return null;
         }
 
@@ -87,11 +108,22 @@ class ReleaseNotes
             return null;
         }
 
-        $release = self::RELEASES[0];
-        $release['items'] = array_values(array_filter($release['items'], function ($item) use ($user) {
-            return empty($item['roles']) || $user->hasAnyRole($item['roles']);
-        }));
+        // Version la plus recente non vue ayant au moins un element pour cet utilisateur :
+        // une version reservee aux admins ne masque pas la precedente aux autres membres.
+        foreach (self::RELEASES as $release) {
+            if (version_compare($seen, $release['version'], '>=')) {
+                return null;
+            }
 
-        return $release['items'] === [] ? null : $release;
+            $release['items'] = array_values(array_filter($release['items'], function ($item) use ($user) {
+                return empty($item['roles']) || $user->hasAnyRole($item['roles']);
+            }));
+
+            if ($release['items'] !== []) {
+                return $release;
+            }
+        }
+
+        return null;
     }
 }

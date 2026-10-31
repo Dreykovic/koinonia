@@ -4,10 +4,14 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\VehicleSetting;
+use App\Traits\LogsErrors;
 use Illuminate\Http\Request;
+use Throwable;
 
 class VehicleSettingController extends Controller
 {
+    use LogsErrors;
+
     /**
      * Show the settings edit form.
      */
@@ -39,15 +43,30 @@ class VehicleSettingController extends Controller
             'max_future_days.max' => 'Le nombre de jours ne peut pas depasser 365.',
         ]);
 
-        $settings = VehicleSetting::getSettings();
-        $settings->update([
+        $new = [
             'opening_hour' => $validated['opening_hour'].':00',
             'closing_hour' => $validated['closing_hour'].':00',
-            'max_future_days' => $validated['max_future_days'],
-        ]);
+            'max_future_days' => (int) $validated['max_future_days'],
+        ];
 
-        // Clear cache so new settings take effect immediately
-        VehicleSetting::clearCache();
+        try {
+            // Lecture hors cache : l'instance en cache peut etre perimee.
+            $settings = VehicleSetting::first() ?? VehicleSetting::getSettings();
+            $old = $settings->only(array_keys($new));
+
+            $settings->update($new);
+        } catch (Throwable $e) {
+            $this->logError('vehicle_settings.update.failed', $e, ['new' => $new]);
+
+            return back()->withInput()
+                ->with('error', 'Les parametres de reservation n\'ont pas pu etre enregistres. Veuillez reessayer.');
+        } finally {
+            // Toujours vider le cache : en cas d'echec, on evite de servir une valeur incoherente.
+            $this->clearSettingsCache();
+        }
+
+        // Regles de reservation pour tous les membres : pas d'ActivityLog, trace dans le canal audit.
+        $this->logInfo('vehicle_settings.updated', ['old' => $old, 'new' => $new], 'audit');
 
         return redirect()->route('admin.vehicle-settings.edit')
             ->with('success', 'Parametres de reservation mis a jour avec succes.');
@@ -68,5 +87,22 @@ class VehicleSettingController extends Controller
             'max_future_days' => $settings->max_future_days,
             'max_reservation_date' => $settings->max_reservation_date,
         ]);
+    }
+
+    /**
+     * Vide le cache des parametres sans jamais faire echouer la requete :
+     * un cache non vide expire de lui-meme (CACHE_TTL).
+     */
+    private function clearSettingsCache(): void
+    {
+        try {
+            VehicleSetting::clearCache();
+        } catch (Throwable $e) {
+            $this->logWarning('vehicle_settings.cache_clear.failed', [
+                'exception_class' => get_class($e),
+                'error' => $e->getMessage(),
+                'ttl_seconds' => VehicleSetting::CACHE_TTL,
+            ]);
+        }
     }
 }

@@ -165,6 +165,31 @@ Seuils de lenteur : `MONITORING_SLOW_QUERY_MS` (500 ms), `MONITORING_SLOW_REQUES
 | `App\Support\SchedulerHeartbeat` | `beat()` (à appeler par le scheduler), `lastBeat()`, `isStale()`. Stocké dans le cache par défaut : le cron et le web doivent partager le même store (`CACHE_DRIVER=file` sur OVH). |
 | `App\Support\LogMask` | `email()` : masque une adresse avant de la journaliser. |
 
+## 9. Utilisateurs, communautés et demandes (issue #24)
+
+Contrôleurs : `UserController`, `CommunityController`, `CommunityRequestController`,
+`CommunityRequestFormController`, `UserProfileVehicleTypeController`,
+`Admin\VehicleSettingController`.
+
+- **Échec d'écriture** (exception SQL…) : `error` dans `app` (`<domaine>.<action>.failed`,
+  ex. `user.store.failed`, `community_request.store.failed`), puis retour au formulaire
+  avec un message flash `error` en français (saisie conservée, sauf mots de passe).
+  Une suppression de membre en échec annule la transaction (`rolled_back: true`).
+- **Refus métier** : `warning` dans `app` avec un champ `reason`
+  (`user.destroy.refused` : `self` / `last_admin`, `community.destroy.refused` :
+  `has_users` / `has_requests`, `profile_vehicle_type.*.refused`,
+  `community_request.form.session_expired`, `community_request.form.location_missing`).
+- **Accès refusé** à une demande d'un autre membre ou à une action admin :
+  `community_request.access.denied` (`warning`, canal `security`).
+- **Audit** (`audit`, `info`) : `user.created`, `user.updated` (noms des champs modifiés,
+  anciens/nouveaux rôles), `user.active_toggled`, `community.created|updated|deleted`,
+  `community_request.updated|deleted|exported`, `profile_vehicle_type.attached|updated|detached`,
+  `vehicle_settings.updated` (anciennes et nouvelles valeurs).
+- **Pas de doublon avec `ActivityLog`** : la suppression d'un membre est déjà tracée
+  par `ActivityLog::log('user.deleted')` ; aucune ligne `audit` n'est ajoutée pour elle.
+- Jamais journalisés : e-mails des demandeurs et membres (seulement masqués en cas
+  d'échec de création), descriptions des demandes, notes admin, URL/contenu du QR code.
+
 <!-- Runbook d'erreurs (diagnostic par symptôme) : à compléter (issue #32). -->
 
 ## 9. Sécurité et authentification (canal `security`)

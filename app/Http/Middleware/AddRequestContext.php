@@ -20,8 +20,7 @@ class AddRequestContext
 
     public function handle(Request $request, Closure $next): Response
     {
-        $requestId = $this->requestId($request);
-        $request->headers->set(self::HEADER, $requestId);
+        $requestId = self::ensureRequestId($request);
 
         Log::shareContext(self::context($request) + [
             'method' => $request->method(),
@@ -53,11 +52,18 @@ class AddRequestContext
         ], fn ($value) => $value !== null && $value !== []);
     }
 
-    private function requestId(Request $request): string
+    /**
+     * Garantit un request_id sûr sur la requête et le renvoie. Idempotent : utilisé aussi
+     * par le handler d'exceptions quand l'erreur survient avant ce middleware (route inconnue…).
+     */
+    public static function ensureRequestId(Request $request): string
     {
-        $incoming = (string) $request->header(self::HEADER);
+        $incoming = (string) $request->headers->get(self::HEADER);
 
         // Un identifiant fourni par un proxy est conservé s'il est sûr (évite l'injection dans les logs).
-        return preg_match('/^[A-Za-z0-9\-]{8,64}$/', $incoming) ? $incoming : (string) Str::uuid();
+        $requestId = preg_match('/^[A-Za-z0-9\-]{8,64}$/', $incoming) ? $incoming : (string) Str::uuid();
+        $request->headers->set(self::HEADER, $requestId);
+
+        return $requestId;
     }
 }

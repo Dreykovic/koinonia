@@ -44,6 +44,11 @@ Route::middleware('guest')->group(function () {
     Route::get('demande-compte/confirmation', [AccountRequestController::class, 'success'])->name('account-request.success');
 });
 
+// Erreurs JavaScript remontées par le navigateur (invités et membres), voir resources/js/monitoring
+Route::post('log/client', [\App\Http\Controllers\ClientErrorController::class, 'store'])
+    ->middleware('throttle:20,1')
+    ->name('log.client');
+
 // Authenticated routes
 Route::middleware('auth')->group(function () {
     // Logout

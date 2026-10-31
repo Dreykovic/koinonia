@@ -4,6 +4,8 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <meta name="csrf-token" content="{{ csrf_token() }}">
+    <meta name="app-version" content="{{ \App\Support\AppVersion::current() }}">
+    <meta name="client-log-url" content="{{ route('log.client', [], false) }}">
     <title>Planning Vehicules - ITCJ Community</title>
 
     <!-- Fonts - Combinaison élégante -->
@@ -1435,6 +1437,17 @@
             headers: { 'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content') }
         });
 
+        // Erreurs AJAX : message du serveur (avec sa référence pour les 5xx) via le helper
+        // commun window.AppErrors (resources/js/monitoring), texte brut sinon.
+        function showAjaxError(xhr, fallback) {
+            if (window.AppErrors) {
+                window.AppErrors.show(window.AppErrors.message(xhr, fallback));
+                return;
+            }
+            var msg = (xhr && xhr.responseJSON && xhr.responseJSON.message) ? xhr.responseJSON.message : fallback;
+            Swal.fire({ titleText: 'Erreur', text: msg, icon: 'error' });
+        }
+
         // ==================== DATA COORDINATOR ====================
         // Single source of truth for date, fetching, and polling
         const DataCoordinator = {
@@ -1471,7 +1484,7 @@
                 }).fail((error) => {
                     console.error('Error:', error);
                     if (showOverlay) {
-                        Swal.fire('Erreur', 'Impossible de charger le planning', 'error');
+                        showAjaxError(error, 'Impossible de charger le planning');
                     }
                 }).always(() => {
                     this.isFetching = false;
@@ -1746,8 +1759,7 @@
                         DataCoordinator.fetchData(false);
                     })
                     .fail(function(xhr) {
-                        var msg = (xhr.responseJSON && xhr.responseJSON.message) ? xhr.responseJSON.message : 'Erreur lors de la reservation';
-                        Swal.fire('Erreur', msg, 'error');
+                        showAjaxError(xhr, 'Erreur lors de la reservation');
                     })
                     .always(function() { self.isSubmitting = false; });
             },
@@ -1773,8 +1785,7 @@
                                     DataCoordinator.fetchData(false);
                                 })
                                 .fail(function(xhr) {
-                                    var msg = (xhr.responseJSON && xhr.responseJSON.message) ? xhr.responseJSON.message : 'Erreur';
-                                    Swal.fire('Erreur', msg, 'error');
+                                    showAjaxError(xhr, 'Erreur');
                                 });
                         }
                     });
@@ -2076,8 +2087,7 @@
                             $.ajax({ url: '/api/v1/reservations/' + r.id, method: 'DELETE' })
                                 .done(function() { DataCoordinator.fetchData(false); })
                                 .fail(function(xhr) {
-                                    var msg = (xhr.responseJSON && xhr.responseJSON.message) ? xhr.responseJSON.message : 'Erreur lors de l\'annulation';
-                                    Swal.fire('Erreur', msg, 'error');
+                                    showAjaxError(xhr, 'Erreur lors de l\'annulation');
                                 });
                         }
                     });
@@ -2119,8 +2129,7 @@
                 $.ajax({ url: '/api/v1/reservations', method: 'POST', data: data })
                     .done(function() { DataCoordinator.fetchData(false); })
                     .fail(function(xhr) {
-                        var msg = (xhr.responseJSON && xhr.responseJSON.message) ? xhr.responseJSON.message : 'Erreur lors de la réservation';
-                        Swal.fire('Erreur', msg, 'error');
+                        showAjaxError(xhr, 'Erreur lors de la réservation');
                     })
                     .always(function() { self.isSubmitting = false; });
             }
@@ -2181,6 +2190,8 @@
             DataCoordinator.fetchData(true);
             DataCoordinator.startPolling();
         });
+        // Retour de la connexion temps réel : recharger ce qui a été diffusé pendant la coupure.
+        window.addEventListener('broadcast:reconnected', () => DataCoordinator.fetchData(false));
         $(window).on('beforeunload', () => DataCoordinator.stopPolling());
     </script>
 </body>

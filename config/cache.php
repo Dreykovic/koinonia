@@ -53,8 +53,9 @@ return [
             'driver' => 'file',
             'path' => storage_path('framework/cache/data'),
             'lock_path' => storage_path('framework/cache/data'),
-            // Partagé par le site et le cron (deux utilisateurs sur l'hébergement mutualisé).
-            'permission' => 0666,
+            // Pas de 'permission' : Laravel l'applique aussi aux sous-dossiers du cache (0666 = sans
+            // droit x, dossiers inaccessibles). Le partage site/cron repose sur umask(0000)
+            // (AppServiceProvider) : fichiers en 0666, dossiers en 0777.
         ],
 
         'memcached' => [

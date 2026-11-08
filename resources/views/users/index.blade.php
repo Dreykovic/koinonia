@@ -256,7 +256,6 @@
                                 <form action="{{ route('users.destroy', $user) }}" method="POST" class="js-delete-user" data-no-loading data-name="{{ $user->name }}">
                                     @csrf
                                     @method('DELETE')
-                                    <input type="hidden" name="confirm_name" value="">
                                     <button type="submit" class="btn btn-icon btn-sm btn-light-danger" title="Supprimer définitivement">
                                         <i class="ki-duotone ki-trash fs-4"><i class="path1"></i><i class="path2"></i><i class="path3"></i><i class="path4"></i><i class="path5"></i></i>
                                     </button>
@@ -370,7 +369,6 @@
                             <form action="{{ route('users.destroy', $user) }}" method="POST" class="js-delete-user" data-no-loading data-name="{{ $user->name }}">
                                 @csrf
                                 @method('DELETE')
-                                <input type="hidden" name="confirm_name" value="">
                                 <button type="submit" class="btn btn-sm btn-light-danger">
                                     <i class="ki-duotone ki-trash fs-5"><i class="path1"></i><i class="path2"></i><i class="path3"></i><i class="path4"></i><i class="path5"></i></i>
                                     Supprimer
@@ -409,14 +407,7 @@ document.querySelectorAll('.js-delete-user').forEach(function (form) {
                 + 'activités qu\'il a créés sont conservés.',
             type: 'danger',
             confirmText: 'Supprimer',
-            input: {
-                label: 'Saisissez « ' + name + ' » pour confirmer',
-                placeholder: name,
-                requiredValue: name,
-                errorText: 'Le nom saisi ne correspond pas au membre à supprimer.'
-            },
-            onConfirm: function (typed) {
-                form.querySelector('input[name="confirm_name"]').value = typed;
+            onConfirm: function () {
                 form.querySelector('[type="submit"]').classList.add('btn-loading');
                 form.submit();
             }

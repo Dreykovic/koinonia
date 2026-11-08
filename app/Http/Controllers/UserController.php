@@ -208,13 +208,6 @@ class UserController extends Controller
             return back()->with('error', 'Impossible de supprimer le dernier administrateur.');
         }
 
-        $request->validate([
-            'confirm_name' => ['required', 'string', Rule::in([$user->name])],
-        ], [
-            'confirm_name.in' => 'Le nom saisi ne correspond pas au membre a supprimer.',
-            'confirm_name.required' => 'Saisissez le nom du membre pour confirmer la suppression.',
-        ]);
-
         $name = $user->name;
 
         // L'audit de la suppression est porte par ActivityLog (user.deleted) : pas de doublon dans les logs.

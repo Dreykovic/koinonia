@@ -185,7 +185,7 @@ class UsersCommunitiesLoggingTest extends TestCase
         User::deleting(fn () => throw new RuntimeException('fk violation'));
 
         $this->actingAs($this->admin)
-            ->delete(route('users.destroy', $user), ['confirm_name' => $user->name])
+            ->delete(route('users.destroy', $user))
             ->assertSessionHas('error');
 
         $context = $this->assertLogged($this->appLog, 'user.destroy.failed', Level::Error);
@@ -199,7 +199,7 @@ class UsersCommunitiesLoggingTest extends TestCase
         $user = $this->user(PlatformRole::MEMBRE);
 
         $this->actingAs($this->admin)
-            ->delete(route('users.destroy', $user), ['confirm_name' => $user->name])
+            ->delete(route('users.destroy', $user))
             ->assertRedirect(route('users.index'));
 
         $this->assertSame(1, ActivityLog::where('action', 'user.deleted')->count());
@@ -209,7 +209,7 @@ class UsersCommunitiesLoggingTest extends TestCase
     public function test_user_business_refusals_are_logged_as_warning(): void
     {
         $this->actingAs($this->admin)
-            ->delete(route('users.destroy', $this->admin), ['confirm_name' => $this->admin->name])
+            ->delete(route('users.destroy', $this->admin))
             ->assertSessionHas('error');
 
         $this->assertSame('self', $this->assertLogged($this->appLog, 'user.destroy.refused', Level::Warning)['reason']);

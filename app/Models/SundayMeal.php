@@ -177,11 +177,26 @@ class SundayMeal extends Model
     }
 
     /**
+     * Hour (24h) after which a meal held today is considered over.
+     */
+    public const MEAL_OVER_HOUR = 19;
+
+    /**
+     * First meal date that is still upcoming: today until MEAL_OVER_HOUR, tomorrow after.
+     */
+    protected static function firstUpcomingDate(): string
+    {
+        $now = now();
+
+        return ($now->hour >= self::MEAL_OVER_HOUR ? $now->copy()->addDay() : $now)->toDateString();
+    }
+
+    /**
      * Scope to get upcoming meals.
      */
     public function scopeUpcoming($query)
     {
-        return $query->where('meal_date', '>=', now()->toDateString())
+        return $query->where('meal_date', '>=', self::firstUpcomingDate())
                      ->orderBy('meal_date');
     }
 
@@ -190,7 +205,7 @@ class SundayMeal extends Model
      */
     public function scopePast($query)
     {
-        return $query->where('meal_date', '<', now()->toDateString())
+        return $query->where('meal_date', '<', self::firstUpcomingDate())
                      ->orderByDesc('meal_date');
     }
 

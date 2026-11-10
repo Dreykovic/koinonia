@@ -344,6 +344,19 @@
                         </a>
                     </li>
 
+                    <li class="menu-item mb-1" role="none">
+                        <a class="menu-link py-3 {{ request()->routeIs('mail-recipients.*') ? 'active' : '' }}"
+                           href="{{ route('mail-recipients.index') }}"
+                           role="menuitem"
+                           aria-current="{{ request()->routeIs('mail-recipients.*') ? 'page' : 'false' }}"
+                           data-tooltip="Configurer les destinataires des mails">
+                            <span class="menu-icon" aria-hidden="true">
+                                <i class="ki-duotone ki-sms fs-2"><i class="path1"></i><i class="path2"></i></i>
+                            </span>
+                            <span class="menu-title">Destinataires mails</span>
+                        </a>
+                    </li>
+
                     @php
                         $unresolvedEmails = \App\Models\FailedEmail::unresolved()->count();
                     @endphp

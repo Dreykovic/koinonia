@@ -6,6 +6,7 @@ use App\Enums\PlatformRole;
 use App\Mail\NewCommunityRequestMail;
 use App\Models\Community;
 use App\Models\CommunityRequest;
+use App\Models\MailRecipient;
 use App\Models\RepairLocation;
 use App\Models\User;
 use App\Services\QRCodeService;
@@ -204,6 +205,18 @@ class CommunityRequestFormController extends Controller
      */
     private function notifyAdmins(CommunityRequest $communityRequest): void
     {
+        if ($communityRequest->request_type === MailRecipient::TYPE_REPAIR) {
+            $configured = MailRecipient::active()->ofType(MailRecipient::TYPE_REPAIR)->get();
+
+            if ($configured->isNotEmpty()) {
+                foreach ($configured as $recipient) {
+                    $this->sendMailAfterResponse($recipient->email, new NewCommunityRequestMail($communityRequest), $communityRequest);
+                }
+
+                return;
+            }
+        }
+
         $admins = User::active()->byRole(PlatformRole::ADMIN)->get();
 
         if ($admins->isEmpty()) {

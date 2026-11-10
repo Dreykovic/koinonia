@@ -17,6 +17,7 @@ use App\Http\Controllers\MealController;
 use App\Http\Controllers\MealInscriptionController;
 use App\Http\Controllers\MenuWeekController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\MailRecipientController;
 use App\Http\Controllers\RepairLocationController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\UserProfileVehicleTypeController;
@@ -193,6 +194,7 @@ Route::middleware('auth')->group(function () {
     Route::middleware('role:admin')->group(function () {
         Route::resource('repair-locations', RepairLocationController::class)->except(['create', 'show', 'edit']);
         Route::resource('communities', CommunityController::class)->except(['create', 'show', 'edit']);
+        Route::resource('mail-recipients', MailRecipientController::class)->only(['index', 'store', 'update', 'destroy']);
 
         // Account Requests Management
         Route::prefix('account-requests')->name('account-requests.')->group(function () {

@@ -196,7 +196,7 @@ Manager OVH → *Hébergement* → *Tâches automatisées (CRON)* → créer :
 
 | Champ | Valeur |
 |---|---|
-| Commande | `koinonia/artisan schedule:run` |
+| Commande | `koinonia/cron.php` (le formulaire OVH refuse les espaces ; ce script lance `schedule:run`) |
 | Version PHP | 8.2 (ou la version du site) |
 | Fréquence | **toutes les minutes** |
 

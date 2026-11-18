@@ -205,27 +205,31 @@ class CommunityRequestFormController extends Controller
      */
     private function notifyAdmins(CommunityRequest $communityRequest): void
     {
-        if ($communityRequest->request_type === MailRecipient::TYPE_REPAIR) {
-            $configured = MailRecipient::active()->ofType(MailRecipient::TYPE_REPAIR)->get();
-
-            if ($configured->isNotEmpty()) {
-                foreach ($configured as $recipient) {
-                    $this->sendMailAfterResponse($recipient->email, new NewCommunityRequestMail($communityRequest), $communityRequest);
-                }
-
-                return;
-            }
-        }
-
         $admins = User::active()->byRole(PlatformRole::ADMIN)->get();
 
-        if ($admins->isEmpty()) {
+        // Destinataires supplementaires configures (reparations) : ils s'ajoutent aux admins.
+        $extra = $communityRequest->request_type === MailRecipient::TYPE_REPAIR
+            ? MailRecipient::active()->ofType(MailRecipient::TYPE_REPAIR)->get()
+            : collect();
+
+        if ($admins->isEmpty() && $extra->isEmpty()) {
             $this->logWarning('community_request.notify.no_admin', ['community_request_id' => $communityRequest->id]);
 
             return;
         }
 
+        $sentTo = [];
+
+        foreach ($extra as $recipient) {
+            $sentTo[] = strtolower($recipient->email);
+            $this->sendMailAfterResponse($recipient->email, new NewCommunityRequestMail($communityRequest), $communityRequest);
+        }
+
         foreach ($admins as $admin) {
+            if (in_array(strtolower($admin->email), $sentTo, true)) {
+                continue;
+            }
+
             $this->sendMailAfterResponse($admin, new NewCommunityRequestMail($communityRequest), $communityRequest);
         }
     }

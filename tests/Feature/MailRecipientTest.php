@@ -101,13 +101,13 @@ class MailRecipientTest extends TestCase
         $this->assertSame(0, MailRecipient::count());
     }
 
-    public function test_repair_mail_goes_only_to_configured_active_addresses(): void
+    public function test_repair_mail_goes_to_configured_active_addresses_and_admins(): void
     {
-        $this->user(PlatformRole::ADMIN);
+        $admin = $this->user(PlatformRole::ADMIN);
         MailRecipient::create(['type' => 'reparation', 'email' => 'tech@example.test']);
         MailRecipient::create(['type' => 'reparation', 'email' => 'off@example.test', 'active' => false]);
 
-        $this->assertSame(['tech@example.test'], $this->notify('reparation'));
+        $this->assertEqualsCanonicalizing(['tech@example.test', $admin->email], $this->notify('reparation'));
     }
 
     public function test_repair_mail_falls_back_to_admins_without_active_address(): void
